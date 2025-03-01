@@ -26,12 +26,19 @@ class CenterTarget extends StatelessWidget {
         border: Border.all(color: Colors.teal, width: 3),
       ),
       child: Center(
-        child: Text(
-          '$targetNumber',
-          style: TextStyle(
-            fontSize: 40,
-            fontWeight: FontWeight.bold,
-            color: Colors.orange,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text(
+              '$targetNumber',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
+            ),
           ),
         ),
       ),

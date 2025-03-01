@@ -3,12 +3,12 @@ import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
 import 'number_tile.dart';
 
-class SquareRing extends StatelessWidget {
+class InnerRing extends StatelessWidget {
   final RingModel ringModel;
   final Function(int) onRotate;
   final List<bool> solvedCorners;
   
-  const SquareRing({
+  const InnerRing({
     Key? key,
     required this.ringModel,
     required this.onRotate,
@@ -45,14 +45,10 @@ class SquareRing extends StatelessWidget {
           clipBehavior: Clip.none, // Allow tiles to overflow if needed
           fit: StackFit.expand,
           children: [
-            // Position all the non-corner tiles
-            for (int index = 0; index < 20; index++) // 5 tiles per side * 4 sides
-              if (!_isCornerIndex(index)) // Only render non-corner tiles here
+            // Position only the non-corner tiles for inner ring
+            for (int index = 0; index < 20; index++)
+              if (!_isCornerIndex(index))
                 _buildPositionedTile(index, rotatedNumbers, tileSize),
-                
-            // Handle corners separately with larger size
-            if (ringModel.itemColor == Colors.teal) // Only for the outer ring
-              ..._buildCornerTiles(rotatedNumbers, tileSize),
           ],
         ),
       ),
@@ -62,45 +58,6 @@ class SquareRing extends StatelessWidget {
   bool _isCornerIndex(int index) {
     // Corners are at indices 0, 4, 10, 14
     return [0, 4, 10, 14].contains(index);
-  }
-  
-  List<Widget> _buildCornerTiles(List<int> rotatedNumbers, double tileSize) {
-    // Corners are at indices 0, 4, 10, 14
-    // Create positions for corners
-    final cornerIndices = [0, 4, 10, 14];
-    final cornerSize = tileSize * 1.5; // 50% larger for corners
-    
-    return cornerIndices.map((index) {
-      // Calculate the corner position
-      final normalPosition = SquarePositionUtils.calculateSquarePosition(
-        index, 
-        ringModel.squareSize, 
-        tileSize
-      );
-      
-      // Adjust based on which corner it is
-      double adjustedX = normalPosition.dx;
-      double adjustedY = normalPosition.dy;
-      
-      final cornerIndex = cornerIndices.indexOf(index);
-      final isSolved = cornerIndex >= 0 && solvedCorners[cornerIndex];
-      
-      return Positioned(
-        left: adjustedX,
-        top: adjustedY,
-        width: cornerSize,
-        height: cornerSize,
-        child: Center(
-          child: NumberTile(
-            number: rotatedNumbers[index],
-            color: ringModel.itemColor,
-            isDisabled: isSolved,
-            onTap: () {},
-            size: cornerSize,
-          ),
-        ),
-      );
-    }).toList();
   }
   
   Widget _buildPositionedTile(int index, List<int> rotatedNumbers, double tileSize) {

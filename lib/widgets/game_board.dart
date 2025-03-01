@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
 import 'number_tile.dart';
-import 'square_ring.dart';
 import 'center_target.dart';
+// Import our new widgets instead of using SquareRing for both
+import 'square_ring.dart'; // For outer ring
+import 'inner_ring.dart'; // For inner ring
 
 class GameBoard extends StatefulWidget {
   final int targetNumber;
@@ -52,7 +54,7 @@ class GameBoardState extends State<GameBoard> {
       if (isCorner) {
         // For corners, create numbers that form valid equations with the target
         // and the corresponding inner corner
-        final innerCornerIndex = [0, 4, 10, 14][([0, 4, 10, 14].indexOf(index))];
+        final innerCornerIndex = index; // Same index for inner/outer corners
         final innerValue = innerNumbers[innerCornerIndex];
         
         switch (widget.operation) {
@@ -71,32 +73,21 @@ class GameBoardState extends State<GameBoard> {
         }
       } else {
         // Non-corner positions can have more random values
-        switch (widget.operation) {
-          case 'addition':
-            return random.nextInt(30) + 1;
-          case 'subtraction':
-            return random.nextInt(30) + 1;
-          case 'multiplication':
-            return random.nextInt(15) + 1;
-          case 'division':
-            return random.nextInt(50) + 1;
-          default:
-            return random.nextInt(30) + 1;
-        }
+        return random.nextInt(30) + 1;
       }
     });
     
-    // Create ring models with larger square sizes
+    // Create ring models with appropriate square sizes
     innerRingModel = RingModel(
       numbers: innerNumbers,
       itemColor: Colors.lightGreen,
-      squareSize: 240, // Increased from 200
+      squareSize: 240,
     );
     
     outerRingModel = RingModel(
       numbers: outerNumbers,
       itemColor: Colors.teal,
-      squareSize: 360, // Increased from 300
+      squareSize: 360,
     );
   }
   
@@ -149,21 +140,21 @@ class GameBoardState extends State<GameBoard> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer ring
+          // Outer ring - uses SquareRing that renders corners
           SquareRing(
             ringModel: outerRingModel,
             onRotate: rotateOuterRing,
             solvedCorners: solvedCorners,
           ),
           
-          // Inner ring
-          SquareRing(
+          // Inner ring - uses InnerRing that doesn't render corners
+          InnerRing(
             ringModel: innerRingModel,
             onRotate: rotateInnerRing,
             solvedCorners: solvedCorners,
           ),
           
-          // Center number (fixed) - Using a square with rounded corners like in your example
+          // Center number (fixed)
           CenterTarget(targetNumber: widget.targetNumber),
           
           // Operators at diagonals
@@ -357,17 +348,6 @@ class GameBoardState extends State<GameBoard> {
     
     setState(() {
       solvedCorners[cornerIndex] = isCorrect;
-      
-      if (isCorrect) {
-        // Explanation of why this works: when we press a corner, we want to gray out both
-        // the outer and inner corner tiles that are part of this equation
-        
-        // TODO: Temporarily disable both inner and outer corner pieces once solved
-        // This will be implemented in the NumberTile widget and the SquareRing
-        
-        // Play a small celebration effect
-        // TODO: Add confetti or other visual indication of success
-      }
       
       // Check if all corners are solved
       if (solvedCorners.every((solved) => solved)) {

@@ -14,40 +14,38 @@ class SquarePositionUtils {
     int side = index ~/ tilesPerSide; // 0=top, 1=right, 2=bottom, 3=left
     int positionOnSide = index % tilesPerSide;
     
-    // Calculate the available space on each side
+    // Calculate the available space (full path along each side)
     final availableSpace = squareSize - itemSize;
     
-    // Fixed positions for each element on a side (normalized from 0.0 to 1.0)
-    // These values create the non-uniform spacing you requested
-    // First and last positions are corners, others follow your spacing pattern
+    // Fixed normalized positions for each element on a side (from 0.0 to 1.0)
+    // These values create evenly spaced tiles with corners at 0.0 and 1.0
     List<double> positions = [0.0, 0.25, 0.5, 0.75, 1.0];
     
     double x, y;
-    final inset = itemSize / 2;
     
     switch (side) {
       case 0: // Top side
-        x = inset + positions[positionOnSide] * availableSpace;
-        y = inset;
+        x = positions[positionOnSide] * availableSpace;
+        y = 0;
         break;
       case 1: // Right side
-        x = squareSize - inset;
-        y = inset + positions[positionOnSide] * availableSpace;
+        x = squareSize - itemSize;
+        y = positions[positionOnSide] * availableSpace;
         break;
       case 2: // Bottom side
-        x = squareSize - inset - positions[positionOnSide] * availableSpace;
-        y = squareSize - inset;
+        x = (1.0 - positions[positionOnSide]) * availableSpace;
+        y = squareSize - itemSize;
         break;
       case 3: // Left side
-        x = inset;
-        y = squareSize - inset - positions[positionOnSide] * availableSpace;
+        x = 0;
+        y = (1.0 - positions[positionOnSide]) * availableSpace;
         break;
       default:
         x = 0;
         y = 0;
     }
     
-    return Offset(x - itemSize/2, y - itemSize/2);
+    return Offset(x, y);
   }
   
   /// Gets all positions for items in a square
@@ -63,5 +61,11 @@ class SquarePositionUtils {
   static List<int> getCornerIndices() {
     // Corners are at indices 0, 4, 10, 14
     return [0, 4, 10, 14];
+  }
+  
+  /// Determines if an index is a corner in either the inner or outer ring
+  static bool isCornerIndex(int index) {
+    // Only consider these specific indices as corners to prevent duplication
+    return [0, 4, 10, 14].contains(index);
   }
 }

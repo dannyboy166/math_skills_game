@@ -5,7 +5,7 @@ class NumberTile extends StatelessWidget {
   final Color color;
   final bool isDisabled;
   final VoidCallback? onTap;
-  final double size; // Added size parameter
+  final double size; // Size parameter
 
   const NumberTile({
     Key? key,
@@ -40,12 +40,19 @@ class NumberTile extends StatelessWidget {
                 ],
           ),
           child: Center(
-            child: Text(
-              '$number',
-              style: TextStyle(
-                fontSize: size * 0.4, // Dynamic font size based on tile size
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: EdgeInsets.all(size * 0.1), // Add padding to ensure text doesn't get too close to edge
+                child: Text(
+                  '$number',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: size * 0.4, // Dynamic font size based on tile size
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ),
