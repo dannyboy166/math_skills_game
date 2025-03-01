@@ -17,7 +17,8 @@ class SquareRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tileSize = 45.0;
+    // Scale tile size based on the ring size
+    final tileSize = ringModel.squareSize * 0.125; // Adjusted tile size
     final rotatedNumbers = ringModel.getRotatedNumbers();
     
     return GestureDetector(
@@ -47,7 +48,7 @@ class SquareRing extends StatelessWidget {
         child: Stack(
           children: [
             // Position all the number tiles
-            ...List.generate(16, (index) {
+            ...List.generate(20, (index) { // Changed from 16 to 20
               final position = SquarePositionUtils.calculateSquarePosition(
                 index, 
                 ringModel.squareSize, 
@@ -66,6 +67,7 @@ class SquareRing extends StatelessWidget {
                   color: ringModel.itemColor,
                   isDisabled: isCorner && solvedCorners[cornerIndex],
                   onTap: () {},
+                  size: tileSize, // Pass the dynamic tile size
                 ),
               );
             }),

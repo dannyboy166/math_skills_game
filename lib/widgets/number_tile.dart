@@ -5,6 +5,7 @@ class NumberTile extends StatelessWidget {
   final Color color;
   final bool isDisabled;
   final VoidCallback? onTap;
+  final double size; // Added size parameter
 
   const NumberTile({
     Key? key,
@@ -12,6 +13,7 @@ class NumberTile extends StatelessWidget {
     required this.color,
     this.isDisabled = false,
     this.onTap,
+    this.size = 45, // Default size is still 45
   }) : super(key: key);
 
   @override
@@ -19,8 +21,8 @@ class NumberTile extends StatelessWidget {
     return GestureDetector(
       onTap: isDisabled ? null : onTap,
       child: Container(
-        width: 45,
-        height: 45,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: isDisabled ? Colors.grey : color,
           shape: BoxShape.circle,
@@ -38,7 +40,7 @@ class NumberTile extends StatelessWidget {
           child: Text(
             '$number',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: size * 0.4, // Dynamic font size based on tile size
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),

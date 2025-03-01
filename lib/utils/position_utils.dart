@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 /// Calculates positions for items arranged in a square
 class SquarePositionUtils {
   /// Calculate position for an item on a square layout
-  /// [index] - The item's index (0-15)
+  /// [index] - The item's index (0-19)
   /// [squareSize] - Size of the square
   /// [itemSize] - Size of the item (width/height)
   static Offset calculateSquarePosition(int index, double squareSize, double itemSize) {
-    final tilesPerSide = 4; // 4 tiles per side
+    final tilesPerSide = 5; // 5 tiles per side (changed from 4)
     
     // Determine which side the tile is on
     int side = index ~/ tilesPerSide; // 0=top, 1=right, 2=bottom, 3=left
@@ -47,7 +47,7 @@ class SquarePositionUtils {
   /// Gets all positions for items in a square
   static List<Offset> getSquarePositions(double squareSize, double itemSize) {
     List<Offset> positions = [];
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 20; i++) { // Changed from 16 to 20 (5 tiles per side * 4 sides)
       positions.add(calculateSquarePosition(i, squareSize, itemSize));
     }
     return positions;
@@ -55,7 +55,7 @@ class SquarePositionUtils {
   
   /// Gets the index of the item at a corner
   static List<int> getCornerIndices() {
-    // Corners are at indices 0, 3, 8, 11
-    return [0, 3, 8, 11];
+    // Corners are at indices 0, 4, 10, 14 (changed from 0, 3, 8, 11)
+    return [0, 4, 10, 14];
   }
 }

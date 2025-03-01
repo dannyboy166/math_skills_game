@@ -37,14 +37,14 @@ class GameBoardState extends State<GameBoard> {
   void generateGameNumbers() {
     final random = Random();
     
-    // Generate inner ring numbers (16 items - 4 per side)
-    final innerNumbers = List.generate(16, (index) {
+    // Generate inner ring numbers (20 items - 5 per side)
+    final innerNumbers = List.generate(20, (index) {
       // Basic numbers 1-12
       return random.nextInt(12) + 1;
     });
     
-    // Generate outer ring numbers (16 items - 4 per side)
-    final outerNumbers = List.generate(16, (index) {
+    // Generate outer ring numbers (20 items - 5 per side)
+    final outerNumbers = List.generate(20, (index) {
       // Generate numbers based on operation
       switch (widget.operation) {
         case 'addition':
@@ -62,17 +62,17 @@ class GameBoardState extends State<GameBoard> {
       }
     });
     
-    // Create ring models
+    // Create ring models with larger square sizes
     innerRingModel = RingModel(
       numbers: innerNumbers,
       itemColor: Colors.lightGreen,
-      squareSize: 200,
+      squareSize: 240, // Increased from 200
     );
     
     outerRingModel = RingModel(
       numbers: outerNumbers,
       itemColor: Colors.teal,
-      squareSize: 300,
+      squareSize: 360, // Increased from 300
     );
   }
   
@@ -92,9 +92,32 @@ class GameBoardState extends State<GameBoard> {
 
   @override
   Widget build(BuildContext context) {
+    // Use MediaQuery to get the screen width and adjust the container size accordingly
+    final screenWidth = MediaQuery.of(context).size.width;
+    final boardSize = screenWidth - 32; // Full width minus padding
+    
+    // Scale the ring sizes based on the board size
+    final outerRingSize = boardSize;
+    final innerRingSize = boardSize * 0.67; // Approximately 2/3 of the outer ring
+    
+    // Update the ring models with the new sizes
+    outerRingModel = RingModel(
+      numbers: outerRingModel.numbers,
+      itemColor: outerRingModel.itemColor,
+      squareSize: outerRingSize,
+      rotationSteps: outerRingModel.rotationSteps,
+    );
+    
+    innerRingModel = RingModel(
+      numbers: innerRingModel.numbers,
+      itemColor: innerRingModel.itemColor,
+      squareSize: innerRingSize,
+      rotationSteps: innerRingModel.rotationSteps,
+    );
+    
     return Container(
-      width: 320,
-      height: 320,
+      width: boardSize,
+      height: boardSize,
       decoration: BoxDecoration(
         color: Colors.blue.shade50,
         borderRadius: BorderRadius.circular(16),
@@ -118,8 +141,8 @@ class GameBoardState extends State<GameBoard> {
           
           // Center number (fixed)
           Container(
-            width: 60,
-            height: 60,
+            width: 70, // Increased from 60
+            height: 70, // Increased from 60
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -136,7 +159,7 @@ class GameBoardState extends State<GameBoard> {
               child: Text(
                 '${widget.targetNumber}',
                 style: TextStyle(
-                  fontSize: 30,
+                  fontSize: 36, // Increased from 30
                   fontWeight: FontWeight.bold,
                   color: Colors.teal,
                 ),
@@ -145,16 +168,16 @@ class GameBoardState extends State<GameBoard> {
           ),
           
           // Operators at diagonals
-          ...buildOperatorOverlays(),
+          ...buildOperatorOverlays(boardSize),
           
           // Detect taps on corners for checking equations
-          ...buildCornerDetectors(),
+          ...buildCornerDetectors(boardSize),
         ],
       ),
     );
   }
   
-  List<Widget> buildOperatorOverlays() {
+  List<Widget> buildOperatorOverlays(double boardSize) {
     // Get operator symbol
     String operatorSymbol;
     switch (widget.operation) {
@@ -174,16 +197,19 @@ class GameBoardState extends State<GameBoard> {
         operatorSymbol = '?';
     }
     
+    // Calculate diagonal positions based on board size
+    final diagonalOffset = boardSize * 0.28; // Adjusted for 5 tiles per side
+    
     // Position operators at diagonals
     return [
       // Top-right
       Positioned(
-        top: 90,
-        right: 90,
+        top: diagonalOffset,
+        right: diagonalOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 28, // Increased from 24
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -191,12 +217,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-right
       Positioned(
-        bottom: 90,
-        right: 90,
+        bottom: diagonalOffset,
+        right: diagonalOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 28,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -204,12 +230,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-left
       Positioned(
-        bottom: 90,
-        left: 90,
+        bottom: diagonalOffset,
+        left: diagonalOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 28,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -217,12 +243,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Top-left
       Positioned(
-        top: 90,
-        left: 90,
+        top: diagonalOffset,
+        left: diagonalOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 28,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -231,18 +257,22 @@ class GameBoardState extends State<GameBoard> {
     ];
   }
   
-  List<Widget> buildCornerDetectors() {
+  List<Widget> buildCornerDetectors(double boardSize) {
+    // Calculate corner positions based on board size
+    final cornerOffset = boardSize * 0.15; // Adjusted for larger board
+    final detectorSize = 70.0; // Increased from 60
+    
     // Position corner detectors
     return [
       // Top-left
       Positioned(
-        top: 30,
-        left: 30,
+        top: cornerOffset,
+        left: cornerOffset,
         child: GestureDetector(
           onTap: () => checkCornerEquation(0),
           child: Container(
-            width: 60,
-            height: 60,
+            width: detectorSize,
+            height: detectorSize,
             decoration: BoxDecoration(
               color: solvedCorners[0] ? Colors.green.withOpacity(0.3) : Colors.transparent,
               shape: BoxShape.circle,
@@ -252,13 +282,13 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Top-right
       Positioned(
-        top: 30,
-        right: 30,
+        top: cornerOffset,
+        right: cornerOffset,
         child: GestureDetector(
           onTap: () => checkCornerEquation(1),
           child: Container(
-            width: 60,
-            height: 60,
+            width: detectorSize,
+            height: detectorSize,
             decoration: BoxDecoration(
               color: solvedCorners[1] ? Colors.green.withOpacity(0.3) : Colors.transparent,
               shape: BoxShape.circle,
@@ -268,13 +298,13 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-right
       Positioned(
-        bottom: 30,
-        right: 30,
+        bottom: cornerOffset,
+        right: cornerOffset,
         child: GestureDetector(
           onTap: () => checkCornerEquation(2),
           child: Container(
-            width: 60,
-            height: 60,
+            width: detectorSize,
+            height: detectorSize,
             decoration: BoxDecoration(
               color: solvedCorners[2] ? Colors.green.withOpacity(0.3) : Colors.transparent,
               shape: BoxShape.circle,
@@ -284,13 +314,13 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-left
       Positioned(
-        bottom: 30,
-        left: 30,
+        bottom: cornerOffset,
+        left: cornerOffset,
         child: GestureDetector(
           onTap: () => checkCornerEquation(3),
           child: Container(
-            width: 60,
-            height: 60,
+            width: detectorSize,
+            height: detectorSize,
             decoration: BoxDecoration(
               color: solvedCorners[3] ? Colors.green.withOpacity(0.3) : Colors.transparent,
               shape: BoxShape.circle,
