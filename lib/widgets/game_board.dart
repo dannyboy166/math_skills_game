@@ -4,6 +4,7 @@ import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
 import 'number_tile.dart';
 import 'square_ring.dart';
+import 'center_target.dart';
 
 class GameBoard extends StatefulWidget {
   final int targetNumber;
@@ -45,20 +46,43 @@ class GameBoardState extends State<GameBoard> {
     
     // Generate outer ring numbers (20 items - 5 per side)
     final outerNumbers = List.generate(20, (index) {
-      // Generate numbers based on operation
-      switch (widget.operation) {
-        case 'addition':
-          return random.nextInt(30) + 1;
-        case 'subtraction':
-          return random.nextInt(30) + 1;
-        case 'multiplication':
-          return random.nextInt(12) * widget.targetNumber; // Multiples of target
-        case 'division':
-          // For division, ensure we get whole number results
-          final possibleMultiples = List.generate(10, (i) => widget.targetNumber * (i + 1));
-          return possibleMultiples[random.nextInt(possibleMultiples.length)];
-        default:
-          return random.nextInt(30) + 1;
+      // Special handling for corner positions
+      final isCorner = [0, 4, 10, 14].contains(index);
+      
+      if (isCorner) {
+        // For corners, create numbers that form valid equations with the target
+        // and the corresponding inner corner
+        final innerCornerIndex = [0, 4, 10, 14][([0, 4, 10, 14].indexOf(index))];
+        final innerValue = innerNumbers[innerCornerIndex];
+        
+        switch (widget.operation) {
+          case 'addition':
+            return innerValue + widget.targetNumber;
+          case 'subtraction':
+            return (random.nextBool())
+                ? innerValue + widget.targetNumber // inner - target = outer
+                : innerValue - widget.targetNumber; // inner + target = outer
+          case 'multiplication':
+            return innerValue * widget.targetNumber;
+          case 'division':
+            return innerValue * widget.targetNumber; // inner = outer ÷ target
+          default:
+            return random.nextInt(30) + 1;
+        }
+      } else {
+        // Non-corner positions can have more random values
+        switch (widget.operation) {
+          case 'addition':
+            return random.nextInt(30) + 1;
+          case 'subtraction':
+            return random.nextInt(30) + 1;
+          case 'multiplication':
+            return random.nextInt(15) + 1;
+          case 'division':
+            return random.nextInt(50) + 1;
+          default:
+            return random.nextInt(30) + 1;
+        }
       }
     });
     
@@ -94,13 +118,13 @@ class GameBoardState extends State<GameBoard> {
   Widget build(BuildContext context) {
     // Use MediaQuery to get the screen width and adjust the container size accordingly
     final screenWidth = MediaQuery.of(context).size.width;
-    final boardSize = screenWidth - 32; // Full width minus padding
+    final boardSize = screenWidth * 0.95; // Use 95% of screen width
     
-    // Scale the ring sizes based on the board size
-    final outerRingSize = boardSize;
-    final innerRingSize = boardSize * 0.67; // Approximately 2/3 of the outer ring
+    // Add more space between rings to prevent overlap
+    final outerRingSize = boardSize * 0.95;
+    final innerRingSize = boardSize * 0.60; // Smaller inner ring to prevent overlapping
     
-    // Update the ring models with the new sizes
+    // Create the models with larger outer ring and smaller inner ring to avoid overlap
     outerRingModel = RingModel(
       numbers: outerRingModel.numbers,
       itemColor: outerRingModel.itemColor,
@@ -139,33 +163,8 @@ class GameBoardState extends State<GameBoard> {
             solvedCorners: solvedCorners,
           ),
           
-          // Center number (fixed)
-          Container(
-            width: 70, // Increased from 60
-            height: 70, // Increased from 60
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 5,
-                  offset: Offset(2, 2),
-                ),
-              ],
-              border: Border.all(color: Colors.teal, width: 4),
-            ),
-            child: Center(
-              child: Text(
-                '${widget.targetNumber}',
-                style: TextStyle(
-                  fontSize: 36, // Increased from 30
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal,
-                ),
-              ),
-            ),
-          ),
+          // Center number (fixed) - Using a square with rounded corners like in your example
+          CenterTarget(targetNumber: widget.targetNumber),
           
           // Operators at diagonals
           ...buildOperatorOverlays(boardSize),
@@ -351,17 +350,23 @@ class GameBoardState extends State<GameBoard> {
         isCorrect = innerCornerNumbers[cornerIndex] * widget.targetNumber == outerCornerNumbers[cornerIndex];
         break;
       case 'division':
-        isCorrect = innerCornerNumbers[cornerIndex] / widget.targetNumber == outerCornerNumbers[cornerIndex] ||
-                    widget.targetNumber / innerCornerNumbers[cornerIndex] == outerCornerNumbers[cornerIndex];
+        isCorrect = innerCornerNumbers[cornerIndex] * widget.targetNumber == outerCornerNumbers[cornerIndex] || // inner * target = outer
+                    outerCornerNumbers[cornerIndex] / widget.targetNumber == innerCornerNumbers[cornerIndex]; // outer / target = inner
         break;
     }
     
     setState(() {
       solvedCorners[cornerIndex] = isCorrect;
       
-      // If correct, show celebration effect (to be implemented)
       if (isCorrect) {
-        // TODO: Add celebration effect
+        // Explanation of why this works: when we press a corner, we want to gray out both
+        // the outer and inner corner tiles that are part of this equation
+        
+        // TODO: Temporarily disable both inner and outer corner pieces once solved
+        // This will be implemented in the NumberTile widget and the SquareRing
+        
+        // Play a small celebration effect
+        // TODO: Add confetti or other visual indication of success
       }
       
       // Check if all corners are solved
@@ -377,7 +382,42 @@ class GameBoardState extends State<GameBoard> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Level Complete!'),
-          content: Text('You solved all the equations. Great job!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('You solved all the equations. Great job!'),
+              SizedBox(height: 20),
+              // Show the equations that were solved
+              ...List.generate(4, (index) {
+                final outerCornerNumbers = outerRingModel.getCornerNumbers();
+                final innerCornerNumbers = innerRingModel.getCornerNumbers();
+                String operatorSymbol;
+                switch (widget.operation) {
+                  case 'addition':
+                    operatorSymbol = '+';
+                    break;
+                  case 'subtraction':
+                    operatorSymbol = '-';
+                    break;
+                  case 'multiplication':
+                    operatorSymbol = '×';
+                    break;
+                  case 'division':
+                    operatorSymbol = '÷';
+                    break;
+                  default:
+                    operatorSymbol = '?';
+                }
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Text(
+                    '${innerCornerNumbers[index]} $operatorSymbol ${widget.targetNumber} = ${outerCornerNumbers[index]}',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                );
+              }),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () {

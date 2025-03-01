@@ -17,8 +17,8 @@ class SquareRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Scale tile size based on the ring size
-    final tileSize = ringModel.squareSize * 0.125; // Adjusted tile size
+    // Set fixed tile size relative to the ring size
+    final tileSize = ringModel.squareSize * 0.13;
     final rotatedNumbers = ringModel.getRotatedNumbers();
     
     return GestureDetector(
@@ -46,34 +46,38 @@ class SquareRing extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Stack(
+          clipBehavior: Clip.none, // Allow tiles to overflow if needed
           children: [
             // Position all the number tiles
-            ...List.generate(20, (index) { // Changed from 16 to 20
-              final position = SquarePositionUtils.calculateSquarePosition(
-                index, 
-                ringModel.squareSize, 
-                tileSize
-              );
-              
-              // Check if this is a corner position
-              final isCorner = ringModel.cornerIndices.contains(index);
-              final cornerIndex = isCorner ? ringModel.cornerIndices.indexOf(index) : -1;
-              
-              return Positioned(
-                left: position.dx,
-                top: position.dy,
-                child: NumberTile(
-                  number: rotatedNumbers[index],
-                  color: ringModel.itemColor,
-                  isDisabled: isCorner && solvedCorners[cornerIndex],
-                  onTap: () {},
-                  size: tileSize, // Pass the dynamic tile size
-                ),
-              );
-            }),
+            for (int index = 0; index < 20; index++) // 5 tiles per side * 4 sides
+              _buildPositionedTile(index, rotatedNumbers, tileSize),
           ],
         ),
       ),
     ); 
+  }
+  
+  Widget _buildPositionedTile(int index, List<int> rotatedNumbers, double tileSize) {
+    final position = SquarePositionUtils.calculateSquarePosition(
+      index, 
+      ringModel.squareSize, 
+      tileSize
+    );
+    
+    // Check if this is a corner position
+    final isCorner = ringModel.cornerIndices.contains(index);
+    final cornerIndex = isCorner ? ringModel.cornerIndices.indexOf(index) : -1;
+    
+    return Positioned(
+      left: position.dx,
+      top: position.dy,
+      child: NumberTile(
+        number: rotatedNumbers[index],
+        color: ringModel.itemColor,
+        isDisabled: isCorner && cornerIndex >= 0 && solvedCorners[cornerIndex],
+        onTap: () {},
+        size: tileSize,
+      ),
+    );
   }
 }

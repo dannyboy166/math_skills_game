@@ -18,31 +18,35 @@ class NumberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isDisabled ? null : onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: isDisabled ? Colors.grey : color,
-          shape: BoxShape.circle,
-          boxShadow: isDisabled
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 4,
-                  offset: Offset(2, 2),
-                ),
-              ],
-        ),
-        child: Center(
-          child: Text(
-            '$number',
-            style: TextStyle(
-              fontSize: size * 0.4, // Dynamic font size based on tile size
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+    return Semantics(
+      button: true,
+      enabled: !isDisabled,
+      child: GestureDetector(
+        onTap: isDisabled ? null : onTap,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: isDisabled ? Colors.grey : color,
+            shape: BoxShape.circle,
+            boxShadow: isDisabled
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 4,
+                    offset: Offset(2, 2),
+                  ),
+                ],
+          ),
+          child: Center(
+            child: Text(
+              '$number',
+              style: TextStyle(
+                fontSize: size * 0.4, // Dynamic font size based on tile size
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ),

@@ -8,33 +8,39 @@ class SquarePositionUtils {
   /// [squareSize] - Size of the square
   /// [itemSize] - Size of the item (width/height)
   static Offset calculateSquarePosition(int index, double squareSize, double itemSize) {
-    final tilesPerSide = 5; // 5 tiles per side (changed from 4)
+    final tilesPerSide = 5; // 5 tiles per side
     
     // Determine which side the tile is on
     int side = index ~/ tilesPerSide; // 0=top, 1=right, 2=bottom, 3=left
     int positionOnSide = index % tilesPerSide;
     
-    double x, y;
-    final padding = itemSize / 2;
+    // Calculate the available space on each side
     final availableSpace = squareSize - itemSize;
-    final step = availableSpace / (tilesPerSide - 1);
+    
+    // Fixed positions for each element on a side (normalized from 0.0 to 1.0)
+    // These values create the non-uniform spacing you requested
+    // First and last positions are corners, others follow your spacing pattern
+    List<double> positions = [0.0, 0.25, 0.5, 0.75, 1.0];
+    
+    double x, y;
+    final inset = itemSize / 2;
     
     switch (side) {
       case 0: // Top side
-        x = padding + positionOnSide * step;
-        y = padding;
+        x = inset + positions[positionOnSide] * availableSpace;
+        y = inset;
         break;
       case 1: // Right side
-        x = squareSize - padding;
-        y = padding + positionOnSide * step;
+        x = squareSize - inset;
+        y = inset + positions[positionOnSide] * availableSpace;
         break;
       case 2: // Bottom side
-        x = squareSize - padding - positionOnSide * step;
-        y = squareSize - padding;
+        x = squareSize - inset - positions[positionOnSide] * availableSpace;
+        y = squareSize - inset;
         break;
       case 3: // Left side
-        x = padding;
-        y = squareSize - padding - positionOnSide * step;
+        x = inset;
+        y = squareSize - inset - positions[positionOnSide] * availableSpace;
         break;
       default:
         x = 0;
@@ -47,7 +53,7 @@ class SquarePositionUtils {
   /// Gets all positions for items in a square
   static List<Offset> getSquarePositions(double squareSize, double itemSize) {
     List<Offset> positions = [];
-    for (int i = 0; i < 20; i++) { // Changed from 16 to 20 (5 tiles per side * 4 sides)
+    for (int i = 0; i < 20; i++) { // 20 positions (5 tiles per side * 4 sides)
       positions.add(calculateSquarePosition(i, squareSize, itemSize));
     }
     return positions;
@@ -55,7 +61,7 @@ class SquarePositionUtils {
   
   /// Gets the index of the item at a corner
   static List<int> getCornerIndices() {
-    // Corners are at indices 0, 4, 10, 14 (changed from 0, 3, 8, 11)
+    // Corners are at indices 0, 4, 10, 14
     return [0, 4, 10, 14];
   }
 }
