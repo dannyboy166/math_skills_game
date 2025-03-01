@@ -219,7 +219,7 @@ class GameBoardState extends State<GameBoard> {
 
     // Calculate diagonal positions based on board size
     // Position between inner ring and center
-    final centerSize = 85.0; // Width of the center target
+    final centerSize = 70.0; // Width of the center target
     final operatorOffset = (innerRingSize / 2 + centerSize / 2) /
         2; // Halfway between center and inner ring
 
@@ -227,7 +227,7 @@ class GameBoardState extends State<GameBoard> {
     return [
       // Top-right
       Positioned(
-        top: boardSize / 2 - operatorOffset,
+        top: boardSize / 2.1 - operatorOffset,
         right: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
@@ -240,7 +240,7 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-right
       Positioned(
-        bottom: boardSize / 2 - operatorOffset,
+        bottom: boardSize / 2.1 - operatorOffset,
         right: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
@@ -253,7 +253,7 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-left
       Positioned(
-        bottom: boardSize / 2 - operatorOffset,
+        bottom: boardSize / 2.1 - operatorOffset,
         left: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
@@ -266,7 +266,7 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Top-left
       Positioned(
-        top: boardSize / 2 - operatorOffset,
+        top: boardSize / 2.1 - operatorOffset,
         left: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
