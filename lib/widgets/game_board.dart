@@ -12,8 +12,8 @@ class GameBoard extends StatefulWidget {
   final String operation;
 
   const GameBoard({
-    Key? key, 
-    required this.targetNumber, 
+    Key? key,
+    required this.targetNumber,
     required this.operation,
   }) : super(key: key);
 
@@ -24,42 +24,46 @@ class GameBoard extends StatefulWidget {
 class GameBoardState extends State<GameBoard> {
   // Track solved corners
   List<bool> solvedCorners = [false, false, false, false];
-  
+
   // Models for our rings
   late RingModel outerRingModel;
   late List<int> innerNumbers; // Just use a simple list for inner numbers
   int innerRotationSteps = 0;
-  
+
   @override
   void initState() {
     super.initState();
     // Initialize ring models
     generateGameNumbers();
   }
-  
+
   void generateGameNumbers() {
     final random = Random();
-    
+
     // For inner ring, use fixed numbers 1-12 in order
     innerNumbers = List.generate(12, (index) => index + 1);
     innerRotationSteps = 0;
-    
+
     // Generate outer ring numbers
     final outerNumbers = List.generate(16, (index) {
       // Special handling for corner positions
       final isCorner = SquarePositionUtils.isCornerIndex(index);
-      
+
       if (isCorner) {
         // Map corner indices to the corresponding positions in the inner ring
         // 0 → 0, 4 → 3, 8 → 6, 12 → 9
         int innerIndex;
-        if (index == 0) innerIndex = 0;       // Top-left
-        else if (index == 4) innerIndex = 3;  // Top-right
-        else if (index == 8) innerIndex = 6;  // Bottom-right
-        else innerIndex = 9;                  // Bottom-left (index == 12)
-        
+        if (index == 0)
+          innerIndex = 0; // Top-left
+        else if (index == 4)
+          innerIndex = 3; // Top-right
+        else if (index == 8)
+          innerIndex = 6; // Bottom-right
+        else
+          innerIndex = 9; // Bottom-left (index == 12)
+
         final innerValue = innerNumbers[innerIndex];
-        
+
         switch (widget.operation) {
           case 'addition':
             return innerValue + widget.targetNumber;
@@ -79,7 +83,7 @@ class GameBoardState extends State<GameBoard> {
         return random.nextInt(30) + 1;
       }
     });
-    
+
     // Create the outer ring model
     outerRingModel = RingModel(
       numbers: outerNumbers,
@@ -87,33 +91,36 @@ class GameBoardState extends State<GameBoard> {
       squareSize: 360,
     );
   }
-  
+
   // Handles rotation of the outer ring
   void rotateOuterRing(int steps) {
     setState(() {
       outerRingModel = outerRingModel.copyWith(rotationSteps: steps);
     });
   }
-  
+
   // Handles rotation of the inner ring
   void rotateInnerRing(int steps) {
     setState(() {
       innerRotationSteps = steps;
     });
   }
-  
+
   // Get the rotated inner numbers
   List<int> getRotatedInnerNumbers() {
     if (innerRotationSteps == 0) return innerNumbers;
-    
+
     // Normalize the rotation steps
     final normalizedSteps = innerRotationSteps % 12;
     if (normalizedSteps == 0) return innerNumbers;
-    
+
     // Rotate the list
-    return [...innerNumbers.sublist(normalizedSteps), ...innerNumbers.sublist(0, normalizedSteps)];
+    return [
+      ...innerNumbers.sublist(normalizedSteps),
+      ...innerNumbers.sublist(0, normalizedSteps)
+    ];
   }
-  
+
   // Get the inner numbers at positions corresponding to corners
   List<int> getInnerCornerNumbers() {
     final rotated = getRotatedInnerNumbers();
@@ -126,11 +133,12 @@ class GameBoardState extends State<GameBoard> {
     // Use MediaQuery to get the screen width and adjust the container size accordingly
     final screenWidth = MediaQuery.of(context).size.width;
     final boardSize = screenWidth * 0.95; // Use 95% of screen width
-    
+
     // Add more space between rings to prevent overlap
     final outerRingSize = boardSize * 0.95;
-    final innerRingSize = boardSize * 0.60; // Smaller inner ring to prevent overlapping
-    
+    final innerRingSize =
+        boardSize * 0.60; // Smaller inner ring to prevent overlapping
+
     // Create the model with larger outer ring to avoid overlap
     outerRingModel = RingModel(
       numbers: outerRingModel.numbers,
@@ -138,10 +146,10 @@ class GameBoardState extends State<GameBoard> {
       squareSize: outerRingSize,
       rotationSteps: outerRingModel.rotationSteps,
     );
-    
+
     // Get rotated inner numbers
     final rotatedInnerNumbers = getRotatedInnerNumbers();
-    
+
     return Container(
       width: boardSize,
       height: boardSize,
@@ -158,7 +166,7 @@ class GameBoardState extends State<GameBoard> {
             onRotate: rotateOuterRing,
             solvedCorners: solvedCorners,
           ),
-          
+
           // Inner ring with 12 tiles (with larger corner tiles)
           Container(
             width: innerRingSize,
@@ -172,21 +180,24 @@ class GameBoardState extends State<GameBoard> {
               rotationSteps: innerRotationSteps,
             ),
           ),
-          
+
           // Center number (fixed)
           CenterTarget(targetNumber: widget.targetNumber),
-          
-          // Operators at diagonals
-          ...buildOperatorOverlays(boardSize),
-          
+
+          // Operators at diagonals - now larger and better positioned
+          ...buildOperatorOverlays(boardSize, innerRingSize),
+
+          // Equals signs between corner tiles
+          ...buildEqualsOverlays(boardSize, innerRingSize, outerRingSize),
+
           // Detect taps on corners for checking equations
           ...buildCornerDetectors(boardSize),
         ],
       ),
     );
   }
-  
-  List<Widget> buildOperatorOverlays(double boardSize) {
+
+  List<Widget> buildOperatorOverlays(double boardSize, double innerRingSize) {
     // Get operator symbol
     String operatorSymbol;
     switch (widget.operation) {
@@ -205,20 +216,23 @@ class GameBoardState extends State<GameBoard> {
       default:
         operatorSymbol = '?';
     }
-    
+
     // Calculate diagonal positions based on board size
-    final diagonalOffset = boardSize * 0.28;
-    
+    // Position between inner ring and center
+    final centerSize = 85.0; // Width of the center target
+    final operatorOffset = (innerRingSize / 2 + centerSize / 2) /
+        2; // Halfway between center and inner ring
+
     // Position operators at diagonals
     return [
       // Top-right
       Positioned(
-        top: diagonalOffset,
-        right: diagonalOffset,
+        top: boardSize / 2 - operatorOffset,
+        right: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 40, // Doubled from 28
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -226,12 +240,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-right
       Positioned(
-        bottom: diagonalOffset,
-        right: diagonalOffset,
+        bottom: boardSize / 2 - operatorOffset,
+        right: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 40,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -239,12 +253,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-left
       Positioned(
-        bottom: diagonalOffset,
-        left: diagonalOffset,
+        bottom: boardSize / 2 - operatorOffset,
+        left: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 40,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -252,12 +266,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Top-left
       Positioned(
-        top: diagonalOffset,
-        left: diagonalOffset,
+        top: boardSize / 2 - operatorOffset,
+        left: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 40,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -265,11 +279,92 @@ class GameBoardState extends State<GameBoard> {
       ),
     ];
   }
-  
+
+  List<Widget> buildEqualsOverlays(
+      double boardSize, double innerRingSize, double outerRingSize) {
+    // Calculate positions for equals signs between inner and outer corner tiles
+    final innerCornerOffset =
+        innerRingSize / 2 * 1.2; // 90% to the edge of inner ring
+    final outerCornerOffset =
+        outerRingSize / 2 * 0.8; // 70% to the edge of outer ring
+
+    // Halfway between inner and outer rings
+    final equalsOffset = (innerCornerOffset + outerCornerOffset) / 2;
+
+    return [
+      // Top-left equals (rotated clockwise 45 degrees)
+      Positioned(
+        top: boardSize / 2 - equalsOffset,
+        left: boardSize / 2 - equalsOffset,
+        child: Transform.rotate(
+          angle: 45 * (pi / 180), // Convert 45 degrees to radians (clockwise)
+          child: Text(
+            "=",
+            style: TextStyle(
+              fontSize: 36,
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+      // Top-right equals (rotated counter-clockwise 45 degrees)
+      Positioned(
+        top: boardSize / 2 - equalsOffset,
+        right: boardSize / 2 - equalsOffset,
+        child: Transform.rotate(
+          angle: -45 *
+              (pi / 180), // Convert -45 degrees to radians (counter-clockwise)
+          child: Text(
+            "=",
+            style: TextStyle(
+              fontSize: 36,
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+      // Bottom-right equals (rotated clockwise 45 degrees)
+      Positioned(
+        bottom: boardSize / 2 - equalsOffset,
+        right: boardSize / 2 - equalsOffset,
+        child: Transform.rotate(
+          angle: 45 * (pi / 180), // Convert 45 degrees to radians (clockwise)
+          child: Text(
+            "=",
+            style: TextStyle(
+              fontSize: 36,
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+      // Bottom-left equals (rotated counter-clockwise 45 degrees)
+      Positioned(
+        bottom: boardSize / 2 - equalsOffset,
+        left: boardSize / 2 - equalsOffset,
+        child: Transform.rotate(
+          angle: -45 *
+              (pi / 180), // Convert -45 degrees to radians (counter-clockwise)
+          child: Text(
+            "=",
+            style: TextStyle(
+              fontSize: 36,
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+
   List<Widget> buildCornerDetectors(double boardSize) {
     final cornerOffset = boardSize * 0.15;
     final detectorSize = 70.0;
-    
+
     return [
       // Top-left
       Positioned(
@@ -281,7 +376,9 @@ class GameBoardState extends State<GameBoard> {
             width: detectorSize,
             height: detectorSize,
             decoration: BoxDecoration(
-              color: solvedCorners[0] ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              color: solvedCorners[0]
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
           ),
@@ -297,7 +394,9 @@ class GameBoardState extends State<GameBoard> {
             width: detectorSize,
             height: detectorSize,
             decoration: BoxDecoration(
-              color: solvedCorners[1] ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              color: solvedCorners[1]
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
           ),
@@ -313,7 +412,9 @@ class GameBoardState extends State<GameBoard> {
             width: detectorSize,
             height: detectorSize,
             decoration: BoxDecoration(
-              color: solvedCorners[2] ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              color: solvedCorners[2]
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
           ),
@@ -329,7 +430,9 @@ class GameBoardState extends State<GameBoard> {
             width: detectorSize,
             height: detectorSize,
             decoration: BoxDecoration(
-              color: solvedCorners[3] ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              color: solvedCorners[3]
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
           ),
@@ -337,46 +440,48 @@ class GameBoardState extends State<GameBoard> {
       ),
     ];
   }
-  
+
   void checkCornerEquation(int cornerIndex) {
     // Get the numbers at the corners
     final outerCornerNumbers = outerRingModel.getCornerNumbers();
     final innerCornerNumbers = getInnerCornerNumbers();
-    
+
     // Get the current corner numbers based on rotation
     final outerNumber = outerCornerNumbers[cornerIndex];
     final innerNumber = innerCornerNumbers[cornerIndex];
-    
+
     // Check if the equation is correct
     bool isCorrect = false;
-    
+
     switch (widget.operation) {
       case 'addition':
         isCorrect = innerNumber + widget.targetNumber == outerNumber;
         break;
       case 'subtraction':
         isCorrect = innerNumber - widget.targetNumber == outerNumber ||
-                    widget.targetNumber - innerNumber == outerNumber;
+            widget.targetNumber - innerNumber == outerNumber;
         break;
       case 'multiplication':
         isCorrect = innerNumber * widget.targetNumber == outerNumber;
         break;
       case 'division':
-        isCorrect = innerNumber * widget.targetNumber == outerNumber || // inner * target = outer
-                    outerNumber / widget.targetNumber == innerNumber;   // outer / target = inner
+        isCorrect = innerNumber * widget.targetNumber ==
+                outerNumber || // inner * target = outer
+            outerNumber / widget.targetNumber ==
+                innerNumber; // outer / target = inner
         break;
     }
-    
+
     setState(() {
       solvedCorners[cornerIndex] = isCorrect;
-      
+
       // Check if all corners are solved
       if (solvedCorners.every((solved) => solved)) {
         showLevelCompleteDialog();
       }
     });
   }
-  
+
   void showLevelCompleteDialog() {
     showDialog(
       context: context,
