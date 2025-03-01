@@ -1,48 +1,50 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-/// Calculates positions for items arranged in a square
+/// Calculates positions for items arranged in a square with 5 items per side
+/// but corners are shared between sides for a total of 16 tiles
 class SquarePositionUtils {
   /// Calculate position for an item on a square layout
-  /// [index] - The item's index (0-19)
+  /// [index] - The item's index (0-15)
   /// [squareSize] - Size of the square
   /// [itemSize] - Size of the item (width/height)
   static Offset calculateSquarePosition(int index, double squareSize, double itemSize) {
-    final tilesPerSide = 5; // 5 tiles per side
+    // Each side has 5 positions (0-4), but corners are shared
+    // So the indices are:
+    // Top row: 0, 1, 2, 3, 4
+    // Right column: 4, 5, 6, 7, 8
+    // Bottom row (right to left): 8, 9, 10, 11, 12 
+    // Left column (bottom to top): 12, 13, 14, 15, 0
     
-    // Determine which side the tile is on
-    int side = index ~/ tilesPerSide; // 0=top, 1=right, 2=bottom, 3=left
-    int positionOnSide = index % tilesPerSide;
+    // The physical mapping of indices is:
+    // [0]  [1]  [2]  [3]  [4]
+    // [15]           [5]
+    // [14]           [6]
+    // [13]           [7]
+    // [12] [11] [10] [9]  [8]
     
     // Calculate the available space (full path along each side)
     final availableSpace = squareSize - itemSize;
     
-    // Fixed normalized positions for each element on a side (from 0.0 to 1.0)
-    // These values create evenly spaced tiles with corners at 0.0 and 1.0
-    List<double> positions = [0.0, 0.25, 0.5, 0.75, 1.0];
-    
+    // Position depends on which segment the index falls into
     double x, y;
     
-    switch (side) {
-      case 0: // Top side
-        x = positions[positionOnSide] * availableSpace;
-        y = 0;
-        break;
-      case 1: // Right side
-        x = squareSize - itemSize;
-        y = positions[positionOnSide] * availableSpace;
-        break;
-      case 2: // Bottom side
-        x = (1.0 - positions[positionOnSide]) * availableSpace;
-        y = squareSize - itemSize;
-        break;
-      case 3: // Left side
-        x = 0;
-        y = (1.0 - positions[positionOnSide]) * availableSpace;
-        break;
-      default:
-        x = 0;
-        y = 0;
+    if (index < 5) {
+      // Top row: indices 0-4
+      x = (index / 4) * availableSpace;
+      y = 0;
+    } else if (index < 9) {
+      // Right column: indices 4-8
+      x = availableSpace;
+      y = ((index - 4) / 4) * availableSpace;
+    } else if (index < 13) {
+      // Bottom row: indices 8-12
+      x = availableSpace - ((index - 8) / 4) * availableSpace;
+      y = availableSpace;
+    } else {
+      // Left column: indices 12-15
+      x = 0;
+      y = availableSpace - ((index - 12) / 4) * availableSpace;
     }
     
     return Offset(x, y);
@@ -51,21 +53,21 @@ class SquarePositionUtils {
   /// Gets all positions for items in a square
   static List<Offset> getSquarePositions(double squareSize, double itemSize) {
     List<Offset> positions = [];
-    for (int i = 0; i < 20; i++) { // 20 positions (5 tiles per side * 4 sides)
+    for (int i = 0; i < 16; i++) {
       positions.add(calculateSquarePosition(i, squareSize, itemSize));
     }
     return positions;
   }
   
-  /// Gets the index of the item at a corner
+  /// Gets the index of the items at corners
   static List<int> getCornerIndices() {
-    // Corners are at indices 0, 4, 10, 14
-    return [0, 4, 10, 14];
+    // Corners are at indices 0, 4, 8, 12
+    return [0, 4, 8, 12];
   }
   
-  /// Determines if an index is a corner in either the inner or outer ring
+  /// Determines if an index is a corner
   static bool isCornerIndex(int index) {
-    // Only consider these specific indices as corners to prevent duplication
-    return [0, 4, 10, 14].contains(index);
+    // Corners are at indices 0, 4, 8, 12
+    return [0, 4, 8, 12].contains(index);
   }
 }

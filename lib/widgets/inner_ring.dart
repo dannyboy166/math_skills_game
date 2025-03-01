@@ -19,6 +19,7 @@ class InnerRing extends StatelessWidget {
   Widget build(BuildContext context) {
     // Set fixed tile size relative to the ring size
     final tileSize = ringModel.squareSize * 0.13;
+    final cornerSize = tileSize * 1.3; // 30% larger for inner ring corners
     final rotatedNumbers = ringModel.getRotatedNumbers();
     
     return GestureDetector(
@@ -46,18 +47,52 @@ class InnerRing extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Position only the non-corner tiles for inner ring
-            for (int index = 0; index < 20; index++)
-              if (!_isCornerIndex(index))
+            for (int index = 0; index < 16; index++)
+              if (!SquarePositionUtils.isCornerIndex(index))
                 _buildPositionedTile(index, rotatedNumbers, tileSize),
+                
+            // Add corner tiles for inner ring too
+            ..._buildCornerTiles(rotatedNumbers, tileSize, cornerSize),
           ],
         ),
       ),
     ); 
   }
   
-  bool _isCornerIndex(int index) {
-    // Corners are at indices 0, 4, 10, 14
-    return [0, 4, 10, 14].contains(index);
+  List<Widget> _buildCornerTiles(List<int> rotatedNumbers, double tileSize, double cornerSize) {
+    // Corners are at indices 0, 4, 8, 12
+    final cornerIndices = [0, 4, 8, 12];
+    
+    return cornerIndices.map((index) {
+      // Calculate the corner position with an adjustment for the inner ring
+      final position = SquarePositionUtils.calculateSquarePosition(
+        index, 
+        ringModel.squareSize, 
+        tileSize
+      );
+      
+      // Apply adjustment to center the larger tile where the regular tile would be
+      final offsetDiff = (cornerSize - tileSize) / 2;
+      final adjustedX = position.dx - offsetDiff;
+      final adjustedY = position.dy - offsetDiff;
+      
+      final cornerIndex = cornerIndices.indexOf(index);
+      final isSolved = cornerIndex >= 0 && solvedCorners[cornerIndex];
+      
+      return Positioned(
+        left: adjustedX,
+        top: adjustedY,
+        width: cornerSize,
+        height: cornerSize,
+        child: NumberTile(
+          number: rotatedNumbers[index],
+          color: ringModel.itemColor,
+          isDisabled: isSolved,
+          onTap: () {},
+          size: cornerSize,
+        ),
+      );
+    }).toList();
   }
   
   Widget _buildPositionedTile(int index, List<int> rotatedNumbers, double tileSize) {
@@ -72,14 +107,12 @@ class InnerRing extends StatelessWidget {
       top: position.dy,
       width: tileSize,
       height: tileSize,
-      child: Center(
-        child: NumberTile(
-          number: rotatedNumbers[index],
-          color: ringModel.itemColor,
-          isDisabled: false,
-          onTap: () {},
-          size: tileSize,
-        ),
+      child: NumberTile(
+        number: rotatedNumbers[index],
+        color: ringModel.itemColor,
+        isDisabled: false,
+        onTap: () {},
+        size: tileSize,
       ),
     );
   }

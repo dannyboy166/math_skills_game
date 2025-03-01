@@ -19,6 +19,7 @@ class SquareRing extends StatelessWidget {
   Widget build(BuildContext context) {
     // Set fixed tile size relative to the ring size
     final tileSize = ringModel.squareSize * 0.13;
+    final cornerSize = tileSize * 1.5; // 50% larger for corners
     final rotatedNumbers = ringModel.getRotatedNumbers();
     
     return GestureDetector(
@@ -45,42 +46,36 @@ class SquareRing extends StatelessWidget {
           clipBehavior: Clip.none, // Allow tiles to overflow if needed
           fit: StackFit.expand,
           children: [
-            // Position all the non-corner tiles
-            for (int index = 0; index < 20; index++) // 5 tiles per side * 4 sides
-              if (!_isCornerIndex(index)) // Only render non-corner tiles here
+            // Position the non-corner tiles
+            for (int index = 0; index < 16; index++)
+              if (!SquarePositionUtils.isCornerIndex(index))
                 _buildPositionedTile(index, rotatedNumbers, tileSize),
                 
-            // Handle corners separately with larger size
-            if (ringModel.itemColor == Colors.teal) // Only for the outer ring
-              ..._buildCornerTiles(rotatedNumbers, tileSize),
+            // Handle corners separately with larger size - only for outer ring
+            if (ringModel.itemColor == Colors.teal)
+              ..._buildCornerTiles(rotatedNumbers, tileSize, cornerSize),
           ],
         ),
       ),
     ); 
   }
   
-  bool _isCornerIndex(int index) {
-    // Corners are at indices 0, 4, 10, 14
-    return [0, 4, 10, 14].contains(index);
-  }
-  
-  List<Widget> _buildCornerTiles(List<int> rotatedNumbers, double tileSize) {
-    // Corners are at indices 0, 4, 10, 14
-    // Create positions for corners
-    final cornerIndices = [0, 4, 10, 14];
-    final cornerSize = tileSize * 1.5; // 50% larger for corners
+  List<Widget> _buildCornerTiles(List<int> rotatedNumbers, double tileSize, double cornerSize) {
+    // Corners are at indices 0, 4, 8, 12
+    final cornerIndices = [0, 4, 8, 12];
     
     return cornerIndices.map((index) {
       // Calculate the corner position
-      final normalPosition = SquarePositionUtils.calculateSquarePosition(
+      final position = SquarePositionUtils.calculateSquarePosition(
         index, 
         ringModel.squareSize, 
         tileSize
       );
       
-      // Adjust based on which corner it is
-      double adjustedX = normalPosition.dx;
-      double adjustedY = normalPosition.dy;
+      // Apply adjustment to center the larger tile where the regular tile would be
+      final offsetDiff = (cornerSize - tileSize) / 2;
+      final adjustedX = position.dx - offsetDiff;
+      final adjustedY = position.dy - offsetDiff;
       
       final cornerIndex = cornerIndices.indexOf(index);
       final isSolved = cornerIndex >= 0 && solvedCorners[cornerIndex];
@@ -90,14 +85,12 @@ class SquareRing extends StatelessWidget {
         top: adjustedY,
         width: cornerSize,
         height: cornerSize,
-        child: Center(
-          child: NumberTile(
-            number: rotatedNumbers[index],
-            color: ringModel.itemColor,
-            isDisabled: isSolved,
-            onTap: () {},
-            size: cornerSize,
-          ),
+        child: NumberTile(
+          number: rotatedNumbers[index],
+          color: ringModel.itemColor,
+          isDisabled: isSolved,
+          onTap: () {},
+          size: cornerSize,
         ),
       );
     }).toList();
@@ -115,14 +108,12 @@ class SquareRing extends StatelessWidget {
       top: position.dy,
       width: tileSize,
       height: tileSize,
-      child: Center(
-        child: NumberTile(
-          number: rotatedNumbers[index],
-          color: ringModel.itemColor,
-          isDisabled: false,
-          onTap: () {},
-          size: tileSize,
-        ),
+      child: NumberTile(
+        number: rotatedNumbers[index],
+        color: ringModel.itemColor,
+        isDisabled: false,
+        onTap: () {},
+        size: tileSize,
       ),
     );
   }

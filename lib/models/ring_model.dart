@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 class RingModel {
-  final int itemCount = 20; // Changed from 16 to 20 tiles (5 per side)
+  final int itemCount = 16; // Total of 16 tiles
   final List<int> numbers;
   final Color itemColor;
   final double squareSize;
   int rotationSteps; // Number of step rotations (0 = initial position)
   
   // Corner indices (clockwise from top-left)
-  final List<int> cornerIndices = [0, 4, 10, 14]; // Changed from [0, 3, 8, 11]
+  // Based on the layout with 5 tiles per side where corners are shared
+  final List<int> cornerIndices = [0, 4, 8, 12];
   
   RingModel({
     required this.numbers,

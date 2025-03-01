@@ -13,8 +13,8 @@ class GameBoard extends StatefulWidget {
   final String operation;
 
   const GameBoard({
-    Key? key, 
-    required this.targetNumber, 
+    Key? key,
+    required this.targetNumber,
     required this.operation,
   }) : super(key: key);
 
@@ -25,38 +25,40 @@ class GameBoard extends StatefulWidget {
 class GameBoardState extends State<GameBoard> {
   // Track solved corners
   List<bool> solvedCorners = [false, false, false, false];
-  
+
   // Models for our rings
   late RingModel outerRingModel;
   late RingModel innerRingModel;
-  
+
   @override
   void initState() {
     super.initState();
     // Initialize ring models
     generateGameNumbers();
   }
-  
+
   void generateGameNumbers() {
     final random = Random();
-    
-    // Generate inner ring numbers (20 items - 5 per side)
-    final innerNumbers = List.generate(20, (index) {
+
+    // Generate 16 numbers for each ring (5 per side, with corners shared)
+
+    // Generate inner ring numbers
+    final innerNumbers = List.generate(16, (index) {
       // Basic numbers 1-12
       return random.nextInt(12) + 1;
     });
-    
-    // Generate outer ring numbers (20 items - 5 per side)
-    final outerNumbers = List.generate(20, (index) {
+
+    // Generate outer ring numbers
+    final outerNumbers = List.generate(16, (index) {
       // Special handling for corner positions
-      final isCorner = [0, 4, 10, 14].contains(index);
-      
+      final isCorner = SquarePositionUtils.isCornerIndex(index);
+
       if (isCorner) {
         // For corners, create numbers that form valid equations with the target
         // and the corresponding inner corner
-        final innerCornerIndex = index; // Same index for inner/outer corners
-        final innerValue = innerNumbers[innerCornerIndex];
-        
+        final innerValue =
+            innerNumbers[index]; // Same index for inner/outer corners
+
         switch (widget.operation) {
           case 'addition':
             return innerValue + widget.targetNumber;
@@ -76,28 +78,28 @@ class GameBoardState extends State<GameBoard> {
         return random.nextInt(30) + 1;
       }
     });
-    
+
     // Create ring models with appropriate square sizes
     innerRingModel = RingModel(
       numbers: innerNumbers,
       itemColor: Colors.lightGreen,
       squareSize: 240,
     );
-    
+
     outerRingModel = RingModel(
       numbers: outerNumbers,
       itemColor: Colors.teal,
       squareSize: 360,
     );
   }
-  
+
   // Handles rotation of the outer ring
   void rotateOuterRing(int steps) {
     setState(() {
       outerRingModel = outerRingModel.copyWith(rotationSteps: steps);
     });
   }
-  
+
   // Handles rotation of the inner ring
   void rotateInnerRing(int steps) {
     setState(() {
@@ -110,11 +112,12 @@ class GameBoardState extends State<GameBoard> {
     // Use MediaQuery to get the screen width and adjust the container size accordingly
     final screenWidth = MediaQuery.of(context).size.width;
     final boardSize = screenWidth * 0.95; // Use 95% of screen width
-    
+
     // Add more space between rings to prevent overlap
     final outerRingSize = boardSize * 0.95;
-    final innerRingSize = boardSize * 0.60; // Smaller inner ring to prevent overlapping
-    
+    final innerRingSize =
+        boardSize * 0.60; // Smaller inner ring to prevent overlapping
+
     // Create the models with larger outer ring and smaller inner ring to avoid overlap
     outerRingModel = RingModel(
       numbers: outerRingModel.numbers,
@@ -122,14 +125,14 @@ class GameBoardState extends State<GameBoard> {
       squareSize: outerRingSize,
       rotationSteps: outerRingModel.rotationSteps,
     );
-    
+
     innerRingModel = RingModel(
       numbers: innerRingModel.numbers,
       itemColor: innerRingModel.itemColor,
       squareSize: innerRingSize,
       rotationSteps: innerRingModel.rotationSteps,
     );
-    
+
     return Container(
       width: boardSize,
       height: boardSize,
@@ -146,27 +149,27 @@ class GameBoardState extends State<GameBoard> {
             onRotate: rotateOuterRing,
             solvedCorners: solvedCorners,
           ),
-          
+
           // Inner ring - uses InnerRing that doesn't render corners
           InnerRing(
             ringModel: innerRingModel,
             onRotate: rotateInnerRing,
             solvedCorners: solvedCorners,
           ),
-          
+
           // Center number (fixed)
           CenterTarget(targetNumber: widget.targetNumber),
-          
+
           // Operators at diagonals
           ...buildOperatorOverlays(boardSize),
-          
+
           // Detect taps on corners for checking equations
           ...buildCornerDetectors(boardSize),
         ],
       ),
     );
   }
-  
+
   List<Widget> buildOperatorOverlays(double boardSize) {
     // Get operator symbol
     String operatorSymbol;
@@ -186,10 +189,10 @@ class GameBoardState extends State<GameBoard> {
       default:
         operatorSymbol = '?';
     }
-    
+
     // Calculate diagonal positions based on board size
     final diagonalOffset = boardSize * 0.28; // Adjusted for 5 tiles per side
-    
+
     // Position operators at diagonals
     return [
       // Top-right
@@ -246,12 +249,12 @@ class GameBoardState extends State<GameBoard> {
       ),
     ];
   }
-  
+
   List<Widget> buildCornerDetectors(double boardSize) {
     // Calculate corner positions based on board size
     final cornerOffset = boardSize * 0.15; // Adjusted for larger board
     final detectorSize = 70.0; // Increased from 60
-    
+
     // Position corner detectors
     return [
       // Top-left
@@ -264,7 +267,9 @@ class GameBoardState extends State<GameBoard> {
             width: detectorSize,
             height: detectorSize,
             decoration: BoxDecoration(
-              color: solvedCorners[0] ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              color: solvedCorners[0]
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
           ),
@@ -280,7 +285,9 @@ class GameBoardState extends State<GameBoard> {
             width: detectorSize,
             height: detectorSize,
             decoration: BoxDecoration(
-              color: solvedCorners[1] ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              color: solvedCorners[1]
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
           ),
@@ -296,7 +303,9 @@ class GameBoardState extends State<GameBoard> {
             width: detectorSize,
             height: detectorSize,
             decoration: BoxDecoration(
-              color: solvedCorners[2] ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              color: solvedCorners[2]
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
           ),
@@ -312,7 +321,9 @@ class GameBoardState extends State<GameBoard> {
             width: detectorSize,
             height: detectorSize,
             decoration: BoxDecoration(
-              color: solvedCorners[3] ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              color: solvedCorners[3]
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
           ),
@@ -320,42 +331,48 @@ class GameBoardState extends State<GameBoard> {
       ),
     ];
   }
-  
+
   void checkCornerEquation(int cornerIndex) {
     // Get the numbers at the corners
     final outerCornerNumbers = outerRingModel.getCornerNumbers();
     final innerCornerNumbers = innerRingModel.getCornerNumbers();
-    
+
+    // Get the current corner numbers based on rotation
+    final outerNumber = outerCornerNumbers[cornerIndex];
+    final innerNumber = innerCornerNumbers[cornerIndex];
+
     // Check if the equation is correct
     bool isCorrect = false;
-    
+
     switch (widget.operation) {
       case 'addition':
-        isCorrect = innerCornerNumbers[cornerIndex] + widget.targetNumber == outerCornerNumbers[cornerIndex];
+        isCorrect = innerNumber + widget.targetNumber == outerNumber;
         break;
       case 'subtraction':
-        isCorrect = innerCornerNumbers[cornerIndex] - widget.targetNumber == outerCornerNumbers[cornerIndex] ||
-                    widget.targetNumber - innerCornerNumbers[cornerIndex] == outerCornerNumbers[cornerIndex];
+        isCorrect = innerNumber - widget.targetNumber == outerNumber ||
+            widget.targetNumber - innerNumber == outerNumber;
         break;
       case 'multiplication':
-        isCorrect = innerCornerNumbers[cornerIndex] * widget.targetNumber == outerCornerNumbers[cornerIndex];
+        isCorrect = innerNumber * widget.targetNumber == outerNumber;
         break;
       case 'division':
-        isCorrect = innerCornerNumbers[cornerIndex] * widget.targetNumber == outerCornerNumbers[cornerIndex] || // inner * target = outer
-                    outerCornerNumbers[cornerIndex] / widget.targetNumber == innerCornerNumbers[cornerIndex]; // outer / target = inner
+        isCorrect = innerNumber * widget.targetNumber ==
+                outerNumber || // inner * target = outer
+            outerNumber / widget.targetNumber ==
+                innerNumber; // outer / target = inner
         break;
     }
-    
+
     setState(() {
       solvedCorners[cornerIndex] = isCorrect;
-      
+
       // Check if all corners are solved
       if (solvedCorners.every((solved) => solved)) {
         showLevelCompleteDialog();
       }
     });
   }
-  
+
   void showLevelCompleteDialog() {
     showDialog(
       context: context,
