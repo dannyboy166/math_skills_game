@@ -294,8 +294,8 @@ class GameBoardState extends State<GameBoard> {
     return [
       // Top-left equals (rotated clockwise 45 degrees)
       Positioned(
-        top: boardSize / 2 - equalsOffset,
-        left: boardSize / 2 - equalsOffset,
+        top: boardSize / 2 - (equalsOffset+5),
+        left: boardSize / 2 - (equalsOffset-10),
         child: Transform.rotate(
           angle: 45 * (pi / 180), // Convert 45 degrees to radians (clockwise)
           child: Text(
@@ -310,8 +310,8 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Top-right equals (rotated counter-clockwise 45 degrees)
       Positioned(
-        top: boardSize / 2 - equalsOffset,
-        right: boardSize / 2 - equalsOffset,
+        top: boardSize / 2 - (equalsOffset+5),
+        right: boardSize / 2 - (equalsOffset-10),
         child: Transform.rotate(
           angle: -45 *
               (pi / 180), // Convert -45 degrees to radians (counter-clockwise)
@@ -327,8 +327,8 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-right equals (rotated clockwise 45 degrees)
       Positioned(
-        bottom: boardSize / 2 - equalsOffset,
-        right: boardSize / 2 - equalsOffset,
+        bottom: boardSize / 2 - (equalsOffset+5),
+        right: boardSize / 2 - (equalsOffset-10),
         child: Transform.rotate(
           angle: 45 * (pi / 180), // Convert 45 degrees to radians (clockwise)
           child: Text(
@@ -343,8 +343,8 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-left equals (rotated counter-clockwise 45 degrees)
       Positioned(
-        bottom: boardSize / 2 - equalsOffset,
-        left: boardSize / 2 - equalsOffset,
+        bottom: boardSize / 2 - (equalsOffset+5),
+        left: boardSize / 2 - (equalsOffset-10),
         child: Transform.rotate(
           angle: -45 *
               (pi / 180), // Convert -45 degrees to radians (counter-clockwise)
