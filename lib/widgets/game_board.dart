@@ -183,10 +183,6 @@ class GameBoardState extends State<GameBoard> {
         ]));
   }
 
-
-
-
-
   List<Widget> buildOperatorOverlays(double boardSize, double innerRingSize) {
     // Get operator symbol
     String operatorSymbol;
@@ -447,7 +443,10 @@ class GameBoardState extends State<GameBoard> {
     ];
   }
 
-  // This method handles swipes on corner tiles and triggers inner ring animation
+// This file contains the updated _handleCornerSwipe method and related code
+// to be placed in your game_board.dart file
+
+// Method to handle swipes on corner tiles and triggers inner ring animation
   void _handleCornerSwipe(
       DragEndDetails details, int cornerIndex, bool isHorizontal) {
     // Ensure there's meaningful velocity
@@ -464,15 +463,15 @@ class GameBoardState extends State<GameBoard> {
           rotateClockwise = details.primaryVelocity! > 0; // Right = clockwise
           break;
         case 1: // Top-right
-          rotateClockwise = details.primaryVelocity! < 0; // Left = clockwise
+          rotateClockwise =
+              details.primaryVelocity! > 0; // Right = clockwise (FIXED)
           break;
         case 2: // Bottom-right
-          rotateClockwise =
-              details.primaryVelocity! > 0; // Right = counter-clockwise
+          rotateClockwise = details.primaryVelocity! < 0; // Left = clockwise
           break;
         case 3: // Bottom-left
           rotateClockwise =
-              details.primaryVelocity! < 0; // Left = counter-clockwise
+              details.primaryVelocity! < 0; // Left = clockwise (FIXED)
           break;
         default:
           return;
@@ -481,15 +480,13 @@ class GameBoardState extends State<GameBoard> {
       // For vertical swipes
       switch (cornerIndex) {
         case 0: // Top-left
-          rotateClockwise = details.primaryVelocity! > 0; // Down = clockwise
+          rotateClockwise = details.primaryVelocity! < 0; // Up = clockwise
           break;
         case 1: // Top-right
-          rotateClockwise =
-              details.primaryVelocity! > 0; // Down = counter-clockwise
+          rotateClockwise = details.primaryVelocity! > 0; // Down = clockwise
           break;
         case 2: // Bottom-right
-          rotateClockwise =
-              details.primaryVelocity! < 0; // Up = counter-clockwise
+          rotateClockwise = details.primaryVelocity! > 0; // Down = clockwise
           break;
         case 3: // Bottom-left
           rotateClockwise = details.primaryVelocity! < 0; // Up = clockwise
