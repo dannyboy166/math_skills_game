@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
+import 'package:math_skills_game/widgets/celebrations/animated_border.dart';
 import 'package:math_skills_game/widgets/celebrations/audio_manager.dart';
 import 'package:math_skills_game/widgets/celebrations/burst_animation.dart';
 import 'package:math_skills_game/widgets/celebrations/celebration_overlay.dart';
@@ -184,69 +185,74 @@ class GameBoardState extends State<GameBoard> {
 
     return Stack(
       children: [
-        Container(
-          width: boardSize,
-          height: boardSize,
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Outer ring - with animated rotation
-              AnimatedSquareRing(
-                ringModel: outerRingModel,
-                onRotate: rotateOuterRing,
-                solvedCorners: solvedCorners,
-                isInner: false,
-                tileSizeFactor: 0.12, // Customize outer ring regular tile size
-                cornerSizeFactor:
-                    1.6, // Customize outer ring corner size multiplier
-              ),
-
-              // Inner ring with animated rotation
-              Container(
-                width: innerRingSize,
-                height: innerRingSize,
-                child: AnimatedSquareRing(
-                  key: innerRingKey,
-                  ringModel: innerRingModel,
-                  onRotate: rotateInnerRing,
+        // Wrap your existing container with AnimatedBorder
+        AnimatedBorder(
+          // Only activate the border when all corners are solved
+          isActive: solvedCorners.every((solved) => solved),
+          child: Container(
+            width: boardSize,
+            height: boardSize,
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer ring - with animated rotation
+                AnimatedSquareRing(
+                  ringModel: outerRingModel,
+                  onRotate: rotateOuterRing,
                   solvedCorners: solvedCorners,
-                  isInner: true,
+                  isInner: false,
                   tileSizeFactor:
-                      0.16, // Customize inner ring regular tile size
+                      0.12, // Customize outer ring regular tile size
                   cornerSizeFactor:
-                      1.4, // Customize inner ring corner size multiplier
+                      1.6, // Customize outer ring corner size multiplier
                 ),
-              ),
 
-              // Center number (fixed)
-              CenterTarget(targetNumber: widget.targetNumber),
+                // Inner ring with animated rotation
+                Container(
+                  width: innerRingSize,
+                  height: innerRingSize,
+                  child: AnimatedSquareRing(
+                    key: innerRingKey,
+                    ringModel: innerRingModel,
+                    onRotate: rotateInnerRing,
+                    solvedCorners: solvedCorners,
+                    isInner: true,
+                    tileSizeFactor:
+                        0.16, // Customize inner ring regular tile size
+                    cornerSizeFactor:
+                        1.4, // Customize inner ring corner size multiplier
+                  ),
+                ),
 
-              // Operators at diagonals
-              ...buildOperatorOverlays(boardSize, innerRingSize),
+                // Center number (fixed)
+                CenterTarget(targetNumber: widget.targetNumber),
 
-              // Equals signs between corner tiles
-              ...buildEqualsOverlays(boardSize, innerRingSize, outerRingSize),
+                // Operators at diagonals
+                ...buildOperatorOverlays(boardSize, innerRingSize),
 
-              // Detect taps on corners for checking equations
-              ...buildCornerDetectors(boardSize),
+                // Equals signs between corner tiles
+                ...buildEqualsOverlays(boardSize, innerRingSize, outerRingSize),
 
-              // Add confetti widgets at each corner
-              _buildConfettiWidget(0,
-                  cornerOffset: boardSize * 0.15), // Top-left
-              _buildConfettiWidget(1,
-                  cornerOffset: boardSize * 0.15), // Top-right
-              _buildConfettiWidget(2,
-                  cornerOffset: boardSize * 0.15), // Bottom-right
-              _buildConfettiWidget(3,
-                  cornerOffset: boardSize * 0.15), // Bottom-left
-            ],
+                // Detect taps on corners for checking equations
+                ...buildCornerDetectors(boardSize),
+
+                // Add confetti widgets at each corner
+                _buildConfettiWidget(0,
+                    cornerOffset: boardSize * 0.15), // Top-left
+                _buildConfettiWidget(1,
+                    cornerOffset: boardSize * 0.15), // Top-right
+                _buildConfettiWidget(2,
+                    cornerOffset: boardSize * 0.15), // Bottom-right
+                _buildConfettiWidget(3,
+                    cornerOffset: boardSize * 0.15), // Bottom-left
+              ],
+            ),
           ),
         ),
-
         // Add the celebration overlay on top when showing
         if (_showingCelebration)
           Positioned.fill(
@@ -266,28 +272,22 @@ class GameBoardState extends State<GameBoard> {
   // Helper method to build confetti widget at a specific corner
   Widget _buildConfettiWidget(int cornerIndex, {required double cornerOffset}) {
     // Determine the alignment and direction based on corner
-    Alignment alignment;
     double blastDirection;
 
     switch (cornerIndex) {
       case 0: // Top-left
-        alignment = Alignment.topLeft;
         blastDirection = 0.785; // 45 degrees (π/4)
         break;
       case 1: // Top-right
-        alignment = Alignment.topRight;
         blastDirection = 2.356; // 135 degrees (3π/4)
         break;
       case 2: // Bottom-right
-        alignment = Alignment.bottomRight;
         blastDirection = 3.927; // 225 degrees (5π/4)
         break;
       case 3: // Bottom-left
-        alignment = Alignment.bottomLeft;
         blastDirection = 5.498; // 315 degrees (7π/4)
         break;
       default:
-        alignment = Alignment.center;
         blastDirection = 0;
     }
 
