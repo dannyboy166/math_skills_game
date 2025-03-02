@@ -4,6 +4,7 @@ import 'package:confetti/confetti.dart';
 import 'package:math_skills_game/widgets/celebrations/animated_border.dart';
 import 'package:math_skills_game/widgets/celebrations/audio_manager.dart';
 import 'package:math_skills_game/widgets/celebrations/burst_animation.dart';
+import 'package:math_skills_game/widgets/celebrations/candy_crush_explosion.dart';
 import 'package:math_skills_game/widgets/celebrations/celebration_overlay.dart';
 import 'package:math_skills_game/widgets/celebrations/particle_burst.dart';
 import 'package:math_skills_game/widgets/square_ring.dart';
@@ -267,6 +268,73 @@ class GameBoardState extends State<GameBoard> {
           ),
       ],
     );
+  }
+
+  // Add this to your game_board.dart file
+
+// Play an enhanced celebration effect for a corner
+  void _playEnhancedCornerCelebration(int cornerIndex) {
+    // 1. Play the existing burst animation
+    _playBurstAnimation(cornerIndex);
+
+    // 2. Play the confetti controller
+    _confettiControllers[cornerIndex].play();
+
+    // 3. Create the explosion animation for that corner
+    _playCornerExplosion(cornerIndex);
+
+    // 4. Play sound effect
+    _audioManager.playCorrectFeedback();
+  }
+
+  void _playCornerExplosion(int cornerIndex) {
+    // Get corner position
+    final cornerOffset = MediaQuery.of(context).size.width * 0.95 * 0.15;
+    Offset position;
+
+    switch (cornerIndex) {
+      case 0: // Top-left
+        position = Offset(cornerOffset, cornerOffset);
+        break;
+      case 1: // Top-right
+        position = Offset(
+            MediaQuery.of(context).size.width - cornerOffset, cornerOffset);
+        break;
+      case 2: // Bottom-right
+        position = Offset(MediaQuery.of(context).size.width - cornerOffset,
+            MediaQuery.of(context).size.width - cornerOffset);
+        break;
+      case 3: // Bottom-left
+        position = Offset(
+            cornerOffset, MediaQuery.of(context).size.width - cornerOffset);
+        break;
+      default:
+        position = Offset.zero;
+    }
+
+    // Declare the entry variable first (without assigning)
+    late OverlayEntry entry;
+
+    // Then assign it, now with a properly declared variable we can reference
+    entry = OverlayEntry(
+        builder: (context) => Positioned(
+              left: position.dx - 40,
+              top: position.dy - 40,
+              child: SizedBox(
+                width: 80,
+                height: 80,
+                child: CandyCrushExplosion(
+                  color: Colors.green,
+                  onComplete: () {
+                    // Now we can safely reference entry
+                    entry.remove();
+                  },
+                ),
+              ),
+            ));
+
+    // Show the overlay
+    Overlay.of(context)?.insert(entry);
   }
 
   // Helper method to build confetti widget at a specific corner
@@ -738,14 +806,8 @@ class GameBoardState extends State<GameBoard> {
     }
 
     if (isCorrect && !solvedCorners[cornerIndex]) {
-      // Play confetti animation for this corner
-      _confettiControllers[cornerIndex].play();
-
-      // Play burst animation on the corner
-      _playBurstAnimation(cornerIndex);
-
-      // Play sound and haptic feedback
-      _audioManager.playCorrectFeedback();
+      // Play the enhanced corner celebration instead of individual effects
+      _playEnhancedCornerCelebration(cornerIndex);
 
       setState(() {
         solvedCorners[cornerIndex] = true;
