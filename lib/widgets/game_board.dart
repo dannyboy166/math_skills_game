@@ -219,7 +219,7 @@ class GameBoardState extends State<GameBoard> {
 
     // Calculate diagonal positions based on board size
     // Position between inner ring and center
-    final centerSize = 70.0; // Width of the center target
+    final centerSize = 60.0; // Width of the center target
     final operatorOffset = (innerRingSize / 2 + centerSize / 2) /
         2; // Halfway between center and inner ring
 
