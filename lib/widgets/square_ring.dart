@@ -91,7 +91,6 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     _rotationDirection = clockwise ? -1 : 1;
 
     // Prepare the target numbers by rotating the current numbers
-    final totalItems = widget.ringModel.itemCount;
     _targetNumbers = List<int>.from(_currentNumbers);
 
     if (clockwise) {

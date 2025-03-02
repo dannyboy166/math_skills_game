@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 
 /// Calculates positions for items arranged in a square with 5 items per side

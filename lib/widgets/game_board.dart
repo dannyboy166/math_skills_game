@@ -269,7 +269,7 @@ class GameBoardState extends State<GameBoard> {
       double boardSize, double innerRingSize, double outerRingSize) {
     // Calculate positions for equals signs between inner and outer corner tiles
     final innerCornerOffset =
-        innerRingSize / 2 * 1.3; // 90% to the edge of inner ring
+        innerRingSize / 2 * 1.4; // 90% to the edge of inner ring
     final outerCornerOffset =
         outerRingSize / 2 * 0.8; // 70% to the edge of outer ring
 
@@ -286,7 +286,7 @@ class GameBoardState extends State<GameBoard> {
           child: Text(
             "=",
             style: TextStyle(
-              fontSize: 36,
+              fontSize: 42,
               color: Colors.red.shade700,
               fontWeight: FontWeight.bold,
             ),
@@ -303,7 +303,7 @@ class GameBoardState extends State<GameBoard> {
           child: Text(
             "=",
             style: TextStyle(
-              fontSize: 36,
+              fontSize: 42,
               color: Colors.red.shade700,
               fontWeight: FontWeight.bold,
             ),
@@ -319,7 +319,7 @@ class GameBoardState extends State<GameBoard> {
           child: Text(
             "=",
             style: TextStyle(
-              fontSize: 36,
+              fontSize: 42,
               color: Colors.red.shade700,
               fontWeight: FontWeight.bold,
             ),
@@ -336,7 +336,7 @@ class GameBoardState extends State<GameBoard> {
           child: Text(
             "=",
             style: TextStyle(
-              fontSize: 36,
+              fontSize: 42,
               color: Colors.red.shade700,
               fontWeight: FontWeight.bold,
             ),
