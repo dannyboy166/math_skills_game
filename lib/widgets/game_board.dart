@@ -123,7 +123,7 @@ class GameBoardState extends State<GameBoard> {
     // Add more space between rings to prevent overlap
     final outerRingSize = boardSize * 0.95;
     final innerRingSize =
-        boardSize * 0.60; // Smaller inner ring to prevent overlapping
+        boardSize * 0.58; // Smaller inner ring to prevent overlapping
 
     // Create the models with updated sizes
     outerRingModel = RingModel(
@@ -154,6 +154,9 @@ class GameBoardState extends State<GameBoard> {
             onRotate: rotateOuterRing,
             solvedCorners: solvedCorners,
             isInner: false,
+            tileSizeFactor: 0.12, // Customize outer ring regular tile size
+            cornerSizeFactor:
+                1.6, // Customize outer ring corner size multiplier
           ),
 
           // Inner ring with animated rotation
@@ -161,24 +164,27 @@ class GameBoardState extends State<GameBoard> {
             width: innerRingSize,
             height: innerRingSize,
             child: AnimatedSquareRing(
-              key: innerRingKey, // Add key to access state
+              key: innerRingKey,
               ringModel: innerRingModel,
               onRotate: rotateInnerRing,
               solvedCorners: solvedCorners,
               isInner: true,
+              tileSizeFactor: 0.16, // Customize inner ring regular tile size
+              cornerSizeFactor:
+                  1.4, // Customize inner ring corner size multiplier
             ),
           ),
 
           // Center number (fixed)
           CenterTarget(targetNumber: widget.targetNumber),
 
-          // Operators at diagonals
+// Operators at diagonals
           ...buildOperatorOverlays(boardSize, innerRingSize),
 
-          // Equals signs between corner tiles
+// Equals signs between corner tiles
           ...buildEqualsOverlays(boardSize, innerRingSize, outerRingSize),
 
-          // Detect taps on corners for checking equations
+// Detect taps on corners for checking equations
           ...buildCornerDetectors(boardSize),
         ]));
   }

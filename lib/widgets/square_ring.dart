@@ -8,6 +8,8 @@ class AnimatedSquareRing extends StatefulWidget {
   final Function(int) onRotate;
   final List<bool> solvedCorners;
   final bool isInner; // To differentiate between inner and outer rings
+  final double tileSizeFactor; // Add parameter for tile size factor
+  final double cornerSizeFactor; // Add parameter for corner size multiplier
 
   const AnimatedSquareRing({
     Key? key,
@@ -15,6 +17,8 @@ class AnimatedSquareRing extends StatefulWidget {
     required this.onRotate,
     required this.solvedCorners,
     this.isInner = false,
+    this.tileSizeFactor = 0.13, // Default tile size factor
+    this.cornerSizeFactor = 1.6, // Default corner multiplier
   }) : super(key: key);
 
   @override
@@ -126,9 +130,9 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
 
   @override
   Widget build(BuildContext context) {
-    // Set tile sizes
-    final tileSize = widget.ringModel.squareSize * 0.13;
-    final cornerSize = tileSize * (widget.isInner ? 1.6 : 1.5);
+    // Set tile sizes using the custom factors provided by parameters
+    final tileSize = widget.ringModel.squareSize * widget.tileSizeFactor;
+    final cornerSize = tileSize * widget.cornerSizeFactor;
 
     return GestureDetector(
       // Track the start position of the drag
