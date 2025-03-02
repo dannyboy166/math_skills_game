@@ -1,11 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/widgets/square_ring.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
-import 'number_tile.dart';
 import 'center_target.dart';
-import 'square_ring.dart';
-import 'inner_ring.dart';
 
 class GameBoard extends StatefulWidget {
   final int targetNumber;
@@ -27,9 +25,8 @@ class GameBoardState extends State<GameBoard> {
 
   // Models for our rings
   late RingModel outerRingModel;
-  late List<int> innerNumbers; // Just use a simple list for inner numbers
-  int innerRotationSteps = 0;
-
+  late RingModel innerRingModel; // Now using RingModel for inner ring too
+  
   @override
   void initState() {
     super.initState();
@@ -41,8 +38,15 @@ class GameBoardState extends State<GameBoard> {
     final random = Random();
 
     // For inner ring, use fixed numbers 1-12 in order
-    innerNumbers = List.generate(12, (index) => index + 1);
-    innerRotationSteps = 0;
+    final innerNumbers = List.generate(12, (index) => index + 1);
+    
+    // Create inner ring model (similar to outer)
+    innerRingModel = RingModel(
+      numbers: innerNumbers,
+      itemColor: Colors.lightGreen,
+      squareSize: 240, // Will be adjusted in build
+      rotationSteps: 0,
+    );
 
     // Generate outer ring numbers
     final outerNumbers = List.generate(16, (index) {
@@ -88,7 +92,8 @@ class GameBoardState extends State<GameBoard> {
     outerRingModel = RingModel(
       numbers: outerNumbers,
       itemColor: Colors.teal,
-      squareSize: 360,
+      squareSize: 360, // Will be adjusted in build
+      rotationSteps: 0,
     );
   }
 
@@ -102,30 +107,8 @@ class GameBoardState extends State<GameBoard> {
   // Handles rotation of the inner ring
   void rotateInnerRing(int steps) {
     setState(() {
-      innerRotationSteps = steps;
+      innerRingModel = innerRingModel.copyWith(rotationSteps: steps);
     });
-  }
-
-  // Get the rotated inner numbers
-  List<int> getRotatedInnerNumbers() {
-    if (innerRotationSteps == 0) return innerNumbers;
-
-    // Normalize the rotation steps
-    final normalizedSteps = innerRotationSteps % 12;
-    if (normalizedSteps == 0) return innerNumbers;
-
-    // Rotate the list
-    return [
-      ...innerNumbers.sublist(normalizedSteps),
-      ...innerNumbers.sublist(0, normalizedSteps)
-    ];
-  }
-
-  // Get the inner numbers at positions corresponding to corners
-  List<int> getInnerCornerNumbers() {
-    final rotated = getRotatedInnerNumbers();
-    // In the inner ring, the "corner aligned" positions are 0, 3, 6, 9
-    return [rotated[0], rotated[3], rotated[6], rotated[9]];
   }
 
   @override
@@ -136,19 +119,22 @@ class GameBoardState extends State<GameBoard> {
 
     // Add more space between rings to prevent overlap
     final outerRingSize = boardSize * 0.95;
-    final innerRingSize =
-        boardSize * 0.60; // Smaller inner ring to prevent overlapping
+    final innerRingSize = boardSize * 0.60; // Smaller inner ring to prevent overlapping
 
-    // Create the model with larger outer ring to avoid overlap
+    // Create the models with updated sizes
     outerRingModel = RingModel(
       numbers: outerRingModel.numbers,
       itemColor: outerRingModel.itemColor,
       squareSize: outerRingSize,
       rotationSteps: outerRingModel.rotationSteps,
     );
-
-    // Get rotated inner numbers
-    final rotatedInnerNumbers = getRotatedInnerNumbers();
+    
+    innerRingModel = RingModel(
+      numbers: innerRingModel.numbers,
+      itemColor: innerRingModel.itemColor,
+      squareSize: innerRingSize,
+      rotationSteps: innerRingModel.rotationSteps,
+    );
 
     return Container(
       width: boardSize,
@@ -160,31 +146,30 @@ class GameBoardState extends State<GameBoard> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer ring - with larger corner tiles
-          SquareRing(
+          // Outer ring - with animated rotation
+          AnimatedSquareRing(
             ringModel: outerRingModel,
             onRotate: rotateOuterRing,
             solvedCorners: solvedCorners,
+            isInner: false,
           ),
 
-          // Inner ring with 12 tiles (with larger corner tiles)
+          // Inner ring with animated rotation
           Container(
             width: innerRingSize,
             height: innerRingSize,
-            child: InnerRing(
-              numbers: rotatedInnerNumbers,
-              itemColor: Colors.lightGreen,
-              squareSize: innerRingSize,
+            child: AnimatedSquareRing(
+              ringModel: innerRingModel,
               onRotate: rotateInnerRing,
               solvedCorners: solvedCorners,
-              rotationSteps: innerRotationSteps,
+              isInner: true,
             ),
           ),
 
           // Center number (fixed)
           CenterTarget(targetNumber: widget.targetNumber),
 
-          // Operators at diagonals - now larger and better positioned
+          // Operators at diagonals
           ...buildOperatorOverlays(boardSize, innerRingSize),
 
           // Equals signs between corner tiles
@@ -444,7 +429,14 @@ class GameBoardState extends State<GameBoard> {
   void checkCornerEquation(int cornerIndex) {
     // Get the numbers at the corners
     final outerCornerNumbers = outerRingModel.getCornerNumbers();
-    final innerCornerNumbers = getInnerCornerNumbers();
+    
+    // For inner ring, map cornerIndex to the corresponding positions
+    final innerCornerIndices = [0, 3, 6, 9]; // Positions in inner ring that align with corners
+    final rotatedInnerNumbers = innerRingModel.getRotatedNumbers();
+    final innerCornerNumbers = innerCornerIndices.map((index) {
+      // Make sure to wrap around properly for the 12-item inner ring
+      return rotatedInnerNumbers[index % 12];
+    }).toList();
 
     // Get the current corner numbers based on rotation
     final outerNumber = outerCornerNumbers[cornerIndex];
@@ -496,7 +488,13 @@ class GameBoardState extends State<GameBoard> {
               // Show the equations that were solved
               ...List.generate(4, (index) {
                 final outerCornerNumbers = outerRingModel.getCornerNumbers();
-                final innerCornerNumbers = getInnerCornerNumbers();
+                
+                // Get inner corner numbers
+                final innerCornerIndices = [0, 3, 6, 9];
+                final rotatedInnerNumbers = innerRingModel.getRotatedNumbers();
+                final innerCornerNumbers = innerCornerIndices.map((i) => 
+                  rotatedInnerNumbers[i % 12]).toList();
+                
                 String operatorSymbol;
                 switch (widget.operation) {
                   case 'addition':
