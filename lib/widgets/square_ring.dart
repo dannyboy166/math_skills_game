@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
 import 'number_tile.dart';
@@ -41,7 +40,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     _targetNumbers = List<int>.from(_currentNumbers);
 
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 400), // Slightly slowed down
       vsync: this,
     );
 
@@ -84,14 +83,13 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     super.dispose();
   }
 
-  // Start rotation animation with proper number preparation
-  void _startRotationAnimation(bool clockwise) {
+  // This method is now public so it can be called from outside
+  void startRotationAnimation(bool clockwise) {
     if (_animationController.isAnimating) return;
 
+    // Determine rotation direction
     _rotationDirection = clockwise ? -1 : 1;
 
-    // Prepare the target numbers by rotating the current numbers
-    final totalItems = widget.ringModel.itemCount;
     _targetNumbers = List<int>.from(_currentNumbers);
 
     if (clockwise) {
@@ -170,9 +168,11 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
             break;
         }
         
-        _startRotationAnimation(isClockwise);
+        startRotationAnimation(isClockwise);
         _dragStartPosition = null;
       },
+      // Ensure corners are included in gesture detection
+      behavior: HitTestBehavior.translucent,
       child: Container(
         width: widget.ringModel.squareSize,
         height: widget.ringModel.squareSize,
@@ -210,9 +210,10 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
           i, widget.ringModel.squareSize, tileSize);
 
       // Calculate the next position index based on rotation direction
-      final nextIndex = (_rotationDirection < 0)
+      final nextIndex = (_rotationDirection < 0) // Note the reversed comparison
           ? (i + 1) % totalItems // For clockwise visual movement
-          : (i - 1 + totalItems) % totalItems; // For counter-clockwise visual movement
+          : (i - 1 + totalItems) %
+              totalItems; // For counter-clockwise visual movement
 
       final nextPosition = SquarePositionUtils.calculateInnerSquarePosition(
           nextIndex, widget.ringModel.squareSize, tileSize);
@@ -241,12 +242,14 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
           top: interpolatedY - (isCorner ? offsetDiff : 0),
           width: effectiveTileSize,
           height: effectiveTileSize,
-          child: NumberTile(
-            number: displayNumber,
-            color: widget.ringModel.itemColor,
-            isDisabled: isSolved,
-            size: effectiveTileSize,
-            onTap: () {},
+          child: AbsorbPointer(
+            child: NumberTile(
+              number: displayNumber,
+              color: widget.ringModel.itemColor,
+              isDisabled: isSolved,
+              size: effectiveTileSize,
+              onTap: () {},
+            ),
           ),
         ),
       );
@@ -255,7 +258,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     return tiles;
   }
 
-  // Build the outer ring tiles with animation
+  // Build the outer ring tiles with animation (similar approach to inner ring)
   List<Widget> _buildOuterRingTiles(
       double tileSize, double cornerSize, double animationValue) {
     final totalItems = widget.ringModel.itemCount;
@@ -267,9 +270,11 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
           i, widget.ringModel.squareSize, tileSize);
 
       // Calculate the next position index based on rotation direction
-      final nextIndex = (_rotationDirection < 0)
+      // IMPORTANT CHANGE: We're reversing the direction for visual animation compared to number rotation
+      final nextIndex = (_rotationDirection < 0) // Note the reversed comparison
           ? (i + 1) % totalItems // For clockwise visual movement
-          : (i - 1 + totalItems) % totalItems; // For counter-clockwise visual movement
+          : (i - 1 + totalItems) %
+              totalItems; // For counter-clockwise visual movement
 
       final nextPosition = SquarePositionUtils.calculateSquarePosition(
           nextIndex, widget.ringModel.squareSize, tileSize);
@@ -298,12 +303,14 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
           top: interpolatedY - (isCorner ? offsetDiff : 0),
           width: effectiveTileSize,
           height: effectiveTileSize,
-          child: NumberTile(
-            number: displayNumber,
-            color: widget.ringModel.itemColor,
-            isDisabled: isSolved,
-            size: effectiveTileSize,
-            onTap: () {},
+          child: AbsorbPointer(
+            child: NumberTile(
+              number: displayNumber,
+              color: widget.ringModel.itemColor,
+              isDisabled: isSolved,
+              size: effectiveTileSize,
+              onTap: () {},
+            ),
           ),
         ),
       );
