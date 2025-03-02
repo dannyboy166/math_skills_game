@@ -334,7 +334,7 @@ class GameBoardState extends State<GameBoard> {
             ));
 
     // Show the overlay
-    Overlay.of(context)?.insert(entry);
+    Overlay.of(context).insert(entry);
   }
 
   // Helper method to build confetti widget at a specific corner
