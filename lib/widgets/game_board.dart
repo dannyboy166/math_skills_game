@@ -1,5 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:confetti/confetti.dart';
+import 'package:math_skills_game/widgets/celebrations/audio_manager.dart';
+import 'package:math_skills_game/widgets/celebrations/burst_animation.dart';
+import 'package:math_skills_game/widgets/celebrations/celebration_overlay.dart';
+import 'package:math_skills_game/widgets/celebrations/particle_burst.dart';
 import 'package:math_skills_game/widgets/square_ring.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
@@ -27,14 +32,41 @@ class GameBoardState extends State<GameBoard> {
   late RingModel outerRingModel;
   late RingModel innerRingModel;
 
+  // Audio manager for sound effects
+  final AudioManager _audioManager = AudioManager();
+
+  // Celebration controllers
+  late List<ConfettiController> _confettiControllers;
+  bool _showingCelebration = false;
+
+  // Keys for the rings and animations
   final GlobalKey<State<AnimatedSquareRing>> innerRingKey =
       GlobalKey<State<AnimatedSquareRing>>();
+
+// Keys for burst animations
+  final List<GlobalKey<State<BurstAnimation>>> _burstKeys = List.generate(
+    4,
+    (index) => GlobalKey<State<BurstAnimation>>(),
+  );
 
   @override
   void initState() {
     super.initState();
     // Initialize ring models
     generateGameNumbers();
+
+    // Initialize confetti controllers for each corner
+    _confettiControllers = List.generate(
+        4, (index) => ConfettiController(duration: const Duration(seconds: 2)));
+  }
+
+  @override
+  void dispose() {
+    // Dispose of all controllers
+    for (var controller in _confettiControllers) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   void generateGameNumbers() {
@@ -114,6 +146,16 @@ class GameBoardState extends State<GameBoard> {
     });
   }
 
+  // Play burst animation for a specific corner
+  // Play burst animation for a specific corner
+  void _playBurstAnimation(int cornerIndex) {
+    final state = _burstKeys[cornerIndex].currentState;
+    if (state != null) {
+      // Use dynamic to access a method that isn't part of the public API
+      (state as dynamic).play();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Use MediaQuery to get the screen width and adjust the container size accordingly
@@ -140,53 +182,148 @@ class GameBoardState extends State<GameBoard> {
       rotationSteps: innerRingModel.rotationSteps,
     );
 
-    return Container(
-        width: boardSize,
-        height: boardSize,
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Stack(alignment: Alignment.center, children: [
-          // Outer ring - with animated rotation
-          AnimatedSquareRing(
-            ringModel: outerRingModel,
-            onRotate: rotateOuterRing,
-            solvedCorners: solvedCorners,
-            isInner: false,
-            tileSizeFactor: 0.12, // Customize outer ring regular tile size
-            cornerSizeFactor:
-                1.6, // Customize outer ring corner size multiplier
+    return Stack(
+      children: [
+        Container(
+          width: boardSize,
+          height: boardSize,
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(16),
           ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer ring - with animated rotation
+              AnimatedSquareRing(
+                ringModel: outerRingModel,
+                onRotate: rotateOuterRing,
+                solvedCorners: solvedCorners,
+                isInner: false,
+                tileSizeFactor: 0.12, // Customize outer ring regular tile size
+                cornerSizeFactor:
+                    1.6, // Customize outer ring corner size multiplier
+              ),
 
-          // Inner ring with animated rotation
-          Container(
-            width: innerRingSize,
-            height: innerRingSize,
-            child: AnimatedSquareRing(
-              key: innerRingKey,
-              ringModel: innerRingModel,
-              onRotate: rotateInnerRing,
-              solvedCorners: solvedCorners,
-              isInner: true,
-              tileSizeFactor: 0.16, // Customize inner ring regular tile size
-              cornerSizeFactor:
-                  1.4, // Customize inner ring corner size multiplier
+              // Inner ring with animated rotation
+              Container(
+                width: innerRingSize,
+                height: innerRingSize,
+                child: AnimatedSquareRing(
+                  key: innerRingKey,
+                  ringModel: innerRingModel,
+                  onRotate: rotateInnerRing,
+                  solvedCorners: solvedCorners,
+                  isInner: true,
+                  tileSizeFactor:
+                      0.16, // Customize inner ring regular tile size
+                  cornerSizeFactor:
+                      1.4, // Customize inner ring corner size multiplier
+                ),
+              ),
+
+              // Center number (fixed)
+              CenterTarget(targetNumber: widget.targetNumber),
+
+              // Operators at diagonals
+              ...buildOperatorOverlays(boardSize, innerRingSize),
+
+              // Equals signs between corner tiles
+              ...buildEqualsOverlays(boardSize, innerRingSize, outerRingSize),
+
+              // Detect taps on corners for checking equations
+              ...buildCornerDetectors(boardSize),
+
+              // Add confetti widgets at each corner
+              _buildConfettiWidget(0,
+                  cornerOffset: boardSize * 0.15), // Top-left
+              _buildConfettiWidget(1,
+                  cornerOffset: boardSize * 0.15), // Top-right
+              _buildConfettiWidget(2,
+                  cornerOffset: boardSize * 0.15), // Bottom-right
+              _buildConfettiWidget(3,
+                  cornerOffset: boardSize * 0.15), // Bottom-left
+            ],
+          ),
+        ),
+
+        // Add the celebration overlay on top when showing
+        if (_showingCelebration)
+          Positioned.fill(
+            child: CelebrationOverlay(
+              isPlaying: true,
+              onComplete: () {
+                setState(() {
+                  _showingCelebration = false;
+                });
+              },
             ),
           ),
+      ],
+    );
+  }
 
-          // Center number (fixed)
-          CenterTarget(targetNumber: widget.targetNumber),
+  // Helper method to build confetti widget at a specific corner
+  Widget _buildConfettiWidget(int cornerIndex, {required double cornerOffset}) {
+    // Determine the alignment and direction based on corner
+    Alignment alignment;
+    double blastDirection;
 
-// Operators at diagonals
-          ...buildOperatorOverlays(boardSize, innerRingSize),
+    switch (cornerIndex) {
+      case 0: // Top-left
+        alignment = Alignment.topLeft;
+        blastDirection = 0.785; // 45 degrees (π/4)
+        break;
+      case 1: // Top-right
+        alignment = Alignment.topRight;
+        blastDirection = 2.356; // 135 degrees (3π/4)
+        break;
+      case 2: // Bottom-right
+        alignment = Alignment.bottomRight;
+        blastDirection = 3.927; // 225 degrees (5π/4)
+        break;
+      case 3: // Bottom-left
+        alignment = Alignment.bottomLeft;
+        blastDirection = 5.498; // 315 degrees (7π/4)
+        break;
+      default:
+        alignment = Alignment.center;
+        blastDirection = 0;
+    }
 
-// Equals signs between corner tiles
-          ...buildEqualsOverlays(boardSize, innerRingSize, outerRingSize),
-
-// Detect taps on corners for checking equations
-          ...buildCornerDetectors(boardSize),
-        ]));
+    return Positioned(
+      left: cornerIndex == 0 || cornerIndex == 3 ? cornerOffset : null,
+      right: cornerIndex == 1 || cornerIndex == 2 ? cornerOffset : null,
+      top: cornerIndex == 0 || cornerIndex == 1 ? cornerOffset : null,
+      bottom: cornerIndex == 2 || cornerIndex == 3 ? cornerOffset : null,
+      child: ConfettiWidget(
+        confettiController: _confettiControllers[cornerIndex],
+        blastDirection: blastDirection,
+        particleDrag: 0.05,
+        emissionFrequency: 0.05,
+        numberOfParticles: 20,
+        gravity: 0.2,
+        shouldLoop: false,
+        colors: const [
+          Colors.green,
+          Colors.blue,
+          Colors.pink,
+          Colors.orange,
+          Colors.purple,
+          Colors.red,
+          Colors.yellow,
+        ],
+        // Make particles shoot from the correct position outward
+        createParticlePath: (size) {
+          final path = Path();
+          path.addOval(Rect.fromCircle(
+            center: Offset(0, 0),
+            radius: 10,
+          ));
+          return path;
+        },
+      ),
+    );
   }
 
   List<Widget> buildOperatorOverlays(double boardSize, double innerRingSize) {
@@ -368,14 +505,27 @@ class GameBoardState extends State<GameBoard> {
           onHorizontalDragEnd: (details) =>
               _handleCornerSwipe(details, 0, true),
           onVerticalDragEnd: (details) => _handleCornerSwipe(details, 0, false),
-          child: Container(
-            width: detectorSize,
-            height: detectorSize,
-            decoration: BoxDecoration(
-              color: solvedCorners[0]
-                  ? Colors.green.withOpacity(0.3)
-                  : Colors.transparent,
-              shape: BoxShape.circle,
+          child: BurstAnimation(
+            key: _burstKeys[0],
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Particle burst (only visible when animation plays)
+                if (solvedCorners[0])
+                  ParticleBurst(color: Colors.green.shade300),
+
+                // The corner indicator
+                Container(
+                  width: detectorSize,
+                  height: detectorSize,
+                  decoration: BoxDecoration(
+                    color: solvedCorners[0]
+                        ? Colors.green.withOpacity(0.3)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -390,14 +540,27 @@ class GameBoardState extends State<GameBoard> {
           onHorizontalDragEnd: (details) =>
               _handleCornerSwipe(details, 1, true),
           onVerticalDragEnd: (details) => _handleCornerSwipe(details, 1, false),
-          child: Container(
-            width: detectorSize,
-            height: detectorSize,
-            decoration: BoxDecoration(
-              color: solvedCorners[1]
-                  ? Colors.green.withOpacity(0.3)
-                  : Colors.transparent,
-              shape: BoxShape.circle,
+          child: BurstAnimation(
+            key: _burstKeys[1],
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Particle burst (only visible when animation plays)
+                if (solvedCorners[1])
+                  ParticleBurst(color: Colors.green.shade300),
+
+                // The corner indicator
+                Container(
+                  width: detectorSize,
+                  height: detectorSize,
+                  decoration: BoxDecoration(
+                    color: solvedCorners[1]
+                        ? Colors.green.withOpacity(0.3)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -412,14 +575,27 @@ class GameBoardState extends State<GameBoard> {
           onHorizontalDragEnd: (details) =>
               _handleCornerSwipe(details, 2, true),
           onVerticalDragEnd: (details) => _handleCornerSwipe(details, 2, false),
-          child: Container(
-            width: detectorSize,
-            height: detectorSize,
-            decoration: BoxDecoration(
-              color: solvedCorners[2]
-                  ? Colors.green.withOpacity(0.3)
-                  : Colors.transparent,
-              shape: BoxShape.circle,
+          child: BurstAnimation(
+            key: _burstKeys[2],
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Particle burst (only visible when animation plays)
+                if (solvedCorners[2])
+                  ParticleBurst(color: Colors.green.shade300),
+
+                // The corner indicator
+                Container(
+                  width: detectorSize,
+                  height: detectorSize,
+                  decoration: BoxDecoration(
+                    color: solvedCorners[2]
+                        ? Colors.green.withOpacity(0.3)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -434,14 +610,27 @@ class GameBoardState extends State<GameBoard> {
           onHorizontalDragEnd: (details) =>
               _handleCornerSwipe(details, 3, true),
           onVerticalDragEnd: (details) => _handleCornerSwipe(details, 3, false),
-          child: Container(
-            width: detectorSize,
-            height: detectorSize,
-            decoration: BoxDecoration(
-              color: solvedCorners[3]
-                  ? Colors.green.withOpacity(0.3)
-                  : Colors.transparent,
-              shape: BoxShape.circle,
+          child: BurstAnimation(
+            key: _burstKeys[3],
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Particle burst (only visible when animation plays)
+                if (solvedCorners[3])
+                  ParticleBurst(color: Colors.green.shade300),
+
+                // The corner indicator
+                Container(
+                  width: detectorSize,
+                  height: detectorSize,
+                  decoration: BoxDecoration(
+                    color: solvedCorners[3]
+                        ? Colors.green.withOpacity(0.3)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -449,10 +638,7 @@ class GameBoardState extends State<GameBoard> {
     ];
   }
 
-// This file contains the updated _handleCornerSwipe method and related code
-// to be placed in your game_board.dart file
-
-// Method to handle swipes on corner tiles and triggers inner ring animation
+  // Method to handle swipes on corner tiles and triggers inner ring animation
   void _handleCornerSwipe(
       DragEndDetails details, int cornerIndex, bool isHorizontal) {
     // Ensure there's meaningful velocity
@@ -551,80 +737,125 @@ class GameBoardState extends State<GameBoard> {
         break;
     }
 
-    setState(() {
-      solvedCorners[cornerIndex] = isCorrect;
+    if (isCorrect && !solvedCorners[cornerIndex]) {
+      // Play confetti animation for this corner
+      _confettiControllers[cornerIndex].play();
 
-      // Check if all corners are solved
-      if (solvedCorners.every((solved) => solved)) {
-        showLevelCompleteDialog();
-      }
-    });
+      // Play burst animation on the corner
+      _playBurstAnimation(cornerIndex);
+
+      // Play sound and haptic feedback
+      _audioManager.playCorrectFeedback();
+
+      setState(() {
+        solvedCorners[cornerIndex] = true;
+
+        // Check if all corners are solved
+        if (solvedCorners.every((solved) => solved)) {
+          // Slightly delay the completion dialog to allow for celebration effects
+          Future.delayed(const Duration(milliseconds: 1000), () {
+            showLevelCompleteDialog();
+          });
+        }
+      });
+    } else if (!isCorrect) {
+      setState(() {
+        solvedCorners[cornerIndex] = false;
+      });
+      // Play incorrect feedback
+      _audioManager.playWrongFeedback();
+    }
   }
 
   void showLevelCompleteDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Level Complete!'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('You solved all the equations. Great job!'),
-              SizedBox(height: 20),
-              // Show the equations that were solved
-              ...List.generate(4, (index) {
-                final outerCornerNumbers = outerRingModel.getCornerNumbers();
+    // Play all confetti controllers for individual corners
+    for (var controller in _confettiControllers) {
+      controller.play();
+    }
 
-                // Get inner corner numbers
-                final innerCornerIndices = [0, 3, 6, 9];
-                final rotatedInnerNumbers = innerRingModel.getRotatedNumbers();
-                final innerCornerNumbers = innerCornerIndices
-                    .map((i) => rotatedInnerNumbers[i % 12])
-                    .toList();
+    // Play completion sound
+    _audioManager.playCompletionFeedback();
 
-                String operatorSymbol;
-                switch (widget.operation) {
-                  case 'addition':
-                    operatorSymbol = '+';
-                    break;
-                  case 'subtraction':
-                    operatorSymbol = '-';
-                    break;
-                  case 'multiplication':
-                    operatorSymbol = '×';
-                    break;
-                  case 'division':
-                    operatorSymbol = '÷';
-                    break;
-                  default:
-                    operatorSymbol = '?';
-                }
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Text(
-                    '${innerCornerNumbers[index]} $operatorSymbol ${widget.targetNumber} = ${outerCornerNumbers[index]}',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                );
-              }),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Reset game or go to next level
-                setState(() {
-                  solvedCorners = [false, false, false, false];
-                  generateGameNumbers();
-                });
-              },
-              child: Text('Play Again'),
+    // Show the full-screen celebration overlay
+    setState(() {
+      _showingCelebration = true;
+    });
+
+    // Delay the actual dialog to allow celebration to be visible
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (!mounted) return;
+
+      // Hide celebration and show dialog
+      setState(() {
+        _showingCelebration = false;
+      });
+
+      // Show the actual dialog
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Level Complete!'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('You solved all the equations. Great job!'),
+                SizedBox(height: 20),
+                // Show the equations that were solved
+                ...List.generate(4, (index) {
+                  final outerCornerNumbers = outerRingModel.getCornerNumbers();
+
+                  // Get inner corner numbers
+                  final innerCornerIndices = [0, 3, 6, 9];
+                  final rotatedInnerNumbers =
+                      innerRingModel.getRotatedNumbers();
+                  final innerCornerNumbers = innerCornerIndices
+                      .map((i) => rotatedInnerNumbers[i % 12])
+                      .toList();
+
+                  String operatorSymbol;
+                  switch (widget.operation) {
+                    case 'addition':
+                      operatorSymbol = '+';
+                      break;
+                    case 'subtraction':
+                      operatorSymbol = '-';
+                      break;
+                    case 'multiplication':
+                      operatorSymbol = '×';
+                      break;
+                    case 'division':
+                      operatorSymbol = '÷';
+                      break;
+                    default:
+                      operatorSymbol = '?';
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Text(
+                      '${innerCornerNumbers[index]} $operatorSymbol ${widget.targetNumber} = ${outerCornerNumbers[index]}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  );
+                }),
+              ],
             ),
-          ],
-        );
-      },
-    );
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Reset game or go to next level
+                  setState(() {
+                    solvedCorners = [false, false, false, false];
+                    generateGameNumbers();
+                  });
+                },
+                child: Text('Play Again'),
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 }
