@@ -119,7 +119,7 @@ class GameBoardState extends State<GameBoard> {
 
     // Add more space between rings to prevent overlap
     final outerRingSize = boardSize * 0.95;
-    final innerRingSize = boardSize * 0.60; // Smaller inner ring to prevent overlapping
+    final innerRingSize = boardSize * 0.55; // Smaller inner ring to prevent overlapping
 
     // Create the models with updated sizes
     outerRingModel = RingModel(
@@ -204,7 +204,7 @@ class GameBoardState extends State<GameBoard> {
 
     // Calculate diagonal positions based on board size
     // Position between inner ring and center
-    final centerSize = 60.0; // Width of the center target
+    final centerSize = 90.0; // Width of the center target
     final operatorOffset = (innerRingSize / 2 + centerSize / 2) /
         2; // Halfway between center and inner ring
 
@@ -212,12 +212,12 @@ class GameBoardState extends State<GameBoard> {
     return [
       // Top-right
       Positioned(
-        top: boardSize / 2.1 - operatorOffset,
+        top: boardSize / 2.35 - operatorOffset,
         right: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 40, // Doubled from 28
+            fontSize: 60, // Doubled from 28
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -225,12 +225,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-right
       Positioned(
-        bottom: boardSize / 2.1 - operatorOffset,
+        bottom: boardSize / 2.25 - operatorOffset,
         right: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 40,
+            fontSize: 60,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -238,12 +238,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Bottom-left
       Positioned(
-        bottom: boardSize / 2.1 - operatorOffset,
+        bottom: boardSize / 2.25 - operatorOffset,
         left: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 40,
+            fontSize: 60,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -251,12 +251,12 @@ class GameBoardState extends State<GameBoard> {
       ),
       // Top-left
       Positioned(
-        top: boardSize / 2.1 - operatorOffset,
+        top: boardSize / 2.35 - operatorOffset,
         left: boardSize / 2 - operatorOffset,
         child: Text(
           operatorSymbol,
           style: TextStyle(
-            fontSize: 40,
+            fontSize: 60,
             color: Colors.red.shade700,
             fontWeight: FontWeight.bold,
           ),
@@ -269,7 +269,7 @@ class GameBoardState extends State<GameBoard> {
       double boardSize, double innerRingSize, double outerRingSize) {
     // Calculate positions for equals signs between inner and outer corner tiles
     final innerCornerOffset =
-        innerRingSize / 2 * 1.2; // 90% to the edge of inner ring
+        innerRingSize / 2 * 1.3; // 90% to the edge of inner ring
     final outerCornerOffset =
         outerRingSize / 2 * 0.8; // 70% to the edge of outer ring
 

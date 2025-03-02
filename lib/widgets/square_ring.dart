@@ -114,7 +114,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
   Widget build(BuildContext context) {
     // Set tile sizes
     final tileSize = widget.ringModel.squareSize * 0.13;
-    final cornerSize = tileSize * (widget.isInner ? 1.6 : 1.5);
+    final cornerSize = tileSize * (widget.isInner ? 1.8 : 1.5);
 
     return GestureDetector(
       onHorizontalDragEnd: (details) {
