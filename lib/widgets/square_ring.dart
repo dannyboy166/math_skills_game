@@ -1,5 +1,5 @@
-// lib/widgets/animated_square_ring.dart
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
 import 'number_tile.dart';
@@ -30,6 +30,9 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
   late List<int> _targetNumbers;
   int _rotationDirection = 0;
 
+  // To track where the drag starts
+  Offset? _dragStartPosition;
+  
   @override
   void initState() {
     super.initState();
@@ -38,7 +41,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     _targetNumbers = List<int>.from(_currentNumbers);
 
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 400), // Slightly slowed down
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
 
@@ -81,16 +84,14 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     super.dispose();
   }
 
-  // This is the key method that starts rotation with proper number preparation
+  // Start rotation animation with proper number preparation
   void _startRotationAnimation(bool clockwise) {
     if (_animationController.isAnimating) return;
 
-    // Determine rotation direction - REVERSED from before
-    // Now when clockwise is true, _rotationDirection is -1 (clockwise movement)
-    // When clockwise is false, _rotationDirection is 1 (counter-clockwise movement)
     _rotationDirection = clockwise ? -1 : 1;
 
     // Prepare the target numbers by rotating the current numbers
+    final totalItems = widget.ringModel.itemCount;
     _targetNumbers = List<int>.from(_currentNumbers);
 
     if (clockwise) {
@@ -109,23 +110,68 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     _animationController.forward();
   }
 
+  // Detect which side of the ring the drag started on 
+  _DragSide _getDragSide(Offset position, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final dx = position.dx - center.dx;
+    final dy = position.dy - center.dy;
+    
+    // Determine which side of the ring the drag is on
+    if (dx.abs() > dy.abs()) {
+      // Horizontal sides
+      return dx > 0 ? _DragSide.right : _DragSide.left;
+    } else {
+      // Vertical sides
+      return dy > 0 ? _DragSide.bottom : _DragSide.top;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Set tile sizes
     final tileSize = widget.ringModel.squareSize * 0.13;
-    final cornerSize = tileSize * (widget.isInner ? 1.8 : 1.5);
+    final cornerSize = tileSize * (widget.isInner ? 1.6 : 1.5);
 
     return GestureDetector(
-      onHorizontalDragEnd: (details) {
-        if (details.primaryVelocity == null) return;
-
-        if (details.primaryVelocity! > 0) {
-          // Right swipe - rotate clockwise (CHANGED)
-          _startRotationAnimation(true);
-        } else if (details.primaryVelocity! < 0) {
-          // Left swipe - rotate counter-clockwise (CHANGED)
-          _startRotationAnimation(false);
+      // Track the start position of the drag
+      onPanStart: (details) {
+        _dragStartPosition = details.localPosition;
+      },
+      // Handle both vertical and horizontal drags
+      onPanEnd: (details) {
+        if (_dragStartPosition == null) return;
+        
+        final size = widget.ringModel.squareSize;
+        final dragEndPosition = details.velocity.pixelsPerSecond;
+        
+        if (dragEndPosition.distance < 50) return; // Ignore very small drags
+        
+        final dragSide = _getDragSide(_dragStartPosition!, Size(size, size));
+        
+        // Determine rotation based on gesture direction and the side it started on
+        bool isClockwise;
+        
+        switch (dragSide) {
+          case _DragSide.top:
+            // Top side: right→clockwise, left→counter-clockwise
+            isClockwise = dragEndPosition.dx > 0;
+            break;
+          case _DragSide.right:
+            // Right side: down→clockwise, up→counter-clockwise
+            isClockwise = dragEndPosition.dy > 0;
+            break;
+          case _DragSide.bottom:
+            // Bottom side: left→clockwise, right→counter-clockwise
+            isClockwise = dragEndPosition.dx < 0;
+            break;
+          case _DragSide.left:
+            // Left side: up→clockwise, down→counter-clockwise
+            isClockwise = dragEndPosition.dy < 0;
+            break;
         }
+        
+        _startRotationAnimation(isClockwise);
+        _dragStartPosition = null;
       },
       child: Container(
         width: widget.ringModel.squareSize,
@@ -164,11 +210,9 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
           i, widget.ringModel.squareSize, tileSize);
 
       // Calculate the next position index based on rotation direction
-      // IMPORTANT CHANGE: We're reversing the direction for visual animation compared to number rotation
-      final nextIndex = (_rotationDirection < 0) // Note the reversed comparison
+      final nextIndex = (_rotationDirection < 0)
           ? (i + 1) % totalItems // For clockwise visual movement
-          : (i - 1 + totalItems) %
-              totalItems; // For counter-clockwise visual movement
+          : (i - 1 + totalItems) % totalItems; // For counter-clockwise visual movement
 
       final nextPosition = SquarePositionUtils.calculateInnerSquarePosition(
           nextIndex, widget.ringModel.squareSize, tileSize);
@@ -211,7 +255,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     return tiles;
   }
 
-  // Build the outer ring tiles with animation (similar approach to inner ring)
+  // Build the outer ring tiles with animation
   List<Widget> _buildOuterRingTiles(
       double tileSize, double cornerSize, double animationValue) {
     final totalItems = widget.ringModel.itemCount;
@@ -223,11 +267,9 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
           i, widget.ringModel.squareSize, tileSize);
 
       // Calculate the next position index based on rotation direction
-      // IMPORTANT CHANGE: We're reversing the direction for visual animation compared to number rotation
-      final nextIndex = (_rotationDirection < 0) // Note the reversed comparison
+      final nextIndex = (_rotationDirection < 0)
           ? (i + 1) % totalItems // For clockwise visual movement
-          : (i - 1 + totalItems) %
-              totalItems; // For counter-clockwise visual movement
+          : (i - 1 + totalItems) % totalItems; // For counter-clockwise visual movement
 
       final nextPosition = SquarePositionUtils.calculateSquarePosition(
           nextIndex, widget.ringModel.squareSize, tileSize);
@@ -269,4 +311,12 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
 
     return tiles;
   }
+}
+
+// Enum to represent which side of the ring a drag started on
+enum _DragSide {
+  top,
+  right,
+  bottom,
+  left,
 }
