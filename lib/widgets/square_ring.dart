@@ -285,6 +285,38 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
       // Get the next position, skipping solved corners if needed
       final nextPosition = _calculateNextPositionWithCornerSkipping(i, true, tileSize);
 
+      // Determine if the tile is moving to or from a corner position
+      final nextIndex = (_rotationDirection < 0)
+          ? (i + 1) % totalItems
+          : (i - 1 + totalItems) % totalItems;
+      final isMovingToCorner = !isCorner && cornerIndices.contains(nextIndex);
+      final isMovingFromCorner = isCorner && !cornerIndices.contains(nextIndex);
+
+      // Calculate size animation based on whether tile is moving to/from corner
+      double startSize, endSize;
+      
+      if (isMovingToCorner) {
+        // Growing from regular to corner size
+        startSize = tileSize;
+        endSize = cornerSize;
+      } else if (isMovingFromCorner) {
+        // Shrinking from corner to regular size
+        startSize = cornerSize;
+        endSize = tileSize;
+      } else {
+        // Maintaining same size
+        startSize = endSize = isCorner ? cornerSize : tileSize;
+      }
+      
+      // Interpolate current size
+      final currentSize = startSize * (1 - animationValue) + endSize * animationValue;
+      
+      // Adjust for position offset for changing sizes
+      final startOffset = (startSize - tileSize) / 2;
+      final endOffset = (endSize - tileSize) / 2;
+      final offsetX = startOffset * (1 - animationValue) + endOffset * animationValue;
+      final offsetY = offsetX; // Same for square tiles
+
       // Interpolate between current and next position
       final interpolatedX = currentPosition.dx * (1 - animationValue) +
           nextPosition.dx * animationValue;
@@ -294,22 +326,18 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
       // Get the number for this tile (current number during animation)
       final displayNumber = _currentNumbers[i];
 
-      // Adjust for corner size if needed
-      final effectiveTileSize = isCorner ? cornerSize : tileSize;
-      final offsetDiff = isCorner ? (cornerSize - tileSize) / 2 : 0.0;
-
       tiles.add(
         Positioned(
-          left: interpolatedX - (isCorner ? offsetDiff : 0),
-          top: interpolatedY - (isCorner ? offsetDiff : 0),
-          width: effectiveTileSize,
-          height: effectiveTileSize,
+          left: interpolatedX - offsetX,
+          top: interpolatedY - offsetY,
+          width: currentSize,
+          height: currentSize,
           child: AbsorbPointer(
             child: NumberTile(
               number: displayNumber,
               color: widget.ringModel.itemColor,
               isDisabled: isSolved,
-              size: effectiveTileSize,
+              size: currentSize,
               onTap: () {},
             ),
           ),
@@ -371,6 +399,38 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
       // Get the next position, skipping solved corners if needed
       final nextPosition = _calculateNextPositionWithCornerSkipping(i, false, tileSize);
 
+      // Determine if the tile is moving to or from a corner position
+      final nextIndex = (_rotationDirection < 0)
+          ? (i + 1) % totalItems
+          : (i - 1 + totalItems) % totalItems;
+      final isMovingToCorner = !isCorner && cornerIndices.contains(nextIndex);
+      final isMovingFromCorner = isCorner && !cornerIndices.contains(nextIndex);
+
+      // Calculate size animation based on whether tile is moving to/from corner
+      double startSize, endSize;
+      
+      if (isMovingToCorner) {
+        // Growing from regular to corner size
+        startSize = tileSize;
+        endSize = cornerSize;
+      } else if (isMovingFromCorner) {
+        // Shrinking from corner to regular size
+        startSize = cornerSize;
+        endSize = tileSize;
+      } else {
+        // Maintaining same size
+        startSize = endSize = isCorner ? cornerSize : tileSize;
+      }
+      
+      // Interpolate current size
+      final currentSize = startSize * (1 - animationValue) + endSize * animationValue;
+      
+      // Adjust for position offset for changing sizes
+      final startOffset = (startSize - tileSize) / 2;
+      final endOffset = (endSize - tileSize) / 2;
+      final offsetX = startOffset * (1 - animationValue) + endOffset * animationValue;
+      final offsetY = offsetX; // Same for square tiles
+
       // Interpolate between current and next position
       final interpolatedX = currentPosition.dx * (1 - animationValue) +
           nextPosition.dx * animationValue;
@@ -380,22 +440,18 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
       // Get the number for this tile
       final displayNumber = _currentNumbers[i];
 
-      // Adjust for corner size if needed
-      final effectiveTileSize = isCorner ? cornerSize : tileSize;
-      final offsetDiff = isCorner ? (cornerSize - tileSize) / 2 : 0.0;
-
       tiles.add(
         Positioned(
-          left: interpolatedX - (isCorner ? offsetDiff : 0),
-          top: interpolatedY - (isCorner ? offsetDiff : 0),
-          width: effectiveTileSize,
-          height: effectiveTileSize,
+          left: interpolatedX - offsetX,
+          top: interpolatedY - offsetY,
+          width: currentSize,
+          height: currentSize,
           child: AbsorbPointer(
             child: NumberTile(
               number: displayNumber,
               color: widget.ringModel.itemColor,
               isDisabled: isSolved,
-              size: effectiveTileSize,
+              size: currentSize,
               onTap: () {},
             ),
           ),
