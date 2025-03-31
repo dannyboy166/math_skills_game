@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import '../models/game_operation.dart';
+import '../operations/operation_factory.dart';
 import '../widgets/game_board.dart';
 
 class GameScreen extends StatefulWidget {
   final int targetNumber;
-  final String operation;
+  final String operationName;
 
   const GameScreen({
     super.key,
     required this.targetNumber,
-    required this.operation,
+    required this.operationName,
   });
 
   @override
@@ -17,10 +19,14 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final AnimationController _pulseController;
+  late final GameOperation operation;
   
   @override
   void initState() {
     super.initState();
+    
+    // Get the operation from the factory
+    operation = OperationFactory.getOperation(widget.operationName);
     
     // Controller for pulse effect on score
     _pulseController = AnimationController(
@@ -34,31 +40,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _pulseController.dispose();
     super.dispose();
   }
-
-  Color _getOperationColor() {
-    switch (widget.operation) {
-      case 'addition': return Colors.green;
-      case 'subtraction': return Colors.purple;
-      case 'multiplication': return Colors.blue;
-      case 'division': return Colors.orange;
-      default: return Colors.blue;
-    }
-  }
   
-  String _getOperationEmoji() {
-    switch (widget.operation) {
-      case 'addition': return '➕';
-      case 'subtraction': return '➖';
-      case 'multiplication': return '✖️';
-      case 'division': return '➗';
-      default: return '🔢';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final operationColor = _getOperationColor();
-    
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -66,7 +50,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              operationColor.withOpacity(0.8),
+              operation.color.withOpacity(0.8),
               Colors.white,
             ],
             stops: const [0.3, 0.65],
@@ -76,10 +60,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           child: Column(
             children: [
               // Custom App Bar
-              _buildAppBar(context, operationColor),
+              _buildAppBar(context),
               
               // Game Stats
-              _buildGameStats(operationColor),
+              _buildGameStats(),
               
               // Game Board
               Expanded(
@@ -109,7 +93,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             child: Opacity(
                               opacity: 0.1,
                               child: Text(
-                                _getOperationEmoji(),
+                                operation.emoji,
                                 style: const TextStyle(
                                   fontSize: 120,
                                 ),
@@ -121,7 +105,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           Center(
                             child: GameBoard(
                               targetNumber: widget.targetNumber,
-                              operation: widget.operation,
+                              operation: operation,
                             ),
                           ),
                         ],
@@ -137,7 +121,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildAppBar(BuildContext context, Color operationColor) {
+  Widget _buildAppBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 0, 8, 8),
       child: Row(
@@ -165,7 +149,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
-                'Practice ${widget.operation} with ${widget.targetNumber}',
+                'Practice ${operation.displayName} with ${widget.targetNumber}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -188,7 +172,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildGameStats(Color operationColor) {
+  Widget _buildGameStats() {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -212,7 +196,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             children: [
               Icon(
                 Icons.timer_outlined,
-                color: operationColor,
+                color: operation.color,
                 size: 24,
               ),
               const SizedBox(width: 8),
@@ -239,7 +223,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             children: [
               Icon(
                 Icons.star_rounded,
-                color: operationColor,
+                color: operation.color,
                 size: 24,
               ),
               const SizedBox(width: 8),

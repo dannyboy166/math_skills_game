@@ -1,19 +1,20 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
-import 'package:math_skills_game/widgets/celebrations/animated_border.dart';
-import 'package:math_skills_game/widgets/celebrations/audio_manager.dart';
-import 'package:math_skills_game/widgets/celebrations/burst_animation.dart';
-import 'package:math_skills_game/widgets/celebrations/candy_crush_explosion.dart';
-import 'package:math_skills_game/widgets/celebrations/celebration_overlay.dart';
-import 'package:math_skills_game/widgets/celebrations/particle_burst.dart';
-import 'package:math_skills_game/widgets/square_ring.dart';
+import '../models/game_operation.dart';
 import '../models/ring_model.dart';
-import 'center_target.dart';
+import '../widgets/celebrations/animated_border.dart';
+import '../widgets/celebrations/audio_manager.dart';
+import '../widgets/celebrations/burst_animation.dart';
+import '../widgets/celebrations/candy_crush_explosion.dart';
+import '../widgets/celebrations/celebration_overlay.dart';
+import '../widgets/celebrations/particle_burst.dart';
+import '../widgets/square_ring.dart';
+import '../widgets/center_target.dart';
 
 class GameBoard extends StatefulWidget {
   final int targetNumber;
-  final String operation;
+  final GameOperation operation;
 
   const GameBoard({
     Key? key,
@@ -44,7 +45,7 @@ class GameBoardState extends State<GameBoard> {
   final GlobalKey<State<AnimatedSquareRing>> innerRingKey =
       GlobalKey<State<AnimatedSquareRing>>();
 
-// Keys for burst animations
+  // Keys for burst animations
   final List<GlobalKey<State<BurstAnimation>>> _burstKeys = List.generate(
     4,
     (index) => GlobalKey<State<BurstAnimation>>(),
@@ -53,7 +54,23 @@ class GameBoardState extends State<GameBoard> {
   @override
   void initState() {
     super.initState();
-    // Initialize ring models
+
+    // Initialize ring models with empty lists (will be populated by generateGameNumbers)
+    outerRingModel = RingModel(
+      numbers: [],
+      itemColor: Colors.teal,
+      squareSize: 360,
+      rotationSteps: 0,
+    );
+
+    innerRingModel = RingModel(
+      numbers: [],
+      itemColor: Colors.lightGreen,
+      squareSize: 240,
+      rotationSteps: 0,
+    );
+
+    // Generate game numbers using the operation strategy
     generateGameNumbers();
 
     // Initialize confetti controllers for each corner
@@ -71,73 +88,11 @@ class GameBoardState extends State<GameBoard> {
   }
 
   void generateGameNumbers() {
-    final random = Random();
-
-    // For inner ring, use fixed numbers 1-12 in order
-    final innerNumbers = List.generate(12, (index) => index + 1);
-
-    // Create inner ring model
-    innerRingModel = RingModel(
-      numbers: innerNumbers,
-      itemColor: Colors.lightGreen,
-      squareSize: 240, // Will be adjusted in build
-      rotationSteps: 0,
-    );
-
-    // Generate 4 distinct valid multiples for the outer ring (for multiplication)
-    // Maximum multiple is 12 (e.g., for target 3, max would be 36)
-    final maxMultiple = 12;
-
-    // Create a list of all possible multiples (1× to 12×)
-    List<int> allMultiples =
-        List.generate(maxMultiple, (i) => (i + 1) * widget.targetNumber);
-
-    // Shuffle the list of multiples
-    allMultiples.shuffle(random);
-
-    // Take the first 4 multiples
-    List<int> validAnswers = allMultiples.take(4).toList();
-
-    // Generate outer ring numbers (all random up to 12× the target number)
-    final maxOuterValue = widget.targetNumber * 12;
-    final outerNumbers = List.generate(16, (index) {
-      // Generate random numbers between 1 and 12× target
-      // Make sure these random numbers are NOT multiples of the target
-      int randomNum;
-      do {
-        randomNum = random.nextInt(maxOuterValue) + 1;
-      } while (
-          randomNum % widget.targetNumber == 0); // Avoid multiples of target
-
-      return randomNum;
-    });
-
-    // Now shuffle the positions where we'll place these valid answers
-    // We'll choose 4 random positions from the 16 positions
-    List<int> possiblePositions = List.generate(16, (index) => index);
-    possiblePositions.shuffle(random);
-    List<int> selectedPositions = possiblePositions.sublist(0, 4);
-
-    // Place the valid answers at the selected positions
-    for (int i = 0; i < 4; i++) {
-      outerNumbers[selectedPositions[i]] = validAnswers[i];
-    }
-
-    // Create the outer ring model
-    outerRingModel = RingModel(
-      numbers: outerNumbers,
-      itemColor: Colors.teal,
-      squareSize: 360, // Will be adjusted in build
-      rotationSteps: 0,
-    );
-
-    // Create the outer ring model
-    outerRingModel = RingModel(
-      numbers: outerNumbers,
-      itemColor: Colors.teal,
-      squareSize: 360, // Will be adjusted in build
-      rotationSteps: 0,
-    );
+    // Delegate to the operation strategy
+    widget.operation.generateGameNumbers(
+        outerRingModel: outerRingModel,
+        innerRingModel: innerRingModel,
+        targetNumber: widget.targetNumber);
   }
 
   // Handles rotation of the outer ring
@@ -154,7 +109,6 @@ class GameBoardState extends State<GameBoard> {
     });
   }
 
-  // Play burst animation for a specific corner
   // Play burst animation for a specific corner
   void _playBurstAnimation(int cornerIndex) {
     final state = _burstKeys[cornerIndex].currentState;
@@ -200,7 +154,7 @@ class GameBoardState extends State<GameBoard> {
             width: boardSize,
             height: boardSize,
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: widget.operation.color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Stack(
@@ -276,9 +230,7 @@ class GameBoardState extends State<GameBoard> {
     );
   }
 
-  // Add this to your game_board.dart file
-
-// Play an enhanced celebration effect for a corner
+  // Play an enhanced celebration effect for a corner
   void _playEnhancedCornerCelebration(int cornerIndex) {
     // 1. Play the existing burst animation
     _playBurstAnimation(cornerIndex);
@@ -330,7 +282,7 @@ class GameBoardState extends State<GameBoard> {
                 width: 80,
                 height: 80,
                 child: CandyCrushExplosion(
-                  color: Colors.green,
+                  color: widget.operation.color,
                   onComplete: () {
                     // Now we can safely reference entry
                     entry.remove();
@@ -401,24 +353,8 @@ class GameBoardState extends State<GameBoard> {
   }
 
   List<Widget> buildOperatorOverlays(double boardSize, double innerRingSize) {
-    // Get operator symbol
-    String operatorSymbol;
-    switch (widget.operation) {
-      case 'addition':
-        operatorSymbol = '+';
-        break;
-      case 'subtraction':
-        operatorSymbol = '-';
-        break;
-      case 'multiplication':
-        operatorSymbol = '×';
-        break;
-      case 'division':
-        operatorSymbol = '÷';
-        break;
-      default:
-        operatorSymbol = '?';
-    }
+    // Get operator symbol from the operation
+    String operatorSymbol = widget.operation.symbol;
 
     // Calculate diagonal positions based on board size
     // Position between inner ring and center
@@ -586,7 +522,7 @@ class GameBoardState extends State<GameBoard> {
               children: [
                 // Particle burst (only visible when animation plays)
                 if (solvedCorners[0])
-                  ParticleBurst(color: Colors.green.shade300),
+                  ParticleBurst(color: widget.operation.color.withOpacity(0.7)),
 
                 // The corner indicator
                 Container(
@@ -594,7 +530,7 @@ class GameBoardState extends State<GameBoard> {
                   height: detectorSize,
                   decoration: BoxDecoration(
                     color: solvedCorners[0]
-                        ? Colors.green.withOpacity(0.3)
+                        ? widget.operation.color.withOpacity(0.3)
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
@@ -621,7 +557,7 @@ class GameBoardState extends State<GameBoard> {
               children: [
                 // Particle burst (only visible when animation plays)
                 if (solvedCorners[1])
-                  ParticleBurst(color: Colors.green.shade300),
+                  ParticleBurst(color: widget.operation.color.withOpacity(0.7)),
 
                 // The corner indicator
                 Container(
@@ -629,7 +565,7 @@ class GameBoardState extends State<GameBoard> {
                   height: detectorSize,
                   decoration: BoxDecoration(
                     color: solvedCorners[1]
-                        ? Colors.green.withOpacity(0.3)
+                        ? widget.operation.color.withOpacity(0.3)
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
@@ -656,7 +592,7 @@ class GameBoardState extends State<GameBoard> {
               children: [
                 // Particle burst (only visible when animation plays)
                 if (solvedCorners[2])
-                  ParticleBurst(color: Colors.green.shade300),
+                  ParticleBurst(color: widget.operation.color.withOpacity(0.7)),
 
                 // The corner indicator
                 Container(
@@ -664,7 +600,7 @@ class GameBoardState extends State<GameBoard> {
                   height: detectorSize,
                   decoration: BoxDecoration(
                     color: solvedCorners[2]
-                        ? Colors.green.withOpacity(0.3)
+                        ? widget.operation.color.withOpacity(0.3)
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
@@ -691,7 +627,7 @@ class GameBoardState extends State<GameBoard> {
               children: [
                 // Particle burst (only visible when animation plays)
                 if (solvedCorners[3])
-                  ParticleBurst(color: Colors.green.shade300),
+                  ParticleBurst(color: widget.operation.color.withOpacity(0.7)),
 
                 // The corner indicator
                 Container(
@@ -699,7 +635,7 @@ class GameBoardState extends State<GameBoard> {
                   height: detectorSize,
                   decoration: BoxDecoration(
                     color: solvedCorners[3]
-                        ? Colors.green.withOpacity(0.3)
+                        ? widget.operation.color.withOpacity(0.3)
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
@@ -789,27 +725,12 @@ class GameBoardState extends State<GameBoard> {
     final outerNumber = outerCornerNumbers[cornerIndex];
     final innerNumber = innerCornerNumbers[cornerIndex];
 
-    // Check if the equation is correct
-    bool isCorrect = false;
-
-    switch (widget.operation) {
-      case 'addition':
-        isCorrect = innerNumber + widget.targetNumber == outerNumber;
-        break;
-      case 'subtraction':
-        isCorrect = innerNumber - widget.targetNumber == outerNumber ||
-            widget.targetNumber - innerNumber == outerNumber;
-        break;
-      case 'multiplication':
-        isCorrect = innerNumber * widget.targetNumber == outerNumber;
-        break;
-      case 'division':
-        isCorrect = innerNumber * widget.targetNumber ==
-                outerNumber || // inner * target = outer
-            outerNumber / widget.targetNumber ==
-                innerNumber; // outer / target = inner
-        break;
-    }
+    // Check if the equation is correct using the operation strategy
+    bool isCorrect = widget.operation.checkEquation(
+      innerNumber: innerNumber,
+      outerNumber: outerNumber,
+      targetNumber: widget.targetNumber,
+    );
 
     if (isCorrect && !solvedCorners[cornerIndex]) {
       // Play the enhanced corner celebration instead of individual effects
@@ -863,12 +784,12 @@ class GameBoardState extends State<GameBoard> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Level Complete!'),
+            title: const Text('Level Complete!'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('You solved all the equations. Great job!'),
-                SizedBox(height: 20),
+                const Text('You solved all the equations. Great job!'),
+                const SizedBox(height: 20),
                 // Show the equations that were solved
                 ...List.generate(4, (index) {
                   final outerCornerNumbers = outerRingModel.getCornerNumbers();
@@ -881,28 +802,18 @@ class GameBoardState extends State<GameBoard> {
                       .map((i) => rotatedInnerNumbers[i % 12])
                       .toList();
 
-                  String operatorSymbol;
-                  switch (widget.operation) {
-                    case 'addition':
-                      operatorSymbol = '+';
-                      break;
-                    case 'subtraction':
-                      operatorSymbol = '-';
-                      break;
-                    case 'multiplication':
-                      operatorSymbol = '×';
-                      break;
-                    case 'division':
-                      operatorSymbol = '÷';
-                      break;
-                    default:
-                      operatorSymbol = '?';
-                  }
+                  // Use the operation to get the equation string
+                  String equation = widget.operation.getEquationString(
+                    innerNumber: innerCornerNumbers[index],
+                    targetNumber: widget.targetNumber,
+                    outerNumber: outerCornerNumbers[index],
+                  );
+
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Text(
-                      '${innerCornerNumbers[index]} $operatorSymbol ${widget.targetNumber} = ${outerCornerNumbers[index]}',
-                      style: TextStyle(fontSize: 16),
+                      equation,
+                      style: const TextStyle(fontSize: 16),
                     ),
                   );
                 }),
@@ -918,7 +829,7 @@ class GameBoardState extends State<GameBoard> {
                     generateGameNumbers();
                   });
                 },
-                child: Text('Play Again'),
+                child: const Text('Play Again'),
               ),
             ],
           );

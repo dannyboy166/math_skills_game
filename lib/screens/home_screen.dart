@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../models/game_operation.dart';
+import '../operations/operation_factory.dart';
 import 'game_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -24,6 +26,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Colors.pink.shade100,
     Colors.teal.shade100,
   ];
+  
+  // Get all available operations
+  final List<GameOperation> _operations = OperationFactory.getAllOperations();
   
   @override
   void initState() {
@@ -93,8 +98,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: SafeArea(
               child: Stack(
                 children: [
-                  // Removed animated background bubbles
-                  
                   // Main content
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -185,15 +188,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 // Operation buttons row
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    _buildOperationButton('+', 'addition'),
-                                    const SizedBox(width: 16),
-                                    _buildOperationButton('-', 'subtraction'),
-                                    const SizedBox(width: 16),
-                                    _buildOperationButton('×', 'multiplication'),
-                                    const SizedBox(width: 16),
-                                    _buildOperationButton('÷', 'division'),
-                                  ],
+                                  children: _operations.map((op) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                      child: _buildOperationButton(op.symbol, op.name),
+                                    );
+                                  }).toList(),
                                 ),
                                 const SizedBox(height: 50),
                                 // Start game button
@@ -283,6 +283,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildOperationButton(String symbol, String operation) {
     final isSelected = selectedOperation == operation;
+    final operationColor = _getOperationColor(operation);
     
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0.8, end: isSelected ? 1.1 : 1.0),
@@ -305,8 +306,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 gradient: isSelected
                     ? LinearGradient(
                         colors: [
-                          _getOperationColor(operation).shade400,
-                          _getOperationColor(operation).shade600,
+                          operationColor.shade400,
+                          operationColor.shade600,
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -320,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 boxShadow: [
                   BoxShadow(
                     color: isSelected
-                        ? _getOperationColor(operation).withOpacity(0.6)
+                        ? operationColor.withOpacity(0.6)
                         : Colors.grey.withOpacity(0.3),
                     blurRadius: isSelected ? 12 : 5,
                     spreadRadius: isSelected ? 2 : 0,
@@ -381,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 PageRouteBuilder(
                   pageBuilder: (context, animation, secondaryAnimation) => GameScreen(
                     targetNumber: selectedNumber,
-                    operation: selectedOperation,
+                    operationName: selectedOperation,
                   ),
                   transitionsBuilder: (context, animation, secondaryAnimation, child) {
                     var begin = const Offset(1.0, 0.0);
@@ -467,8 +468,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
-
-// Removed bubble painter classes
 
 // Custom painter for confetti effect on button
 class ConfettiPainter extends CustomPainter {
