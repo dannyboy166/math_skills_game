@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_operation.dart';
 import '../operations/operation_factory.dart';
-import '../widgets/game_board.dart';
+import '../widgets/board/game_board.dart';
 
 class GameScreen extends StatefulWidget {
   final int targetNumber;
