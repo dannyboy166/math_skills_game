@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 class BurstAnimation extends StatefulWidget {
   final Widget child;
   final VoidCallback? onComplete;
-  
+
   const BurstAnimation({
     Key? key,
     required this.child,
@@ -15,20 +14,21 @@ class BurstAnimation extends StatefulWidget {
   State<BurstAnimation> createState() => _BurstAnimationState();
 }
 
-class _BurstAnimationState extends State<BurstAnimation> with SingleTickerProviderStateMixin {
+class _BurstAnimationState extends State<BurstAnimation>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 1.0, end: 1.3)
@@ -41,7 +41,7 @@ class _BurstAnimationState extends State<BurstAnimation> with SingleTickerProvid
         weight: 70,
       ),
     ]).animate(_controller);
-    
+
     _opacityAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 1.0, end: 0.6),
@@ -52,28 +52,28 @@ class _BurstAnimationState extends State<BurstAnimation> with SingleTickerProvid
         weight: 70,
       ),
     ]).animate(_controller);
-    
+
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         widget.onComplete?.call();
       }
     });
   }
-  
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
-  
+
   void play() {
     _controller.forward(from: 0.0);
   }
-  
+
   void reset() {
     _controller.reset();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(

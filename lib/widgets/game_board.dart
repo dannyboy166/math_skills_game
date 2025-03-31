@@ -9,7 +9,6 @@ import 'package:math_skills_game/widgets/celebrations/celebration_overlay.dart';
 import 'package:math_skills_game/widgets/celebrations/particle_burst.dart';
 import 'package:math_skills_game/widgets/square_ring.dart';
 import '../models/ring_model.dart';
-import '../utils/position_utils.dart';
 import 'center_target.dart';
 
 class GameBoard extends StatefulWidget {
@@ -77,7 +76,7 @@ class GameBoardState extends State<GameBoard> {
     // For inner ring, use fixed numbers 1-12 in order
     final innerNumbers = List.generate(12, (index) => index + 1);
 
-    // Create inner ring model (similar to outer)
+    // Create inner ring model
     innerRingModel = RingModel(
       numbers: innerNumbers,
       itemColor: Colors.lightGreen,
@@ -85,45 +84,52 @@ class GameBoardState extends State<GameBoard> {
       rotationSteps: 0,
     );
 
-    // Generate outer ring numbers
+    // Generate 4 distinct valid multiples for the outer ring (for multiplication)
+    // Maximum multiple is 12 (e.g., for target 3, max would be 36)
+    final maxMultiple = 12;
+
+    // Create a list of all possible multiples (1× to 12×)
+    List<int> allMultiples =
+        List.generate(maxMultiple, (i) => (i + 1) * widget.targetNumber);
+
+    // Shuffle the list of multiples
+    allMultiples.shuffle(random);
+
+    // Take the first 4 multiples
+    List<int> validAnswers = allMultiples.take(4).toList();
+
+    // Generate outer ring numbers (all random up to 12× the target number)
+    final maxOuterValue = widget.targetNumber * 12;
     final outerNumbers = List.generate(16, (index) {
-      // Special handling for corner positions
-      final isCorner = SquarePositionUtils.isCornerIndex(index);
+      // Generate random numbers between 1 and 12× target
+      // Make sure these random numbers are NOT multiples of the target
+      int randomNum;
+      do {
+        randomNum = random.nextInt(maxOuterValue) + 1;
+      } while (
+          randomNum % widget.targetNumber == 0); // Avoid multiples of target
 
-      if (isCorner) {
-        // Map corner indices to the corresponding positions in the inner ring
-        // 0 → 0, 4 → 3, 8 → 6, 12 → 9
-        int innerIndex;
-        if (index == 0)
-          innerIndex = 0; // Top-left
-        else if (index == 4)
-          innerIndex = 3; // Top-right
-        else if (index == 8)
-          innerIndex = 6; // Bottom-right
-        else
-          innerIndex = 9; // Bottom-left (index == 12)
-
-        final innerValue = innerNumbers[innerIndex];
-
-        switch (widget.operation) {
-          case 'addition':
-            return innerValue + widget.targetNumber;
-          case 'subtraction':
-            return (random.nextBool())
-                ? innerValue + widget.targetNumber // inner - target = outer
-                : innerValue - widget.targetNumber; // inner + target = outer
-          case 'multiplication':
-            return innerValue * widget.targetNumber;
-          case 'division':
-            return innerValue * widget.targetNumber; // inner = outer ÷ target
-          default:
-            return random.nextInt(30) + 1;
-        }
-      } else {
-        // Non-corner positions can have more random values
-        return random.nextInt(30) + 1;
-      }
+      return randomNum;
     });
+
+    // Now shuffle the positions where we'll place these valid answers
+    // We'll choose 4 random positions from the 16 positions
+    List<int> possiblePositions = List.generate(16, (index) => index);
+    possiblePositions.shuffle(random);
+    List<int> selectedPositions = possiblePositions.sublist(0, 4);
+
+    // Place the valid answers at the selected positions
+    for (int i = 0; i < 4; i++) {
+      outerNumbers[selectedPositions[i]] = validAnswers[i];
+    }
+
+    // Create the outer ring model
+    outerRingModel = RingModel(
+      numbers: outerNumbers,
+      itemColor: Colors.teal,
+      squareSize: 360, // Will be adjusted in build
+      rotationSteps: 0,
+    );
 
     // Create the outer ring model
     outerRingModel = RingModel(
