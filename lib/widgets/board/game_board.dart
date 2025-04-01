@@ -26,14 +26,14 @@ class GameBoardState extends State<GameBoard> {
   late GameBoardController _controller;
 
   // Keys for the rings
-  final GlobalKey<State<AnimatedSquareRing>> innerRingKey =
-      GlobalKey<State<AnimatedSquareRing>>();
+  final GlobalKey<State<StatefulWidget>> innerRingKey = 
+      GlobalKey<State<StatefulWidget>>();
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize the controller
+    // Initialize the controller with both ring keys
     _controller = GameBoardController(
       targetNumber: widget.targetNumber,
       operation: widget.operation,

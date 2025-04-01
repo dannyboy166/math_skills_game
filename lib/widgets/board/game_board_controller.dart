@@ -11,6 +11,10 @@ class GameBoardController {
   late RingModel outerRingModel;
   late RingModel innerRingModel;
 
+  // Direct storage for locked corner numbers
+  final List<int?> _lockedInnerNumbers = List.filled(4, null);
+  final List<int?> _lockedOuterNumbers = List.filled(4, null);
+
   // Game state
   final int targetNumber;
   final GameOperation operation;
@@ -153,10 +157,13 @@ class GameBoardController {
         : outerRingModel.cornerIndices;
   }
 
-  // Set a corner as locked/solved
   void setCornerLocked(
       int cornerIndex, int innerNumber, int outerNumber, String equation) {
     if (cornerIndex < 0 || cornerIndex >= 4) return;
+
+    print('Setting corner $cornerIndex as locked:');
+    print('  Inner number: $innerNumber, Outer number: $outerNumber');
+    print('  Equation: $equation');
 
     _cornerStates[cornerIndex] = SolvedCorner(
         isLocked: true,
@@ -164,15 +171,9 @@ class GameBoardController {
         outerNumber: outerNumber,
         equationString: equation);
 
-    onStateChanged();
-  }
+    // Add any other locking logic here
 
-  // Clear a corner's locked/solved status
-  void clearCornerLocked(int cornerIndex) {
-    if (cornerIndex < 0 || cornerIndex >= 4) return;
-
-    _cornerStates[cornerIndex] = SolvedCorner(
-        isLocked: false, innerNumber: 0, outerNumber: 0, equationString: "");
+    print('Corner $cornerIndex is now locked: ${isCornerLocked(cornerIndex)}');
 
     onStateChanged();
   }
@@ -180,6 +181,31 @@ class GameBoardController {
   // Helper function to get the number at a position with current rotation
   int _getNumberAtPosition(
       List<int> numbers, int position, int rotationSteps, int itemCount) {
+    // Check if this position is part of a locked corner
+    bool isInnerRing = itemCount == innerRingModel.itemCount;
+    List<int> cornerIndices = isInnerRing
+        ? innerRingModel.cornerIndices
+        : outerRingModel.cornerIndices;
+
+    // Find which corner this position corresponds to (if any)
+    int cornerIndex = -1;
+    for (int i = 0; i < cornerIndices.length; i++) {
+      if (cornerIndices[i] == position) {
+        cornerIndex = i;
+        break;
+      }
+    }
+
+    // If this is a corner position and it's locked, return the locked number
+    if (cornerIndex >= 0 && isCornerLocked(cornerIndex)) {
+      if (isInnerRing && _lockedInnerNumbers[cornerIndex] != null) {
+        return _lockedInnerNumbers[cornerIndex]!;
+      } else if (!isInnerRing && _lockedOuterNumbers[cornerIndex] != null) {
+        return _lockedOuterNumbers[cornerIndex]!;
+      }
+    }
+
+    // Otherwise calculate normally
     if (rotationSteps == 0) return numbers[position];
 
     final actualSteps = rotationSteps % itemCount;
@@ -196,19 +222,33 @@ class GameBoardController {
 
     return numbers[originalPos];
   }
+// Replace the checkCornerEquation method in your GameBoardController class
 
-  // Check if a corner equation is correct
   void checkCornerEquation(int cornerIndex) {
+    print('\nChecking corner $cornerIndex:');
+    print('Already locked? ${isCornerLocked(cornerIndex)}');
+
     // If already locked, don't check again
     if (isCornerLocked(cornerIndex)) return;
 
-    // Get the corner indices
+    // Get the corner indices for both rings
     final outerCornerIndices = outerRingModel.cornerIndices;
     final innerCornerIndices = innerRingModel.cornerIndices;
 
-    // Get the actual outer and inner corner positions
+    // Get the positions for this corner
     final outerCornerPos = outerCornerIndices[cornerIndex];
     final innerCornerPos = innerCornerIndices[cornerIndex];
+
+    print(
+        'Inner corner position: $innerCornerPos, Outer corner position: $outerCornerPos');
+
+    // Print all inner ring positions and numbers to debug
+    print('All inner ring positions and numbers:');
+    for (int i = 0; i < innerRingModel.numbers.length; i++) {
+      int num = _getNumberAtPosition(innerRingModel.numbers, i,
+          innerRingModel.rotationSteps, innerRingModel.itemCount);
+      print('Position $i: $num');
+    }
 
     // Get the numbers at these positions after rotation
     final outerNumber = _getNumberAtPosition(outerRingModel.numbers,
@@ -217,38 +257,94 @@ class GameBoardController {
     final innerNumber = _getNumberAtPosition(innerRingModel.numbers,
         innerCornerPos, innerRingModel.rotationSteps, innerRingModel.itemCount);
 
-    // Check if the equation is correct using the operation strategy
-    bool isCorrect = operation.checkEquation(
-      innerNumber: innerNumber,
-      outerNumber: outerNumber,
-      targetNumber: targetNumber,
-    );
+    print('Inner number: $innerNumber, Outer number: $outerNumber');
+    print('Target number: $targetNumber');
+
+    // Check each corner position and potential equation
+    List<int> innerPotentialCornerPositions = [
+      0,
+      3,
+      6,
+      9
+    ]; // Inner ring corners
+    List<int> possibleInnerNumbers = [];
+
+    // Get all possible inner numbers from corner positions
+    for (int pos in innerPotentialCornerPositions) {
+      int num = _getNumberAtPosition(innerRingModel.numbers, pos,
+          innerRingModel.rotationSteps, innerRingModel.itemCount);
+      possibleInnerNumbers.add(num);
+      print('Potential inner corner at position $pos: $num');
+    }
+
+    // Check if any inner number would make a valid equation with this outer number
+    bool isCorrect = false;
+    int correctInnerNumber = innerNumber;
+
+    for (int i = 0; i < possibleInnerNumbers.length; i++) {
+      int potentialInnerNumber = possibleInnerNumbers[i];
+      bool potentialCorrect =
+          potentialInnerNumber * targetNumber == outerNumber;
+      print(
+          'Testing: $potentialInnerNumber × $targetNumber = ${potentialInnerNumber * targetNumber}, Expected: $outerNumber, Result: $potentialCorrect');
+
+      if (potentialCorrect) {
+        isCorrect = true;
+        correctInnerNumber = potentialInnerNumber;
+        print('Found matching inner number: $correctInnerNumber');
+        break;
+      }
+    }
+
+    print('Equation correct? $isCorrect');
 
     if (isCorrect) {
       // Save the solved equation details
-      String equation = operation.getEquationString(
-          innerNumber: innerNumber,
-          targetNumber: targetNumber,
-          outerNumber: outerNumber);
+      String equation = '$correctInnerNumber × $targetNumber = $outerNumber';
 
-      // Mark this corner as solved with the current numbers
-      setCornerLocked(cornerIndex, innerNumber, outerNumber, equation);
+      print('Setting corner locked with equation: $equation');
+
+      // Store the actual numbers that should remain at these corners
+      _lockedInnerNumbers[cornerIndex] = correctInnerNumber;
+      _lockedOuterNumbers[cornerIndex] = outerNumber;
+
+      // Mark this corner as solved
+      _cornerStates[cornerIndex] = SolvedCorner(
+          isLocked: true,
+          innerNumber: correctInnerNumber,
+          outerNumber: outerNumber,
+          equationString: equation);
+
+      print('After locking - Is corner locked? ${isCornerLocked(cornerIndex)}');
 
       // Play celebration
       _confettiControllers[cornerIndex].play();
       _playBurstAnimation(cornerIndex);
-      _audioManager.playCorrectFeedback();
+
+      try {
+        _audioManager.playCorrectFeedback();
+      } catch (e) {
+        print('Audio error: $e');
+      }
 
       // Check if all corners are solved
       if (solvedCorners.every((solved) => solved)) {
+        print('All corners solved!');
         // Slightly delay the completion celebration
         Future.delayed(const Duration(milliseconds: 1000), () {
           _showCelebration();
         });
       }
+
+      // Notify listeners
+      onStateChanged();
     } else {
       // Play incorrect feedback
-      _audioManager.playWrongFeedback();
+      try {
+        _audioManager.playWrongFeedback();
+      } catch (e) {
+        print('Audio error: $e');
+      }
     }
   }
 
@@ -371,5 +467,38 @@ class GameBoardController {
         ),
       );
     });
+  }
+
+  void debugPrintState(String label) {
+    print('\n===== $label =====');
+    print('Target Number: $targetNumber');
+    print('Inner Ring Rotation: ${innerRingModel.rotationSteps}');
+    print('Outer Ring Rotation: ${outerRingModel.rotationSteps}');
+
+    for (int i = 0; i < 4; i++) {
+      print('Corner $i locked: ${isCornerLocked(i)}');
+
+      // Get the corner positions
+      final innerCornerPos = innerRingModel.cornerIndices[i];
+      final outerCornerPos = outerRingModel.cornerIndices[i];
+
+      // Get the numbers currently at these positions
+      final innerNumber = _getNumberAtPosition(
+          innerRingModel.numbers,
+          innerCornerPos,
+          innerRingModel.rotationSteps,
+          innerRingModel.itemCount);
+
+      final outerNumber = _getNumberAtPosition(
+          outerRingModel.numbers,
+          outerCornerPos,
+          outerRingModel.rotationSteps,
+          outerRingModel.itemCount);
+
+      print('  Inner number: $innerNumber, Outer number: $outerNumber');
+      print(
+          '  Equation correct: ${operation.checkEquation(innerNumber: innerNumber, outerNumber: outerNumber, targetNumber: targetNumber)}');
+    }
+    print('====================\n');
   }
 }

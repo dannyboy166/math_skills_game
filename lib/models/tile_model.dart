@@ -16,6 +16,9 @@ class TileModel {
   
   /// The color of this tile
   final Color color;
+
+  // Original index in the number list (to preserve number-tile mapping)
+  final int originalIndex;
   
   TileModel({
     required this.number,
@@ -23,6 +26,7 @@ class TileModel {
     required this.isCorner,
     this.isSolved = false,
     required this.color,
+    required this.originalIndex,
   });
   
   /// Create a copy of this tile with updated properties
@@ -32,6 +36,7 @@ class TileModel {
     bool? isCorner,
     bool? isSolved,
     Color? color,
+    int? originalIndex,
   }) {
     return TileModel(
       number: number ?? this.number,
@@ -39,6 +44,30 @@ class TileModel {
       isCorner: isCorner ?? this.isCorner,
       isSolved: isSolved ?? this.isSolved,
       color: color ?? this.color,
+      originalIndex: originalIndex ?? this.originalIndex,
+    );
+  }
+  
+  /// Convert to a RingTile (for compatibility with AnimatedSquareRing)
+  dynamic toRingTile() {
+    return {
+      'number': number,
+      'currentPosition': positionIndex,
+      'isCorner': isCorner,
+      'isLocked': isSolved,
+      'originalIndex': originalIndex,
+    };
+  }
+  
+  /// Create a TileModel from a RingTile
+  static TileModel fromRingTile(dynamic ringTile, Color color) {
+    return TileModel(
+      number: ringTile['number'],
+      positionIndex: ringTile['currentPosition'],
+      isCorner: ringTile['isCorner'],
+      isSolved: ringTile['isLocked'],
+      color: color,
+      originalIndex: ringTile['originalIndex'] ?? ringTile['currentPosition'],
     );
   }
 }

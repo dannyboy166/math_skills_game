@@ -3,6 +3,42 @@ import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
 import 'number_tile.dart';
 
+// Class to represent a tile with its fixed number and current position
+class RingTile {
+  final int number;
+  int currentPosition;
+  bool isCorner;
+  bool isLocked;
+  
+  RingTile({
+    required this.number,
+    required this.currentPosition,
+    this.isCorner = false,
+    this.isLocked = false,
+  });
+  
+  // Clone this tile
+  RingTile clone() {
+    return RingTile(
+      number: number,
+      currentPosition: currentPosition,
+      isCorner: isCorner,
+      isLocked: isLocked,
+    );
+  }
+}
+
+// Enum to represent which side of the ring a drag started on
+enum _DragSide {
+  top,
+  right,
+  bottom,
+  left,
+}
+
+// Callback type for tile initialization
+typedef OnTilesInitialized = void Function(List<RingTile> tiles);
+
 class AnimatedSquareRing extends StatefulWidget {
   final RingModel ringModel;
   final Function(int) onRotate;
@@ -10,6 +46,7 @@ class AnimatedSquareRing extends StatefulWidget {
   final bool isInner;
   final double tileSizeFactor;
   final double cornerSizeFactor;
+  final OnTilesInitialized? onTilesInitialized;
 
   const AnimatedSquareRing({
     Key? key,
@@ -19,13 +56,14 @@ class AnimatedSquareRing extends StatefulWidget {
     this.isInner = false,
     this.tileSizeFactor = 0.13,
     this.cornerSizeFactor = 1.6,
+    this.onTilesInitialized,
   }) : super(key: key);
 
   @override
-  State<AnimatedSquareRing> createState() => _AnimatedSquareRingState();
+  AnimatedSquareRingState createState() => AnimatedSquareRingState();
 }
 
-class _AnimatedSquareRingState extends State<AnimatedSquareRing>
+class AnimatedSquareRingState extends State<AnimatedSquareRing>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _rotationAnimation;
@@ -106,6 +144,16 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     
     // Update locked status
     _updateLockedTiles();
+    
+    // Notify parent about our tiles (for controller to reference)
+    if (widget.onTilesInitialized != null) {
+      widget.onTilesInitialized!(_tiles);
+    }
+  }
+  
+  // Get the current tiles
+  List<RingTile> getTiles() {
+    return List.from(_tiles);
   }
   
   // Sync tile positions with the model's rotation state
@@ -145,6 +193,11 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
         }
       }
     }
+    
+    // Notify parent about updated tiles
+    if (widget.onTilesInitialized != null) {
+      widget.onTilesInitialized!(_tiles);
+    }
   }
   
   // Rotate tiles to new positions
@@ -161,7 +214,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     }
     
     // Create a copy of the tiles to work with
-    List<RingTile> tilesCopy = List.from(_tiles);
+    List<RingTile> tilesCopy = _tiles.map((tile) => tile.clone()).toList();
     
     // For each tile, calculate its new position
     for (var tile in tilesCopy) {
@@ -198,6 +251,11 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     setState(() {
       _tiles = tilesCopy;
     });
+    
+    // Notify parent about updated tiles
+    if (widget.onTilesInitialized != null && updateModel) {
+      widget.onTilesInitialized!(_tiles);
+    }
   }
 
   @override
@@ -430,27 +488,4 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     
     return tileWidgets;
   }
-}
-
-// Class to represent a tile with its fixed number and current position
-class RingTile {
-  final int number;
-  int currentPosition;
-  bool isCorner;
-  bool isLocked;
-  
-  RingTile({
-    required this.number,
-    required this.currentPosition,
-    this.isCorner = false,
-    this.isLocked = false,
-  });
-}
-
-// Enum to represent which side of the ring a drag started on
-enum _DragSide {
-  top,
-  right,
-  bottom,
-  left,
 }
