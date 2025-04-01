@@ -17,7 +17,6 @@ class GameBoardController {
   final GameOperation operation;
   final VoidCallback onStateChanged;
   final GlobalKey<State<StatefulWidget>> innerRingKey;
-  List<bool> solvedCorners = [false, false, false, false];
 
   // Audio manager for sound effects
   final AudioManager _audioManager = AudioManager();
@@ -63,6 +62,10 @@ class GameBoardController {
 
   bool get isShowingCelebration => _showingCelebration;
 
+  // Get a list of which corners are solved (for widget consistency)
+  List<bool> get solvedCorners =>
+      List.generate(4, (index) => outerRingModel.corners[index].isLocked);
+
   GlobalKey<State<BurstAnimation>> getBurstKey(int index) => _burstKeys[index];
 
   void dispose() {
@@ -82,19 +85,29 @@ class GameBoardController {
 
   // Update ring models with new sizes
   void updateRingModels(double outerRingSize, double innerRingSize) {
-    outerRingModel = RingModel(
+    // Create new models with the same data but updated sizes
+    RingModel newOuterRingModel = RingModel(
       numbers: outerRingModel.numbers,
       itemColor: outerRingModel.itemColor,
       squareSize: outerRingSize,
       rotationSteps: outerRingModel.rotationSteps,
     );
 
-    innerRingModel = RingModel(
+    RingModel newInnerRingModel = RingModel(
       numbers: innerRingModel.numbers,
       itemColor: innerRingModel.itemColor,
       squareSize: innerRingSize,
       rotationSteps: innerRingModel.rotationSteps,
     );
+
+    // Copy corner states
+    for (int i = 0; i < 4; i++) {
+      newOuterRingModel.corners[i] = outerRingModel.corners[i];
+      newInnerRingModel.corners[i] = innerRingModel.corners[i];
+    }
+
+    outerRingModel = newOuterRingModel;
+    innerRingModel = newInnerRingModel;
 
     onStateChanged();
   }
@@ -126,8 +139,8 @@ class GameBoardController {
     }
   }
 
-  // Helper method to get the number at a specific position after rotation
-  int _getNumberAtPosition(
+  // Get the rotated number at a specific position
+  int getNumberAtPosition(
       List<int> numbers, int position, int rotationSteps, int itemCount) {
     if (rotationSteps == 0) return numbers[position];
 
@@ -150,17 +163,17 @@ class GameBoardController {
   void checkCornerEquation(int cornerIndex) {
     // Get the corner indices
     final outerCornerIndices = outerRingModel.cornerIndices;
-    final innerCornerIndices = [0, 3, 6, 9]; // Standard for inner 12-item ring
+    final innerCornerIndices = innerRingModel.cornerIndices;
 
     // Get the actual outer and inner corner positions
     final outerCornerPos = outerCornerIndices[cornerIndex];
     final innerCornerPos = innerCornerIndices[cornerIndex];
 
     // Get the numbers at these positions after rotation
-    final outerNumber = _getNumberAtPosition(outerRingModel.numbers,
+    final outerNumber = getNumberAtPosition(outerRingModel.numbers,
         outerCornerPos, outerRingModel.rotationSteps, outerRingModel.itemCount);
 
-    final innerNumber = _getNumberAtPosition(innerRingModel.numbers,
+    final innerNumber = getNumberAtPosition(innerRingModel.numbers,
         innerCornerPos, innerRingModel.rotationSteps, innerRingModel.itemCount);
 
     // Check if the equation is correct using the operation strategy
@@ -170,11 +183,22 @@ class GameBoardController {
       targetNumber: targetNumber,
     );
 
-    if (isCorrect && !solvedCorners[cornerIndex]) {
+    if (isCorrect && !outerRingModel.corners[cornerIndex].isLocked) {
+      // Save the solved equation details
+      String equation = operation.getEquationString(
+          innerNumber: innerNumber,
+          targetNumber: targetNumber,
+          outerNumber: outerNumber);
+
+      // Mark this corner as solved with the current numbers
+      outerRingModel.setCornerSolved(
+          cornerIndex, innerNumber, outerNumber, equation);
+      innerRingModel.setCornerSolved(
+          cornerIndex, innerNumber, outerNumber, equation);
+
       // Play the enhanced corner celebration
       _playEnhancedCornerCelebration(cornerIndex);
 
-      solvedCorners[cornerIndex] = true;
       onStateChanged();
 
       // Check if all corners are solved
@@ -185,8 +209,12 @@ class GameBoardController {
         });
       }
     } else if (!isCorrect) {
-      solvedCorners[cornerIndex] = false;
-      onStateChanged();
+      // Clear solved state for this corner if it was previously solved
+      if (outerRingModel.corners[cornerIndex].isLocked) {
+        outerRingModel.clearCornerSolved(cornerIndex);
+        innerRingModel.clearCornerSolved(cornerIndex);
+        onStateChanged();
+      }
 
       // Play incorrect feedback
       _audioManager.playWrongFeedback();
