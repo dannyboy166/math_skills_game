@@ -101,6 +101,7 @@ class GameBoardState extends State<GameBoard> {
               ringModel: _controller.outerRingModel,
               onRotate: _controller.rotateOuterRing,
               solvedCorners: _controller.solvedCorners,
+              controller: _controller, // Pass the controller
               isInner: false,
               tileSizeFactor: 0.12, // Customize outer ring regular tile size
               cornerSizeFactor:
@@ -116,6 +117,7 @@ class GameBoardState extends State<GameBoard> {
                 ringModel: _controller.innerRingModel,
                 onRotate: _controller.rotateInnerRing,
                 solvedCorners: _controller.solvedCorners,
+                controller: _controller, // Pass the controller
                 isInner: true,
                 tileSizeFactor: 0.16, // Customize inner ring regular tile size
                 cornerSizeFactor:

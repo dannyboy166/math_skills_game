@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:math_skills_game/models/game_operation.dart';
 import 'package:math_skills_game/models/ring_model.dart';
+import 'package:math_skills_game/models/solved_corner.dart'; 
 import 'package:math_skills_game/widgets/celebrations/animated_border.dart';
 import 'package:math_skills_game/widgets/celebrations/audio_manager.dart';
 import 'package:math_skills_game/widgets/celebrations/burst_animation.dart';
@@ -17,6 +18,17 @@ class GameBoardController {
   final GameOperation operation;
   final VoidCallback onStateChanged;
   final GlobalKey<State<StatefulWidget>> innerRingKey;
+
+  // Centralized corner state management
+  final List<SolvedCorner> _cornerStates = List.generate(
+    4, 
+    (index) => SolvedCorner(
+      isLocked: false, 
+      innerNumber: 0, 
+      outerNumber: 0, 
+      equationString: ""
+    )
+  );
 
   // Audio manager for sound effects
   final AudioManager _audioManager = AudioManager();
@@ -64,7 +76,19 @@ class GameBoardController {
 
   // Get a list of which corners are solved (for widget consistency)
   List<bool> get solvedCorners =>
-      List.generate(4, (index) => outerRingModel.corners[index].isLocked);
+      List.generate(4, (index) => _cornerStates[index].isLocked);
+
+  // Get if a specific corner is locked/solved
+  bool isCornerLocked(int cornerIndex) {
+    if (cornerIndex < 0 || cornerIndex >= 4) return false;
+    return _cornerStates[cornerIndex].isLocked;
+  }
+
+  // Get the equation string for a corner
+  String getCornerEquation(int cornerIndex) {
+    if (cornerIndex < 0 || cornerIndex >= 4) return "";
+    return _cornerStates[cornerIndex].equationString;
+  }
 
   GlobalKey<State<BurstAnimation>> getBurstKey(int index) => _burstKeys[index];
 
@@ -100,11 +124,7 @@ class GameBoardController {
       rotationSteps: innerRingModel.rotationSteps,
     );
 
-    // Copy corner states
-    for (int i = 0; i < 4; i++) {
-      newOuterRingModel.corners[i] = outerRingModel.corners[i];
-      newInnerRingModel.corners[i] = innerRingModel.corners[i];
-    }
+    // We don't need to copy corner states anymore as they're stored in _cornerStates
 
     outerRingModel = newOuterRingModel;
     innerRingModel = newInnerRingModel;
@@ -159,6 +179,41 @@ class GameBoardController {
     return numbers[originalPos];
   }
 
+  // Get the corner indices for a specific ring
+  List<int> getCornerIndices(bool isInner) {
+    return isInner 
+      ? innerRingModel.cornerIndices 
+      : outerRingModel.cornerIndices;
+  }
+
+  // Centralized method to set a corner as locked/solved
+  void setCornerLocked(int cornerIndex, int innerNumber, int outerNumber, String equation) {
+    if (cornerIndex < 0 || cornerIndex >= 4) return;
+    
+    _cornerStates[cornerIndex] = SolvedCorner(
+      isLocked: true,
+      innerNumber: innerNumber,
+      outerNumber: outerNumber,
+      equationString: equation
+    );
+    
+    onStateChanged();
+  }
+
+  // Centralized method to clear a corner's locked/solved status
+  void clearCornerLocked(int cornerIndex) {
+    if (cornerIndex < 0 || cornerIndex >= 4) return;
+    
+    _cornerStates[cornerIndex] = SolvedCorner(
+      isLocked: false,
+      innerNumber: 0,
+      outerNumber: 0,
+      equationString: ""
+    );
+    
+    onStateChanged();
+  }
+
   // Check if a corner equation is correct
   void checkCornerEquation(int cornerIndex) {
     // Get the corner indices
@@ -183,7 +238,7 @@ class GameBoardController {
       targetNumber: targetNumber,
     );
 
-    if (isCorrect && !outerRingModel.corners[cornerIndex].isLocked) {
+    if (isCorrect && !isCornerLocked(cornerIndex)) {
       // Save the solved equation details
       String equation = operation.getEquationString(
           innerNumber: innerNumber,
@@ -191,15 +246,10 @@ class GameBoardController {
           outerNumber: outerNumber);
 
       // Mark this corner as solved with the current numbers
-      outerRingModel.setCornerSolved(
-          cornerIndex, innerNumber, outerNumber, equation);
-      innerRingModel.setCornerSolved(
-          cornerIndex, innerNumber, outerNumber, equation);
+      setCornerLocked(cornerIndex, innerNumber, outerNumber, equation);
 
       // Play the enhanced corner celebration
       _playEnhancedCornerCelebration(cornerIndex);
-
-      onStateChanged();
 
       // Check if all corners are solved
       if (solvedCorners.every((solved) => solved)) {
@@ -210,10 +260,8 @@ class GameBoardController {
       }
     } else if (!isCorrect) {
       // Clear solved state for this corner if it was previously solved
-      if (outerRingModel.corners[cornerIndex].isLocked) {
-        outerRingModel.clearCornerSolved(cornerIndex);
-        innerRingModel.clearCornerSolved(cornerIndex);
-        onStateChanged();
+      if (isCornerLocked(cornerIndex)) {
+        clearCornerLocked(cornerIndex);
       }
 
       // Play incorrect feedback

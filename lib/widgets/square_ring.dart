@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
+import '../widgets/board/game_board_controller.dart';
 import 'number_tile.dart';
 
 class AnimatedSquareRing extends StatefulWidget {
   final RingModel ringModel;
   final Function(int) onRotate;
   final List<bool> solvedCorners;
-  final bool isInner; // To differentiate between inner and outer rings
-  final double tileSizeFactor; // Add parameter for tile size factor
-  final double cornerSizeFactor; // Add parameter for corner size multiplier
+  final bool isInner;
+  final double tileSizeFactor;
+  final double cornerSizeFactor;
+  final GameBoardController controller; // Added controller reference
 
   const AnimatedSquareRing({
     Key? key,
     required this.ringModel,
     required this.onRotate,
     required this.solvedCorners,
+    required this.controller, // Make controller required
     this.isInner = false,
-    this.tileSizeFactor = 0.13, // Default tile size factor
-    this.cornerSizeFactor = 1.6, // Default corner multiplier
+    this.tileSizeFactor = 0.13,
+    this.cornerSizeFactor = 1.6,
   }) : super(key: key);
 
   @override
@@ -72,9 +75,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
   }
 
   // Get the corner indices based on the ring type
-  List<int> get _cornerIndices => widget.isInner 
-      ? SquarePositionUtils.getInnerCornerIndices()
-      : SquarePositionUtils.getCornerIndices();
+  List<int> get _cornerIndices => widget.controller.getCornerIndices(widget.isInner);
 
   // Initialize all tiles
   void _initializeTiles() {
