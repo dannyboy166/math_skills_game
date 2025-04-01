@@ -30,30 +30,35 @@ class EquationLayout extends StatelessWidget {
   }
 
   List<Widget> _buildOperationSymbols() {
-    // Calculate positions based on inner ring corners
-    final innerRadius = innerRingSize / 2;
-
-    // Define offsets for each corner (proportional to board size for consistency)
-    final offsets = [
-      // Top-left (from center)
-      Offset(-innerRadius * 0.5, -innerRadius * 0.5),
-      // Top-right
-      Offset(innerRadius * 0.5, -innerRadius * 0.5),
-      // Bottom-right
-      Offset(innerRadius * 0.5, innerRadius * 0.5),
-      // Bottom-left
-      Offset(-innerRadius * 0.5, innerRadius * 0.5),
+    // We need to place the operation symbols (×) exactly between the center and the inner ring
+    final symbolSize = 30.0;
+    final verticalAdjustment = -5.0; // Move all symbols up a bit
+    
+    // Calculate positions for the inner ring corner tiles
+    final innerCornerPositions = [
+      _calculateInnerTilePosition(0), // Top-left
+      _calculateInnerTilePosition(3), // Top-right
+      _calculateInnerTilePosition(6), // Bottom-right
+      _calculateInnerTilePosition(9), // Bottom-left
     ];
-
-    // Create operation symbols
-    return offsets.map((offset) {
+    
+    // Center position of the board
+    final centerX = boardSize / 2;
+    final centerY = boardSize / 2;
+    
+    // Create operation symbols at the midpoints between center and inner corners
+    return List.generate(4, (index) {
+      // Calculate midpoint between center and inner corner
+      final cornerPos = innerCornerPositions[index];
+      final midX = (centerX + cornerPos.dx) / 2;
+      final midY = (centerY + cornerPos.dy) / 2 + verticalAdjustment;
+      
       return Positioned(
-        // Position relative to center
-        left: boardSize / 2 + offset.dx - 15,
-        top: boardSize / 2 + offset.dy - 15,
+        left: midX - symbolSize / 2,
+        top: midY - symbolSize / 2,
         child: Container(
-          width: 30,
-          height: 30,
+          width: symbolSize,
+          height: symbolSize,
           alignment: Alignment.center,
           child: Text(
             operation.symbol,
@@ -65,34 +70,46 @@ class EquationLayout extends StatelessWidget {
           ),
         ),
       );
-    }).toList();
+    });
   }
 
   List<Widget> _buildEqualsSymbols() {
-    // Calculate positions based on both rings
-    final innerRadius = innerRingSize / 2;
-    final outerRadius = outerRingSize / 2;
-
-    // Position exactly halfway between inner and outer corners
-    final positions = [
-      // Top-left corner
-      _getCornerPosition(0, innerRadius, outerRadius),
-      // Top-right corner
-      _getCornerPosition(1, innerRadius, outerRadius),
-      // Bottom-right corner
-      _getCornerPosition(2, innerRadius, outerRadius),
-      // Bottom-left corner
-      _getCornerPosition(3, innerRadius, outerRadius),
+    final symbolSize = 30.0;
+    final verticalAdjustment = -5.0; // Move all symbols up a bit
+    
+    // Inner ring corner positions indices: 0, 3, 6, 9
+    // Outer ring corner positions indices: 0, 4, 8, 12
+    
+    // Get positions for inner and outer ring corner tiles
+    final innerCornerPositions = [
+      _calculateInnerTilePosition(0), // Top-left
+      _calculateInnerTilePosition(3), // Top-right
+      _calculateInnerTilePosition(6), // Bottom-right
+      _calculateInnerTilePosition(9), // Bottom-left
     ];
-
-    // Create equal signs
-    return positions.map((position) {
+    
+    final outerCornerPositions = [
+      _calculateOuterTilePosition(0), // Top-left
+      _calculateOuterTilePosition(4), // Top-right
+      _calculateOuterTilePosition(8), // Bottom-right
+      _calculateOuterTilePosition(12), // Bottom-left
+    ];
+    
+    // Create equals symbols exactly between inner and outer corners
+    return List.generate(4, (index) {
+      final innerPos = innerCornerPositions[index];
+      final outerPos = outerCornerPositions[index];
+      
+      // Calculate exact midpoint between inner and outer tiles
+      final midX = (innerPos.dx + outerPos.dx) / 2;
+      final midY = (innerPos.dy + outerPos.dy) / 2 + verticalAdjustment;
+      
       return Positioned(
-        left: position.dx - 15, // Center the = sign
-        top: position.dy - 15,
+        left: midX - symbolSize / 2,
+        top: midY - symbolSize / 2,
         child: Container(
-          width: 30,
-          height: 30,
+          width: symbolSize,
+          height: symbolSize,
           alignment: Alignment.center,
           child: Text(
             "=",
@@ -104,43 +121,71 @@ class EquationLayout extends StatelessWidget {
           ),
         ),
       );
-    }).toList();
+    });
   }
-
-  // Calculate exact position for a corner's equals sign
-  Offset _getCornerPosition(
-      int cornerIndex, double innerRadius, double outerRadius) {
-    // Center of the board
-    final centerX = boardSize / 2;
-    final centerY = boardSize / 2;
-
-    // Calculate positions of inner and outer corners
-    Offset innerCorner;
-    Offset outerCorner;
-
-    // Calculate inner ring corner position
-    if (cornerIndex == 0) {
-      // Top-left
-      innerCorner = Offset(centerX - innerRadius, centerY - innerRadius);
-      outerCorner = Offset(centerX - outerRadius, centerY - outerRadius);
-    } else if (cornerIndex == 1) {
-      // Top-right
-      innerCorner = Offset(centerX + innerRadius, centerY - innerRadius);
-      outerCorner = Offset(centerX + outerRadius, centerY - outerRadius);
-    } else if (cornerIndex == 2) {
-      // Bottom-right
-      innerCorner = Offset(centerX + innerRadius, centerY + innerRadius);
-      outerCorner = Offset(centerX + outerRadius, centerY + outerRadius);
+  
+  // Calculate position for inner ring tile at a given index
+  Offset _calculateInnerTilePosition(int index) {
+    // Use the same calculation logic as in SimpleRing widget
+    final innerTileSize = innerRingSize * 0.16;
+    final availableSpace = innerRingSize - innerTileSize;
+    double x, y;
+    
+    if (index < 4) {
+      // Top row: indices 0-3
+      x = (index / 3) * availableSpace;
+      y = 0;
+    } else if (index < 7) {
+      // Right column: indices 3-6
+      x = availableSpace;
+      y = ((index - 3) / 3) * availableSpace;
+    } else if (index < 10) {
+      // Bottom row: indices 6-9
+      x = availableSpace - ((index - 6) / 3) * availableSpace;
+      y = availableSpace;
     } else {
-      // Bottom-left
-      innerCorner = Offset(centerX - innerRadius, centerY + innerRadius);
-      outerCorner = Offset(centerX - outerRadius, centerY + outerRadius);
+      // Left column: indices 9-11
+      x = 0;
+      y = availableSpace - ((index - 9) / 3) * availableSpace;
     }
-
-    // Midpoint between inner and outer corners
+    
+    // Convert to absolute position on the board
+    final offsetFromCenter = (boardSize - innerRingSize) / 2;
     return Offset(
-      (innerCorner.dx + outerCorner.dx) / 2,
-      (innerCorner.dy + outerCorner.dy) / 2,
+      offsetFromCenter + x + innerTileSize / 2,
+      offsetFromCenter + y + innerTileSize / 2
+    );
+  }
+  
+  // Calculate position for outer ring tile at a given index
+  Offset _calculateOuterTilePosition(int index) {
+    // Use the same calculation logic as in SimpleRing widget
+    final outerTileSize = boardSize * 0.12;
+    final availableSpace = boardSize - outerTileSize;
+    double x, y;
+    
+    if (index < 5) {
+      // Top row: indices 0-4
+      x = (index / 4) * availableSpace;
+      y = 0;
+    } else if (index < 9) {
+      // Right column: indices 4-8
+      x = availableSpace;
+      y = ((index - 4) / 4) * availableSpace;
+    } else if (index < 13) {
+      // Bottom row: indices 8-12
+      x = availableSpace - ((index - 8) / 4) * availableSpace;
+      y = availableSpace;
+    } else {
+      // Left column: indices 12-15
+      x = 0;
+      y = availableSpace - ((index - 12) / 4) * availableSpace;
+    }
+    
+    // Return tile center position
+    return Offset(
+      x + outerTileSize / 2,
+      y + outerTileSize / 2
     );
   }
 }
