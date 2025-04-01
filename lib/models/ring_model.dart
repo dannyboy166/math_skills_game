@@ -118,74 +118,62 @@ class RingModel {
 
     if (steps == 0) return;
 
-    final itemCount = numbers.length;
-    steps = steps % itemCount;
-    if (steps == 0) return;
+    // Force steps to be in range -1 to 1 (simplify to just direction)
+    steps = steps > 0 ? 1 : -1;
+    print('ROTATION DEBUG: Simplified rotation steps: $steps');
 
-    print('ROTATION DEBUG: Effective rotation steps: $steps');
-
-    // Create a new numbers map for the result
-    Map<int, int> newNumbers = {};
-
-    // Copy all locked positions to preserve them
-    for (int pos in _lockedPositions.keys) {
-      newNumbers[pos] = _currentNumbers[pos]!;
-    }
-
-    // Create a list of unlocked positions and their current numbers
-    List<MapEntry<int, int>> unlockedItems = [];
-    for (int i = 0; i < itemCount; i++) {
+    // Get all unlocked positions
+    List<int> unlockedPositions = [];
+    for (int i = 0; i < numbers.length; i++) {
       if (!_lockedPositions.containsKey(i)) {
-        unlockedItems.add(MapEntry(i, _currentNumbers[i]!));
+        unlockedPositions.add(i);
       }
     }
 
-    // Sort the unlocked items by position for consistent processing
-    unlockedItems.sort((a, b) => a.key.compareTo(b.key));
+    if (unlockedPositions.isEmpty) return;
 
-    // Step 1: Collect all unlocked numbers in their correct order
-    List<int> unlockedNumbers = unlockedItems.map((e) => e.value).toList();
+    // Create copy of current state
+    Map<int, int> newNumbers = Map.of(_currentNumbers);
 
-    // Step 2: Rotate the unlocked numbers
     if (steps > 0) {
-      // Counterclockwise rotation (positive steps)
-      final rotationCount = steps % unlockedNumbers.length;
-      print(
-          'ROTATION DEBUG: Rotating ${unlockedNumbers.length} unlocked numbers counterclockwise by $rotationCount steps');
-      final rotatedNumbers = [
-        ...unlockedNumbers.sublist(rotationCount),
-        ...unlockedNumbers.sublist(0, rotationCount)
-      ];
-      unlockedNumbers = rotatedNumbers;
+      // Counterclockwise: first value becomes last
+      int firstPos = unlockedPositions.first;
+      int firstVal = _currentNumbers[firstPos]!;
+
+      // Shift all other values left
+      for (int i = 0; i < unlockedPositions.length - 1; i++) {
+        newNumbers[unlockedPositions[i]] =
+            _currentNumbers[unlockedPositions[i + 1]]!;
+      }
+
+      // Last position gets the first value
+      newNumbers[unlockedPositions.last] = firstVal;
+
+      print('ROTATION DEBUG: Performed simple counterclockwise shift');
     } else {
-      // Clockwise rotation (negative steps)
-      final rotationCount = (-steps) % unlockedNumbers.length;
-      print(
-          'ROTATION DEBUG: Rotating ${unlockedNumbers.length} unlocked numbers clockwise by $rotationCount steps');
-      final rotatedNumbers = [
-        ...unlockedNumbers.sublist(unlockedNumbers.length - rotationCount),
-        ...unlockedNumbers.sublist(0, unlockedNumbers.length - rotationCount)
-      ];
-      unlockedNumbers = rotatedNumbers;
+      // Clockwise: last value becomes first
+      int lastPos = unlockedPositions.last;
+      int lastVal = _currentNumbers[lastPos]!;
+
+      // Shift all other values right
+      for (int i = unlockedPositions.length - 1; i > 0; i--) {
+        newNumbers[unlockedPositions[i]] =
+            _currentNumbers[unlockedPositions[i - 1]]!;
+      }
+
+      // First position gets the last value
+      newNumbers[unlockedPositions.first] = lastVal;
+
+      print('ROTATION DEBUG: Performed simple clockwise shift');
     }
 
-    // Step 3: Place the rotated unlocked numbers back into their positions
-    List<int> unlockedPositions = unlockedItems.map((e) => e.key).toList();
-
-    for (int i = 0; i < unlockedPositions.length; i++) {
-      int position = unlockedPositions[i];
-      int number = unlockedNumbers[i];
-      newNumbers[position] = number;
-      print('ROTATION DEBUG: Placed number $number at position $position');
-    }
-
-    // Replace the current numbers with the rotated numbers
+    // Replace current numbers with new arrangement
     _currentNumbers.clear();
     _currentNumbers.addAll(newNumbers);
 
-    // Print final state after rotation
+    // Debug output
     print('ROTATION DEBUG: Numbers after rotation:');
-    for (int i = 0; i < itemCount; i++) {
+    for (int i = 0; i < numbers.length; i++) {
       String lockStatus = _lockedPositions.containsKey(i) ? '(LOCKED)' : '';
       print('ROTATION DEBUG:   Position $i: ${_currentNumbers[i]} $lockStatus');
     }

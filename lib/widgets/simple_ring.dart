@@ -66,6 +66,9 @@ class _SimpleRingState extends State<SimpleRing> {
             _startPosition!, dragDelta, widget.size);
 
         if (rotationStep != 0) {
+          // Print the rotation step for debugging
+          print("Applying rotation step: $rotationStep");
+
           // Apply the rotation using copyWithRotation
           widget.onRotateSteps(rotationStep);
 
@@ -323,8 +326,11 @@ class _SimpleRingState extends State<SimpleRing> {
       print(
           '${widget.isInner ? "INNER" : "OUTER"} RING DEBUG: Drawing tile at position $i: number=$numberToDisplay, corner=$isCorner, locked=$isLocked');
 
+      // In the _buildTiles method in simple_ring.dart
       tiles.add(
         Positioned(
+          key: ValueKey(
+              'tile_${widget.isInner ? 'inner' : 'outer'}_${i}_${numberToDisplay}'),
           left: offset.dx,
           top: offset.dy,
           child: GestureDetector(

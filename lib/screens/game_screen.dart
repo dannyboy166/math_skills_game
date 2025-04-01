@@ -261,6 +261,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _updateOuterRing(int steps) {
+    print("Outer ring rotation requested: $steps");
     setState(() {
       // Create a new model with the rotation applied
       outerRingModel = outerRingModel.copyWithRotation(steps);
@@ -268,8 +269,8 @@ class _GameScreenState extends State<GameScreen> {
     _checkAllEquations();
   }
 
-// Updated method to rotate the inner ring
   void _updateInnerRing(int steps) {
+    print("Inner ring rotation requested: $steps");
     setState(() {
       // Create a new model with the rotation applied
       innerRingModel = innerRingModel.copyWithRotation(steps);
