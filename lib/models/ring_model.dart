@@ -38,8 +38,22 @@ class RingModel {
     );
   }
 
-  // Get the unrotated number at a position (base reference)
-  int getBaseNumber(int position) {
-    return numbers[position];
+  // Get the number at position considering rotation
+  int getNumberAtPosition(int position) {
+    if (rotationSteps == 0) return numbers[position];
+
+    final actualSteps = rotationSteps % itemCount;
+
+    // Calculate the original position before rotation
+    int originalPos;
+    if (actualSteps > 0) {
+      // Counterclockwise rotation
+      originalPos = (position - actualSteps + itemCount) % itemCount;
+    } else {
+      // Clockwise rotation
+      originalPos = (position + (-actualSteps) + itemCount) % itemCount;
+    }
+
+    return numbers[originalPos];
   }
 }

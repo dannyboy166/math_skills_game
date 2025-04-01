@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:math_skills_game/models/game_operation.dart';
 import 'package:math_skills_game/models/ring_model.dart';
-import 'package:math_skills_game/models/solved_corner.dart'; 
-import 'package:math_skills_game/widgets/celebrations/animated_border.dart';
+import 'package:math_skills_game/models/solved_corner.dart';
 import 'package:math_skills_game/widgets/celebrations/audio_manager.dart';
 import 'package:math_skills_game/widgets/celebrations/burst_animation.dart';
-import 'package:math_skills_game/widgets/celebrations/candy_crush_explosion.dart';
 
 class GameBoardController {
   // Models for our rings
@@ -19,23 +17,14 @@ class GameBoardController {
   final VoidCallback onStateChanged;
   final GlobalKey<State<StatefulWidget>> innerRingKey;
 
-  // Centralized corner state management
+  // Centralized corner state management - single source of truth
   final List<SolvedCorner> _cornerStates = List.generate(
-    4, 
-    (index) => SolvedCorner(
-      isLocked: false, 
-      innerNumber: 0, 
-      outerNumber: 0, 
-      equationString: ""
-    )
-  );
+      4,
+      (index) => SolvedCorner(
+          isLocked: false, innerNumber: 0, outerNumber: 0, equationString: ""));
 
   // Audio manager for sound effects
   final AudioManager _audioManager = AudioManager();
-
-  // Celebration controllers
-  late List<ConfettiController> _confettiControllers;
-  bool _showingCelebration = false;
 
   // Keys for burst animations
   final List<GlobalKey<State<BurstAnimation>>> _burstKeys = List.generate(
@@ -43,13 +32,17 @@ class GameBoardController {
     (index) => GlobalKey<State<BurstAnimation>>(),
   );
 
+  // Confetti controllers for celebrations
+  late final List<ConfettiController> _confettiControllers;
+  bool _showingCelebration = false;
+
   GameBoardController({
     required this.targetNumber,
     required this.operation,
     required this.onStateChanged,
     required this.innerRingKey,
   }) {
-    // Initialize ring models with empty lists (will be populated by generateGameNumbers)
+    // Initialize ring models with empty lists
     outerRingModel = RingModel(
       numbers: [],
       itemColor: Colors.teal,
@@ -67,7 +60,7 @@ class GameBoardController {
     // Generate game numbers using the operation strategy
     generateGameNumbers();
 
-    // Initialize confetti controllers for each corner
+    // Initialize confetti controllers
     _confettiControllers = List.generate(
         4, (index) => ConfettiController(duration: const Duration(seconds: 2)));
   }
@@ -75,8 +68,7 @@ class GameBoardController {
   bool get isShowingCelebration => _showingCelebration;
 
   // Get a list of which corners are solved (for widget consistency)
-  List<bool> get solvedCorners =>
-      List.generate(4, (index) => _cornerStates[index].isLocked);
+  List<bool> get solvedCorners => _cornerStates.map((c) => c.isLocked).toList();
 
   // Get if a specific corner is locked/solved
   bool isCornerLocked(int cornerIndex) {
@@ -90,6 +82,7 @@ class GameBoardController {
     return _cornerStates[cornerIndex].equationString;
   }
 
+  // Get the burst key for a corner
   GlobalKey<State<BurstAnimation>> getBurstKey(int index) => _burstKeys[index];
 
   void dispose() {
@@ -109,25 +102,19 @@ class GameBoardController {
 
   // Update ring models with new sizes
   void updateRingModels(double outerRingSize, double innerRingSize) {
-    // Create new models with the same data but updated sizes
-    RingModel newOuterRingModel = RingModel(
+    outerRingModel = RingModel(
       numbers: outerRingModel.numbers,
       itemColor: outerRingModel.itemColor,
       squareSize: outerRingSize,
       rotationSteps: outerRingModel.rotationSteps,
     );
 
-    RingModel newInnerRingModel = RingModel(
+    innerRingModel = RingModel(
       numbers: innerRingModel.numbers,
       itemColor: innerRingModel.itemColor,
       squareSize: innerRingSize,
       rotationSteps: innerRingModel.rotationSteps,
     );
-
-    // We don't need to copy corner states anymore as they're stored in _cornerStates
-
-    outerRingModel = newOuterRingModel;
-    innerRingModel = newInnerRingModel;
 
     onStateChanged();
   }
@@ -159,8 +146,39 @@ class GameBoardController {
     }
   }
 
-  // Get the rotated number at a specific position
-  int getNumberAtPosition(
+  // Get the corner indices for a specific ring
+  List<int> getCornerIndices(bool isInner) {
+    return isInner
+        ? innerRingModel.cornerIndices
+        : outerRingModel.cornerIndices;
+  }
+
+  // Set a corner as locked/solved
+  void setCornerLocked(
+      int cornerIndex, int innerNumber, int outerNumber, String equation) {
+    if (cornerIndex < 0 || cornerIndex >= 4) return;
+
+    _cornerStates[cornerIndex] = SolvedCorner(
+        isLocked: true,
+        innerNumber: innerNumber,
+        outerNumber: outerNumber,
+        equationString: equation);
+
+    onStateChanged();
+  }
+
+  // Clear a corner's locked/solved status
+  void clearCornerLocked(int cornerIndex) {
+    if (cornerIndex < 0 || cornerIndex >= 4) return;
+
+    _cornerStates[cornerIndex] = SolvedCorner(
+        isLocked: false, innerNumber: 0, outerNumber: 0, equationString: "");
+
+    onStateChanged();
+  }
+
+  // Helper function to get the number at a position with current rotation
+  int _getNumberAtPosition(
       List<int> numbers, int position, int rotationSteps, int itemCount) {
     if (rotationSteps == 0) return numbers[position];
 
@@ -169,53 +187,21 @@ class GameBoardController {
     // Calculate the original position before rotation
     int originalPos;
     if (actualSteps > 0) {
-      // Clockwise rotation
-      originalPos = (position + actualSteps) % itemCount;
+      // Counterclockwise rotation
+      originalPos = (position - actualSteps + itemCount) % itemCount;
     } else {
-      // Counter-clockwise rotation
-      originalPos = (position - actualSteps) % itemCount;
+      // Clockwise rotation
+      originalPos = (position + (-actualSteps) + itemCount) % itemCount;
     }
 
     return numbers[originalPos];
   }
 
-  // Get the corner indices for a specific ring
-  List<int> getCornerIndices(bool isInner) {
-    return isInner 
-      ? innerRingModel.cornerIndices 
-      : outerRingModel.cornerIndices;
-  }
-
-  // Centralized method to set a corner as locked/solved
-  void setCornerLocked(int cornerIndex, int innerNumber, int outerNumber, String equation) {
-    if (cornerIndex < 0 || cornerIndex >= 4) return;
-    
-    _cornerStates[cornerIndex] = SolvedCorner(
-      isLocked: true,
-      innerNumber: innerNumber,
-      outerNumber: outerNumber,
-      equationString: equation
-    );
-    
-    onStateChanged();
-  }
-
-  // Centralized method to clear a corner's locked/solved status
-  void clearCornerLocked(int cornerIndex) {
-    if (cornerIndex < 0 || cornerIndex >= 4) return;
-    
-    _cornerStates[cornerIndex] = SolvedCorner(
-      isLocked: false,
-      innerNumber: 0,
-      outerNumber: 0,
-      equationString: ""
-    );
-    
-    onStateChanged();
-  }
-
   // Check if a corner equation is correct
   void checkCornerEquation(int cornerIndex) {
+    // If already locked, don't check again
+    if (isCornerLocked(cornerIndex)) return;
+
     // Get the corner indices
     final outerCornerIndices = outerRingModel.cornerIndices;
     final innerCornerIndices = innerRingModel.cornerIndices;
@@ -225,10 +211,10 @@ class GameBoardController {
     final innerCornerPos = innerCornerIndices[cornerIndex];
 
     // Get the numbers at these positions after rotation
-    final outerNumber = getNumberAtPosition(outerRingModel.numbers,
+    final outerNumber = _getNumberAtPosition(outerRingModel.numbers,
         outerCornerPos, outerRingModel.rotationSteps, outerRingModel.itemCount);
 
-    final innerNumber = getNumberAtPosition(innerRingModel.numbers,
+    final innerNumber = _getNumberAtPosition(innerRingModel.numbers,
         innerCornerPos, innerRingModel.rotationSteps, innerRingModel.itemCount);
 
     // Check if the equation is correct using the operation strategy
@@ -238,7 +224,7 @@ class GameBoardController {
       targetNumber: targetNumber,
     );
 
-    if (isCorrect && !isCornerLocked(cornerIndex)) {
+    if (isCorrect) {
       // Save the solved equation details
       String equation = operation.getEquationString(
           innerNumber: innerNumber,
@@ -248,22 +234,19 @@ class GameBoardController {
       // Mark this corner as solved with the current numbers
       setCornerLocked(cornerIndex, innerNumber, outerNumber, equation);
 
-      // Play the enhanced corner celebration
-      _playEnhancedCornerCelebration(cornerIndex);
+      // Play celebration
+      _confettiControllers[cornerIndex].play();
+      _playBurstAnimation(cornerIndex);
+      _audioManager.playCorrectFeedback();
 
       // Check if all corners are solved
       if (solvedCorners.every((solved) => solved)) {
-        // Slightly delay the completion dialog to allow for celebration effects
+        // Slightly delay the completion celebration
         Future.delayed(const Duration(milliseconds: 1000), () {
-          showLevelCompleteDialog();
+          _showCelebration();
         });
       }
-    } else if (!isCorrect) {
-      // Clear solved state for this corner if it was previously solved
-      if (isCornerLocked(cornerIndex)) {
-        clearCornerLocked(cornerIndex);
-      }
-
+    } else {
       // Play incorrect feedback
       _audioManager.playWrongFeedback();
     }
@@ -323,96 +306,9 @@ class GameBoardController {
     }
   }
 
-  // Create animated border widget
-  Widget buildAnimatedBorder({required Widget child}) {
-    return AnimatedBorder(
-      // Only activate the border when all corners are solved
-      isActive: solvedCorners.every((solved) => solved),
-      child: child,
-    );
-  }
-
-  // Build confetti widgets for all corners
-  List<Widget> buildConfettiWidgets(double boardSize) {
-    return List.generate(
-        4, (index) => _buildConfettiWidget(index, boardSize: boardSize));
-  }
-
-  // Helper method to build confetti widget at a specific corner
-  Widget _buildConfettiWidget(int cornerIndex, {required double boardSize}) {
-    // Corner offset (distance from edge)
-    final cornerOffset = boardSize * 0.15;
-
-    // Determine the alignment and direction based on corner
-    double blastDirection;
-
-    switch (cornerIndex) {
-      case 0: // Top-left
-        blastDirection = 0.785; // 45 degrees (π/4)
-        break;
-      case 1: // Top-right
-        blastDirection = 2.356; // 135 degrees (3π/4)
-        break;
-      case 2: // Bottom-right
-        blastDirection = 3.927; // 225 degrees (5π/4)
-        break;
-      case 3: // Bottom-left
-        blastDirection = 5.498; // 315 degrees (7π/4)
-        break;
-      default:
-        blastDirection = 0;
-    }
-
-    return Positioned(
-      left: cornerIndex == 0 || cornerIndex == 3 ? cornerOffset : null,
-      right: cornerIndex == 1 || cornerIndex == 2 ? cornerOffset : null,
-      top: cornerIndex == 0 || cornerIndex == 1 ? cornerOffset : null,
-      bottom: cornerIndex == 2 || cornerIndex == 3 ? cornerOffset : null,
-      child: ConfettiWidget(
-        confettiController: _confettiControllers[cornerIndex],
-        blastDirection: blastDirection,
-        particleDrag: 0.05,
-        emissionFrequency: 0.05,
-        numberOfParticles: 20,
-        gravity: 0.2,
-        shouldLoop: false,
-        colors: const [
-          Colors.green,
-          Colors.blue,
-          Colors.pink,
-          Colors.orange,
-          Colors.purple,
-          Colors.red,
-          Colors.yellow,
-        ],
-        // Make particles shoot from the correct position outward
-        createParticlePath: (size) {
-          final path = Path();
-          path.addOval(Rect.fromCircle(
-            center: Offset(0, 0),
-            radius: 10,
-          ));
-          return path;
-        },
-      ),
-    );
-  }
-
-  // Play an enhanced celebration effect for a corner
-  void _playEnhancedCornerCelebration(int cornerIndex) {
-    // 1. Play the existing burst animation
-    _playBurstAnimation(cornerIndex);
-
-    // 2. Play the confetti controller
-    _confettiControllers[cornerIndex].play();
-
-    // 3. Play sound effect
-    _audioManager.playCorrectFeedback();
-  }
-
-  // Show level complete dialog
-  void showLevelCompleteDialog() {
-    // Play all confetti controllers for individual corners
+  // Show celebration when all corners are solved
+  void _showCelebration() {
+    // Play all confetti controllers
     for (var controller in _confettiControllers) {
       controller.play();
     }
@@ -420,59 +316,60 @@ class GameBoardController {
     // Play completion sound
     _audioManager.playCompletionFeedback();
 
-    // Show the full-screen celebration overlay
+    // Show the celebration overlay
     _showingCelebration = true;
     onStateChanged();
   }
 
-  // Play explosion animation for a corner
-  void playCornerExplosion(int cornerIndex, BuildContext context) {
-    // Get corner position
-    final cornerOffset = MediaQuery.of(context).size.width * 0.95 * 0.15;
-    Offset position;
+  // Build confetti widgets for all corners
+  List<Widget> buildConfettiWidgets(double boardSize) {
+    return List.generate(4, (index) {
+      // Corner offset (distance from edge)
+      final cornerOffset = boardSize * 0.15;
 
-    switch (cornerIndex) {
-      case 0: // Top-left
-        position = Offset(cornerOffset, cornerOffset);
-        break;
-      case 1: // Top-right
-        position = Offset(
-            MediaQuery.of(context).size.width - cornerOffset, cornerOffset);
-        break;
-      case 2: // Bottom-right
-        position = Offset(MediaQuery.of(context).size.width - cornerOffset,
-            MediaQuery.of(context).size.width - cornerOffset);
-        break;
-      case 3: // Bottom-left
-        position = Offset(
-            cornerOffset, MediaQuery.of(context).size.width - cornerOffset);
-        break;
-      default:
-        position = Offset.zero;
-    }
+      // Determine the alignment and direction based on corner
+      double blastDirection;
+      switch (index) {
+        case 0: // Top-left
+          blastDirection = 0.785; // 45 degrees
+          break;
+        case 1: // Top-right
+          blastDirection = 2.356; // 135 degrees
+          break;
+        case 2: // Bottom-right
+          blastDirection = 3.927; // 225 degrees
+          break;
+        case 3: // Bottom-left
+          blastDirection = 5.498; // 315 degrees
+          break;
+        default:
+          blastDirection = 0;
+      }
 
-    // Declare the entry variable first (without assigning)
-    late OverlayEntry entry;
-
-    // Then assign it, now with a properly declared variable we can reference
-    entry = OverlayEntry(
-        builder: (context) => Positioned(
-              left: position.dx - 40,
-              top: position.dy - 40,
-              child: SizedBox(
-                width: 80,
-                height: 80,
-                child: CandyCrushExplosion(
-                  color: operation.color,
-                  onComplete: () {
-                    // Now we can safely reference entry
-                    entry.remove();
-                  },
-                ),
-              ),
-            ));
-
-    // Show the overlay
-    Overlay.of(context).insert(entry);
+      return Positioned(
+        left: index == 0 || index == 3 ? cornerOffset : null,
+        right: index == 1 || index == 2 ? cornerOffset : null,
+        top: index == 0 || index == 1 ? cornerOffset : null,
+        bottom: index == 2 || index == 3 ? cornerOffset : null,
+        child: ConfettiWidget(
+          confettiController: _confettiControllers[index],
+          blastDirection: blastDirection,
+          particleDrag: 0.05,
+          emissionFrequency: 0.05,
+          numberOfParticles: 20,
+          gravity: 0.2,
+          shouldLoop: false,
+          colors: const [
+            Colors.green,
+            Colors.blue,
+            Colors.pink,
+            Colors.orange,
+            Colors.purple,
+            Colors.red,
+            Colors.yellow,
+          ],
+        ),
+      );
+    });
   }
 }

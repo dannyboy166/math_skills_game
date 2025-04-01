@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
-import '../widgets/board/game_board_controller.dart';
 import 'number_tile.dart';
 
 class AnimatedSquareRing extends StatefulWidget {
@@ -11,14 +10,12 @@ class AnimatedSquareRing extends StatefulWidget {
   final bool isInner;
   final double tileSizeFactor;
   final double cornerSizeFactor;
-  final GameBoardController controller; // Added controller reference
 
   const AnimatedSquareRing({
     Key? key,
     required this.ringModel,
     required this.onRotate,
     required this.solvedCorners,
-    required this.controller, // Make controller required
     this.isInner = false,
     this.tileSizeFactor = 0.13,
     this.cornerSizeFactor = 1.6,
@@ -33,9 +30,9 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
   late AnimationController _animationController;
   late Animation<double> _rotationAnimation;
   int _rotationDirection = 0;
-
-  // Tile-based model, each RingTile has a fixed number that moves with it
-  late List<RingTile> _tiles = [];
+  
+  // List of tiles with their fixed numbers and current positions
+  late List<RingTile> _tiles;
   
   // To track where the drag starts
   Offset? _dragStartPosition;
@@ -43,8 +40,8 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
   @override
   void initState() {
     super.initState();
-
-    // Initialize tiles
+    
+    // Initialize tiles with fixed numbers
     _initializeTiles();
 
     _animationController = AnimationController(
@@ -62,11 +59,11 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
 
     _animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        // When animation completes, update the tile positions
+        // When animation completes, update the actual tile positions
         setState(() {
           _rotateTiles(_rotationDirection);
         });
-
+        
         // Notify parent of the rotation
         widget.onRotate(widget.ringModel.rotationSteps + _rotationDirection);
         _animationController.reset();
@@ -74,104 +71,133 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     });
   }
 
-  // Get the corner indices based on the ring type
-  List<int> get _cornerIndices => widget.controller.getCornerIndices(widget.isInner);
-
-  // Initialize all tiles
-  void _initializeTiles() {
-    // Get the unrotated base numbers
-    final baseNumbers = widget.ringModel.numbers;
-    final totalItems = widget.ringModel.itemCount;
+  @override
+  void didUpdateWidget(AnimatedSquareRing oldWidget) {
+    super.didUpdateWidget(oldWidget);
     
-    // Initialize with one tile per position
-    _tiles = List.generate(totalItems, (index) {
+    // If rotation steps changed externally, update our tiles
+    if (widget.ringModel.rotationSteps != oldWidget.ringModel.rotationSteps) {
+      _syncTilesToModel();
+    }
+    
+    // If solvedCorners changed, update our locked state
+    if (widget.solvedCorners != oldWidget.solvedCorners) {
+      _updateLockedTiles();
+    }
+  }
+  
+  // Initialize tiles with their fixed numbers
+  void _initializeTiles() {
+    final cornerIndices = _getCornerIndices();
+    final itemCount = widget.ringModel.numbers.length;
+    
+    _tiles = List.generate(itemCount, (index) {
+      // Each tile has a fixed number and position
       return RingTile(
-        id: index,  // Unique ID for each tile
-        number: baseNumbers[index],  // Fixed number for this tile
-        currentPosition: index,  // Start at matching position
-        isCorner: _cornerIndices.contains(index),  // Is this a corner position?
+        number: widget.ringModel.numbers[index],
+        currentPosition: index,
+        isCorner: cornerIndices.contains(index),
+        isLocked: false,
       );
     });
     
     // Apply any existing rotation from the model
-    if (widget.ringModel.rotationSteps != 0) {
-      // Apply each rotation step one by one to match the model's state
-      for (int i = 0; i < widget.ringModel.rotationSteps.abs(); i++) {
-        _rotateTiles(widget.ringModel.rotationSteps > 0 ? 1 : -1, updateParent: false);
+    _syncTilesToModel();
+    
+    // Update locked status
+    _updateLockedTiles();
+  }
+  
+  // Sync tile positions with the model's rotation state
+  void _syncTilesToModel() {
+    final rotationSteps = widget.ringModel.rotationSteps;
+    if (rotationSteps == 0) return;
+    
+    // Reset tiles to their initial positions
+    for (int i = 0; i < _tiles.length; i++) {
+      _tiles[i].currentPosition = i;
+    }
+    
+    // Apply each rotation step
+    for (int i = 0; i < rotationSteps.abs(); i++) {
+      _rotateTiles(rotationSteps > 0 ? 1 : -1, updateModel: false);
+    }
+  }
+  
+  // Update which tiles are locked based on solvedCorners
+  void _updateLockedTiles() {
+    final cornerIndices = _getCornerIndices();
+    
+    // First, reset all locked states
+    for (var tile in _tiles) {
+      tile.isLocked = false;
+    }
+    
+    // Then, set locked state for tiles at solved corner positions
+    for (int i = 0; i < cornerIndices.length && i < widget.solvedCorners.length; i++) {
+      if (widget.solvedCorners[i]) {
+        // Find the tile currently at this corner position
+        for (var tile in _tiles) {
+          if (tile.currentPosition == cornerIndices[i]) {
+            tile.isLocked = true;
+            break;
+          }
+        }
       }
     }
   }
-
+  
   // Rotate tiles to new positions
-  void _rotateTiles(int direction, {bool updateParent = true}) {
-    // direction: -1 for clockwise, 1 for counterclockwise
-    final totalItems = widget.ringModel.itemCount;
+  void _rotateTiles(int direction, {bool updateModel = true}) {
+    final itemCount = _tiles.length;
+    final cornerIndices = _getCornerIndices();
     
-    // Create a new tiles list for the updated positions
-    List<RingTile> newTiles = List.from(_tiles);
-    
-    // First identify which positions are locked (correspond to solved corners)
+    // First identify which positions are locked
     Set<int> lockedPositions = {};
-    for (int i = 0; i < widget.solvedCorners.length; i++) {
-      if (widget.solvedCorners[i]) {
-        lockedPositions.add(_cornerIndices[i]);
+    for (var tile in _tiles) {
+      if (tile.isLocked) {
+        lockedPositions.add(tile.currentPosition);
       }
     }
     
+    // Create a copy of the tiles to work with
+    List<RingTile> tilesCopy = List.from(_tiles);
+    
     // For each tile, calculate its new position
-    for (var tile in newTiles) {
-      // Skip tiles that are in locked positions
-      if (lockedPositions.contains(tile.currentPosition)) {
-        // This tile is locked at its current position - don't move it
-        continue;
-      }
+    for (var tile in tilesCopy) {
+      // Skip tiles that are locked
+      if (tile.isLocked) continue;
       
       // Calculate the next position
       int nextPosition;
       if (direction < 0) {
-        // Clockwise: position increases
-        nextPosition = (tile.currentPosition + 1) % totalItems;
+        // Clockwise rotation
+        nextPosition = (tile.currentPosition + 1) % itemCount;
       } else {
-        // Counterclockwise: position decreases
-        nextPosition = (tile.currentPosition - 1 + totalItems) % totalItems;
+        // Counterclockwise rotation
+        nextPosition = (tile.currentPosition - 1 + itemCount) % itemCount;
       }
       
-      // Skip over locked positions
+      // Skip over any locked positions
       while (lockedPositions.contains(nextPosition)) {
         if (direction < 0) {
-          nextPosition = (nextPosition + 1) % totalItems;
+          nextPosition = (nextPosition + 1) % itemCount;
         } else {
-          nextPosition = (nextPosition - 1 + totalItems) % totalItems;
+          nextPosition = (nextPosition - 1 + itemCount) % itemCount;
         }
       }
       
       // Update the tile's position
       tile.currentPosition = nextPosition;
       
-      // Update corner status based on new position
-      tile.isCorner = _cornerIndices.contains(nextPosition);
+      // Update corner status
+      tile.isCorner = cornerIndices.contains(nextPosition);
     }
     
-    _tiles = newTiles;
-  }
-
-  @override
-  void didUpdateWidget(AnimatedSquareRing oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    
-    // Check if solved corners state has changed
-    bool cornersChanged = false;
-    for (int i = 0; i < widget.solvedCorners.length && i < oldWidget.solvedCorners.length; i++) {
-      if (widget.solvedCorners[i] != oldWidget.solvedCorners[i]) {
-        cornersChanged = true;
-        break;
-      }
-    }
-    
-    // If the model's rotation has changed externally or corners changed, reinitialize tiles
-    if (widget.ringModel.rotationSteps != oldWidget.ringModel.rotationSteps || cornersChanged) {
-      _initializeTiles();
-    }
+    // Update the tiles
+    setState(() {
+      _tiles = tilesCopy;
+    });
   }
 
   @override
@@ -180,7 +206,14 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     super.dispose();
   }
 
-  // Public method for starting rotation
+  // Get corner indices based on ring type
+  List<int> _getCornerIndices() {
+    return widget.isInner 
+        ? [0, 3, 6, 9]  // Inner ring corners
+        : [0, 4, 8, 12]; // Outer ring corners
+  }
+
+  // Public method for starting rotation animation
   void startRotationAnimation(bool clockwise) {
     if (_animationController.isAnimating) return;
 
@@ -209,7 +242,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
 
   @override
   Widget build(BuildContext context) {
-    // Set tile sizes using the custom factors provided by parameters
+    // Set tile sizes using the factors provided
     final tileSize = widget.ringModel.squareSize * widget.tileSizeFactor;
     final cornerSize = tileSize * widget.cornerSizeFactor;
 
@@ -234,19 +267,15 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
 
         switch (dragSide) {
           case _DragSide.top:
-            // Top side: right→clockwise, left→counter-clockwise
             isClockwise = dragEndPosition.dx > 0;
             break;
           case _DragSide.right:
-            // Right side: down→clockwise, up→counter-clockwise
             isClockwise = dragEndPosition.dy > 0;
             break;
           case _DragSide.bottom:
-            // Bottom side: left→clockwise, right→counter-clockwise
             isClockwise = dragEndPosition.dx < 0;
             break;
           case _DragSide.left:
-            // Left side: up→clockwise, down→counter-clockwise
             isClockwise = dragEndPosition.dy < 0;
             break;
         }
@@ -254,7 +283,6 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
         startRotationAnimation(isClockwise);
         _dragStartPosition = null;
       },
-      // Ensure corners are included in gesture detection
       behavior: HitTestBehavior.translucent,
       child: Container(
         width: widget.ringModel.squareSize,
@@ -269,8 +297,7 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
             return Stack(
               clipBehavior: Clip.none,
               fit: StackFit.expand,
-              children:
-                  _buildTiles(tileSize, cornerSize, _rotationAnimation.value),
+              children: _buildTiles(tileSize, cornerSize, _rotationAnimation.value),
             );
           },
         ),
@@ -278,62 +305,49 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
     );
   }
 
-  // Build all the tiles with proper animation
-  List<Widget> _buildTiles(
-      double tileSize, double cornerSize, double animationValue) {
+  List<Widget> _buildTiles(double tileSize, double cornerSize, double animationValue) {
     final List<Widget> tileWidgets = [];
-    final totalItems = widget.ringModel.itemCount;
-    final cornerIndices = _cornerIndices;
+    final itemCount = _tiles.length;
+    final cornerIndices = _getCornerIndices();
     
-    // First identify which positions are locked (correspond to solved corners)
-    Set<int> lockedPositions = {};
-    for (int i = 0; i < widget.solvedCorners.length; i++) {
-      if (widget.solvedCorners[i]) {
-        lockedPositions.add(cornerIndices[i]);
-      }
+    // Helper function to get position coordinates
+    Offset getPositionCoordinates(int position) {
+      return widget.isInner
+          ? SquarePositionUtils.calculateInnerSquarePosition(
+              position, widget.ringModel.squareSize, tileSize)
+          : SquarePositionUtils.calculateSquarePosition(
+              position, widget.ringModel.squareSize, tileSize);
     }
     
-    // First determine which tiles are moving to which positions
+    // For each tile, build its widget
     for (var tile in _tiles) {
-      // Get current position index
+      // Current position and whether it's a corner
       final currentPosition = tile.currentPosition;
+      final isCorner = cornerIndices.contains(currentPosition);
+      final cornerIndex = isCorner ? cornerIndices.indexOf(currentPosition) : -1;
+      final isLocked = tile.isLocked;
       
-      // Check if this position is locked (corresponds to a solved corner)
-      final isPositionLocked = lockedPositions.contains(currentPosition);
+      // Determine tile size based on whether it's at a corner
+      final effectiveTileSize = isCorner ? cornerSize : tileSize;
       
-      // Determine if this is a corner position and if it's solved
-      final isCornerPosition = cornerIndices.contains(currentPosition);
-      final cornerIndex = isCornerPosition ? cornerIndices.indexOf(currentPosition) : -1;
-      final isPositionSolved = cornerIndex >= 0 && 
-                              cornerIndex < widget.solvedCorners.length && 
-                              widget.solvedCorners[cornerIndex];
+      // Get current position coordinates
+      final currentCoords = getPositionCoordinates(currentPosition);
       
-      // Get the current position's coordinates
-      final currentPosCoords = widget.isInner
-          ? SquarePositionUtils.calculateInnerSquarePosition(
-              currentPosition, widget.ringModel.squareSize, tileSize)
-          : SquarePositionUtils.calculateSquarePosition(
-              currentPosition, widget.ringModel.squareSize, tileSize);
-      
-      // For locked positions or during no animation, just show the tile at its position
-      if (isPositionLocked || animationValue == 0) {
-        final effectiveTileSize = isCornerPosition ? cornerSize : tileSize;
-        final offsetDiff = (effectiveTileSize - tileSize) / 2;
-
+      // For locked tiles or when no animation is happening, just show at current position
+      if (isLocked || animationValue == 0) {
         tileWidgets.add(
           Positioned(
-            left: currentPosCoords.dx - offsetDiff,
-            top: currentPosCoords.dy - offsetDiff,
+            left: currentCoords.dx - (effectiveTileSize - tileSize) / 2,
+            top: currentCoords.dy - (effectiveTileSize - tileSize) / 2,
             width: effectiveTileSize,
             height: effectiveTileSize,
             child: AbsorbPointer(
-              absorbing: isPositionSolved, // Only absorb if the position is solved
+              absorbing: isLocked,
               child: NumberTile(
-                number: tile.number,  // The tile's number never changes
+                number: tile.number,
                 color: widget.ringModel.itemColor,
-                isDisabled: isPositionSolved,
+                isDisabled: isLocked,
                 size: effectiveTileSize,
-                onTap: () {},
               ),
             ),
           ),
@@ -341,105 +355,95 @@ class _AnimatedSquareRingState extends State<AnimatedSquareRing>
         continue;
       }
       
-      // For tiles that are moving (animating), calculate their next position
+      // For animated tiles, calculate the next position
       int nextPosition;
       if (_rotationDirection < 0) {
-        // Clockwise: position increases
-        nextPosition = (currentPosition + 1) % totalItems;
-        
-        // Skip over locked positions
-        while (lockedPositions.contains(nextPosition)) {
-          nextPosition = (nextPosition + 1) % totalItems;
-        }
+        // Clockwise rotation
+        nextPosition = (currentPosition + 1) % itemCount;
       } else {
-        // Counterclockwise: position decreases
-        nextPosition = (currentPosition - 1 + totalItems) % totalItems;
-        
-        // Skip over locked positions
-        while (lockedPositions.contains(nextPosition)) {
-          nextPosition = (nextPosition - 1 + totalItems) % totalItems;
+        // Counterclockwise rotation
+        nextPosition = (currentPosition - 1 + itemCount) % itemCount;
+      }
+      
+      // Skip locked positions
+      Set<int> lockedPositions = {};
+      for (var t in _tiles) {
+        if (t.isLocked) {
+          lockedPositions.add(t.currentPosition);
         }
       }
       
-      // Calculate next position coordinates
-      final nextPosCoords = widget.isInner
-          ? SquarePositionUtils.calculateInnerSquarePosition(
-              nextPosition, widget.ringModel.squareSize, tileSize)
-          : SquarePositionUtils.calculateSquarePosition(
-              nextPosition, widget.ringModel.squareSize, tileSize);
+      while (lockedPositions.contains(nextPosition)) {
+        if (_rotationDirection < 0) {
+          nextPosition = (nextPosition + 1) % itemCount;
+        } else {
+          nextPosition = (nextPosition - 1 + itemCount) % itemCount;
+        }
+      }
       
-      // Determine current/next position corner status for size changes
-      final currentIsCorner = cornerIndices.contains(currentPosition);
+      // Determine if next position is a corner
       final nextIsCorner = cornerIndices.contains(nextPosition);
+      
+      // Get next position coordinates
+      final nextCoords = getPositionCoordinates(nextPosition);
       
       // Calculate size animation
       double startSize, endSize;
-
-      if (!currentIsCorner && nextIsCorner) {
+      if (!isCorner && nextIsCorner) {
         // Growing from regular to corner size
         startSize = tileSize;
         endSize = cornerSize;
-      } else if (currentIsCorner && !nextIsCorner) {
+      } else if (isCorner && !nextIsCorner) {
         // Shrinking from corner to regular size
         startSize = cornerSize;
         endSize = tileSize;
       } else {
         // Maintaining same size
-        startSize = endSize = currentIsCorner ? cornerSize : tileSize;
+        startSize = endSize = isCorner ? cornerSize : tileSize;
       }
-
-      // Interpolate current size
-      final currentSize =
-          startSize * (1 - animationValue) + endSize * animationValue;
-
-      // Adjust for position offset for changing sizes
-      final startOffset = (startSize - tileSize) / 2;
-      final endOffset = (endSize - tileSize) / 2;
-      final offsetX =
-          startOffset * (1 - animationValue) + endOffset * animationValue;
-      final offsetY = offsetX; // Same for square tiles
-
-      // Interpolate between current and next position
-      final interpolatedX = currentPosCoords.dx * (1 - animationValue) +
-          nextPosCoords.dx * animationValue;
-      final interpolatedY = currentPosCoords.dy * (1 - animationValue) +
-          nextPosCoords.dy * animationValue;
-
+      
+      // Current animated size
+      final currentSize = startSize * (1 - animationValue) + endSize * animationValue;
+      
+      // Interpolate position
+      final x = currentCoords.dx * (1 - animationValue) + nextCoords.dx * animationValue;
+      final y = currentCoords.dy * (1 - animationValue) + nextCoords.dy * animationValue;
+      
+      // Position adjustments for size changes
+      final offsetX = (currentSize - tileSize) / 2;
+      
       tileWidgets.add(
         Positioned(
-          left: interpolatedX - offsetX,
-          top: interpolatedY - offsetY,
+          left: x - offsetX,
+          top: y - offsetX,
           width: currentSize,
           height: currentSize,
-          child: AbsorbPointer(
-            child: NumberTile(
-              number: tile.number,  // Always use the tile's fixed number
-              color: widget.ringModel.itemColor,
-              isDisabled: false,
-              size: currentSize,
-              onTap: () {},
-            ),
+          child: NumberTile(
+            number: tile.number,
+            color: widget.ringModel.itemColor,
+            isDisabled: false,
+            size: currentSize,
           ),
         ),
       );
     }
-
+    
     return tileWidgets;
   }
 }
 
-// Represents an actual tile that moves between positions
+// Class to represent a tile with its fixed number and current position
 class RingTile {
-  final int id;          // Unique identifier for this tile
-  final int number;      // The number displayed on this tile (never changes)
-  int currentPosition;   // Current position index of this tile (changes with rotation)
-  bool isCorner;         // Whether this tile is currently at a corner position
+  final int number;
+  int currentPosition;
+  bool isCorner;
+  bool isLocked;
   
   RingTile({
-    required this.id,
     required this.number,
     required this.currentPosition,
-    required this.isCorner,
+    this.isCorner = false,
+    this.isLocked = false,
   });
 }
 
