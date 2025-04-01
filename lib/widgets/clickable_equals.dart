@@ -20,7 +20,6 @@ class ClickableEquals extends StatefulWidget {
 class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
 
   @override
   void initState() {
@@ -46,7 +45,6 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
   void _handleTapDown(TapDownDetails details) {
     if (!widget.isLocked) {
       setState(() {
-        _isPressed = true;
       });
       _controller.forward();
     }
@@ -55,7 +53,6 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
   void _handleTapUp(TapUpDetails details) {
     if (!widget.isLocked) {
       setState(() {
-        _isPressed = false;
       });
       _controller.reverse();
     }
@@ -64,7 +61,6 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
   void _handleTapCancel() {
     if (!widget.isLocked) {
       setState(() {
-        _isPressed = false;
       });
       _controller.reverse();
     }

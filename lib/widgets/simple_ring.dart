@@ -322,15 +322,10 @@ class _SimpleRingState extends State<SimpleRing> {
           orElse: () => null as LockedEquation, // This should never happen
         );
 
-        if (lockedEq != null) {
-          // Use the actual number that was part of the equation
-          numberToDisplay =
-              widget.isInner ? lockedEq.innerNumber : lockedEq.outerNumber;
-        } else {
-          // Fallback - should never happen
-          numberToDisplay = widget.ringModel.numbers[i];
-        }
-      } else {
+        // Use the actual number that was part of the equation
+        numberToDisplay =
+            widget.isInner ? lockedEq.innerNumber : lockedEq.outerNumber;
+            } else {
         // If not locked, get number based on current rotation
         numberToDisplay = widget.ringModel.getNumberAtPosition(i);
       }
