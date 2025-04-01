@@ -111,7 +111,6 @@ class RingModel {
     return newModel;
   }
 
-// Completely fixed _applyRotation method with special handling for anticlockwise rotation
   void _applyRotation(int steps) {
     print('ROTATION DEBUG: Starting rotation by $steps steps');
     print(
@@ -125,102 +124,55 @@ class RingModel {
 
     print('ROTATION DEBUG: Effective rotation steps: $steps');
 
-    // Create a fresh new numbers map
+    // Create a new numbers map for the result
     Map<int, int> newNumbers = {};
 
-    // DIFFERENT APPROACHES FOR CLOCKWISE VS COUNTERCLOCKWISE
-    if (steps > 0) {
-      // COUNTERCLOCKWISE ROTATION (positive steps)
+    // Copy all locked positions to preserve them
+    for (int pos in _lockedPositions.keys) {
+      newNumbers[pos] = _currentNumbers[pos]!;
+    }
 
-      // First, assign all locked positions
-      for (int pos in _lockedPositions.keys) {
-        newNumbers[pos] = _currentNumbers[pos]!;
-      }
-
-      // Process unlocked positions in a specific order to avoid collisions
-      List<int> unlockedPositions = [];
-      for (int i = 0; i < itemCount; i++) {
-        if (!_lockedPositions.containsKey(i)) {
-          unlockedPositions.add(i);
-        }
-      }
-// Change the sorting order for counterclockwise rotation
-// Process positions in REVERSE order of their starting positions
-// This ensures we handle positions that need to move past locked ones first
-      unlockedPositions.sort((a, b) => b.compareTo(a));
-      print(
-          'ROTATION DEBUG: Processing unlocked positions in order: $unlockedPositions');
-
-      // Now process in this strategic order
-      for (int pos in unlockedPositions) {
-        int currentNumber = _currentNumbers[pos]!;
-
-        // Calculate target position
-        int newPos = (pos + steps) % itemCount;
-
-        // Find the next available position (not locked or already assigned)
-        while (_lockedPositions.containsKey(newPos) ||
-            newNumbers.containsKey(newPos)) {
-          newPos = (newPos + 1) % itemCount;
-        }
-
-        newNumbers[newPos] = currentNumber;
-        print(
-            'ROTATION DEBUG: Moved number $currentNumber from $pos to $newPos');
-      }
-    } else {
-      // CLOCKWISE ROTATION (negative steps)
-
-      // First, assign all locked positions
-      for (int pos in _lockedPositions.keys) {
-        newNumbers[pos] = _currentNumbers[pos]!;
-      }
-
-      // Process unlocked positions in a specific order to avoid collisions
-      List<int> unlockedPositions = [];
-      for (int i = 0; i < itemCount; i++) {
-        if (!_lockedPositions.containsKey(i)) {
-          unlockedPositions.add(i);
-        }
-      }
-
-      // Sort by the proposed new position in REVERSE order for clockwise
-      // This ensures we process the furthest positions first
-      unlockedPositions.sort((a, b) {
-        int newPosA = (a + steps + itemCount) % itemCount;
-        int newPosB = (b + steps + itemCount) % itemCount;
-        return newPosB.compareTo(newPosA); // Note the reversed comparison
-      });
-
-      print(
-          'ROTATION DEBUG: Processing unlocked positions in order: $unlockedPositions');
-
-      // Now process in this strategic order
-      for (int pos in unlockedPositions) {
-        int currentNumber = _currentNumbers[pos]!;
-
-        // Calculate target position
-        int newPos = (pos + steps + itemCount) % itemCount;
-
-        // Find the next available position (not locked or already assigned)
-        while (_lockedPositions.containsKey(newPos) ||
-            newNumbers.containsKey(newPos)) {
-          newPos = (newPos - 1 + itemCount) % itemCount;
-        }
-
-        newNumbers[newPos] = currentNumber;
-        print(
-            'ROTATION DEBUG: Moved number $currentNumber from $pos to $newPos');
+    // Create a list of unlocked positions and their current numbers
+    List<MapEntry<int, int>> unlockedItems = [];
+    for (int i = 0; i < itemCount; i++) {
+      if (!_lockedPositions.containsKey(i)) {
+        unlockedItems.add(MapEntry(i, _currentNumbers[i]!));
       }
     }
 
-    // Fill in any missing positions with their original numbers (should not happen)
-    for (int i = 0; i < itemCount; i++) {
-      if (!newNumbers.containsKey(i)) {
-        print(
-            'ROTATION DEBUG: Position $i was not assigned! Using original number ${numbers[i]}');
-        newNumbers[i] = numbers[i];
-      }
+    // Sort the unlocked items by position for consistent processing
+    unlockedItems.sort((a, b) => a.key.compareTo(b.key));
+
+    // Step 1: Collect all unlocked numbers in their correct order
+    List<int> unlockedNumbers = unlockedItems.map((e) => e.value).toList();
+
+    // Step 2: Rotate the unlocked numbers
+    if (steps > 0) {
+      // Counterclockwise rotation (positive steps)
+      final rotationCount = steps % unlockedNumbers.length;
+      final rotatedNumbers = [
+        ...unlockedNumbers.sublist(rotationCount),
+        ...unlockedNumbers.sublist(0, rotationCount)
+      ];
+      unlockedNumbers = rotatedNumbers;
+    } else {
+      // Clockwise rotation (negative steps)
+      final rotationCount = (-steps) % unlockedNumbers.length;
+      final rotatedNumbers = [
+        ...unlockedNumbers.sublist(unlockedNumbers.length - rotationCount),
+        ...unlockedNumbers.sublist(0, unlockedNumbers.length - rotationCount)
+      ];
+      unlockedNumbers = rotatedNumbers;
+    }
+
+    // Step 3: Place the rotated unlocked numbers back into their positions
+    List<int> unlockedPositions = unlockedItems.map((e) => e.key).toList();
+
+    for (int i = 0; i < unlockedPositions.length; i++) {
+      int position = unlockedPositions[i];
+      int number = unlockedNumbers[i];
+      newNumbers[position] = number;
+      print('ROTATION DEBUG: Placed number $number at position $position');
     }
 
     // Replace the current numbers with the rotated numbers
