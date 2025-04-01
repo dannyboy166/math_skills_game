@@ -83,11 +83,11 @@ class _SimpleRingState extends State<SimpleRing> {
     // Determine which region the initial touch happened in
     final region = _determineRegion(startPos, size);
     
-            // Threshold for drag sensitivity - increased for less sensitivity
-        final dragThreshold = 15.0; // Increased from 3 to 15
-        
-        // Determine rotation direction based on region and drag direction
-        switch (region) {
+    // Threshold for drag sensitivity - increased for less sensitivity
+    final dragThreshold = 15.0; // Increased from 3 to 15
+    
+    // Determine rotation direction based on region and drag direction
+    switch (region) {
       case 'top':
         // For top edge: left drag -> counterclockwise, right drag -> clockwise
         return dragDelta.dx < -dragThreshold ? -1 : (dragDelta.dx > dragThreshold ? 1 : 0);
@@ -241,8 +241,10 @@ class _SimpleRingState extends State<SimpleRing> {
       // Is this a corner?
       final isCorner = widget.ringModel.cornerIndices.contains(i);
       
-      // Debug info for corner positions
-      final String debugLabel = isCorner ? "[C${widget.ringModel.cornerIndices.indexOf(i)}]" : "";
+      // Keep console logging for debugging
+      if (isCorner) {
+        print('Corner ${widget.ringModel.cornerIndices.indexOf(i)}: Position $i, Number $number');
+      }
       
       tiles.add(
         Positioned(
@@ -266,34 +268,16 @@ class _SimpleRingState extends State<SimpleRing> {
                 ),
               ],
             ),
+            // Fix: Use a simple centered Text widget for all tiles
             child: Center(
-              // Fix: Replace Column with a single Stack widget to avoid overflow
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Main number
-                  Text(
-                    '$number',
-                    style: TextStyle(
-                      fontSize: isCorner ? 24 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  
-                  // Debug label, positioned at the bottom
-                  if (debugLabel.isNotEmpty)
-                    Positioned(
-                      bottom: 4,
-                      child: Text(
-                        debugLabel,
-                        style: TextStyle(
-                          fontSize: 8,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ),
-                ],
+              child: Text(
+                '$number',
+                style: TextStyle(
+                  fontSize: isCorner ? 20 : 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
