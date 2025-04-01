@@ -66,13 +66,8 @@ class _SimpleRingState extends State<SimpleRing> {
             _startPosition!, dragDelta, widget.size);
 
         if (rotationStep != 0) {
-          // Calculate the new rotation steps
-          final newRotationSteps =
-              widget.ringModel.rotationSteps + rotationStep;
-
-          // Apply the rotation (we don't need to check if it would affect locked positions
-          // because our getNumberAtPosition method will skip them)
-          widget.onRotateSteps(newRotationSteps);
+          // Apply the rotation using copyWithRotation
+          widget.onRotateSteps(rotationStep);
 
           // Reset the start position to the current position
           setState(() {
@@ -315,20 +310,7 @@ class _SimpleRingState extends State<SimpleRing> {
       // Get the number to display
       int numberToDisplay;
 
-      if (isLocked) {
-        // If position is locked, use the actual number from the locked equation
-        LockedEquation? lockedEq = widget.lockedEquations.firstWhere(
-          (eq) => eq.cornerIndex == cornerIndex,
-          orElse: () => null as LockedEquation, // This should never happen
-        );
-
-        // Use the actual number that was part of the equation
-        numberToDisplay =
-            widget.isInner ? lockedEq.innerNumber : lockedEq.outerNumber;
-            } else {
-        // If not locked, get number based on current rotation
-        numberToDisplay = widget.ringModel.getNumberAtPosition(i);
-      }
+      numberToDisplay = widget.ringModel.getNumberAtPosition(i);
 
       // For console debugging
       if (isCorner && isLocked) {

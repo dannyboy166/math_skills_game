@@ -262,14 +262,17 @@ class _GameScreenState extends State<GameScreen> {
 
   void _updateOuterRing(int steps) {
     setState(() {
-      outerRingModel = outerRingModel.copyWith(rotationSteps: steps);
+      // Create a new model with the rotation applied
+      outerRingModel = outerRingModel.copyWithRotation(steps);
     });
     _checkAllEquations();
   }
 
+// Updated method to rotate the inner ring
   void _updateInnerRing(int steps) {
     setState(() {
-      innerRingModel = innerRingModel.copyWith(rotationSteps: steps);
+      // Create a new model with the rotation applied
+      innerRingModel = innerRingModel.copyWithRotation(steps);
     });
     _checkAllEquations();
   }
@@ -300,21 +303,21 @@ class _GameScreenState extends State<GameScreen> {
     _handleEquationTap(cornerIndex);
   }
 
-// Updated _lockEquation method for GameScreen that properly stores the actual numbers
   void _lockEquation(int cornerIndex) {
     // If already locked, do nothing
     if (lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
       return;
     }
 
-    // Get numbers at corner positions
+    // Get corner positions
     final outerCornerPos = outerRingModel.cornerIndices[cornerIndex];
     final innerCornerPos = innerRingModel.cornerIndices[cornerIndex];
 
+    // Get current numbers at these positions
     final outerNumber = outerRingModel.getNumberAtPosition(outerCornerPos);
     final innerNumber = innerRingModel.getNumberAtPosition(innerCornerPos);
 
-    // Create a locked equation
+    // Create a locked equation object
     final lockedEquation = LockedEquation(
       cornerIndex: cornerIndex,
       innerNumber: innerNumber,
@@ -327,19 +330,23 @@ class _GameScreenState extends State<GameScreen> {
           innerNumber, widget.targetNumber, outerNumber),
     );
 
-    // Update state - just mark these positions as locked without changing the numbers
+    // Update state with locked positions
     setState(() {
+      // Add to locked equations list
       lockedEquations.add(lockedEquation);
 
-      // Update locked positions in ring models
-      Set<int> innerLocked = Set<int>.from(innerRingModel.lockedPositions);
-      Set<int> outerLocked = Set<int>.from(outerRingModel.lockedPositions);
+      // Create new models with the positions locked
+      innerRingModel =
+          innerRingModel.copyWithLockedPosition(innerCornerPos, innerNumber);
+      outerRingModel =
+          outerRingModel.copyWithLockedPosition(outerCornerPos, outerNumber);
 
-      innerLocked.add(innerCornerPos);
-      outerLocked.add(outerCornerPos);
-
-      innerRingModel = innerRingModel.copyWith(lockedPositions: innerLocked);
-      outerRingModel = outerRingModel.copyWith(lockedPositions: outerLocked);
+      // Debug - print the new state
+      print('After locking corner $cornerIndex:');
+      print('Inner ring state:');
+      innerRingModel.debugPrintState();
+      print('Outer ring state:');
+      outerRingModel.debugPrintState();
 
       // Check if all four corners are locked (win condition)
       if (lockedEquations.length == 4) {
@@ -376,15 +383,17 @@ class _GameScreenState extends State<GameScreen> {
               },
               child: Text('Return to Menu'),
             ),
+            // Update this in your _showWinDialog method
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
-                // Reset the game
+                // Reset the game with our new API
                 setState(() {
                   lockedEquations = [];
                   isGameComplete = false;
-                  innerRingModel = innerRingModel.copyWith(rotationSteps: 0);
-                  outerRingModel = outerRingModel.copyWith(rotationSteps: 0);
+
+                  // Recreate the ring models from scratch
+                  _generateGameNumbers();
                 });
               },
               child: Text('Play Again'),
