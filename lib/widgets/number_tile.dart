@@ -1,20 +1,21 @@
+// lib/widgets/number_tile.dart
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 class NumberTile extends StatefulWidget {
   final int number;
   final Color color;
-  final bool isDisabled;
+  final bool isLocked;  // Changed from isDisabled to isLocked
   final VoidCallback? onTap;
-  final double size; // Size parameter
+  final double size;
 
   const NumberTile({
     Key? key,
     required this.number,
     required this.color,
-    this.isDisabled = false,
+    this.isLocked = false,  // Changed from isDisabled to isLocked
     this.onTap,
-    this.size = 45, // Default size is still 45
+    this.size = 45,
   }) : super(key: key);
 
   @override
@@ -48,7 +49,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   void _handleTapDown(TapDownDetails details) {
-    if (!widget.isDisabled && widget.onTap != null) {
+    if (!widget.isLocked && widget.onTap != null) {
       setState(() {
         _isPressed = true;
       });
@@ -57,7 +58,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   void _handleTapUp(TapUpDetails details) {
-    if (!widget.isDisabled && widget.onTap != null) {
+    if (!widget.isLocked && widget.onTap != null) {
       setState(() {
         _isPressed = false;
       });
@@ -66,7 +67,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   void _handleTapCancel() {
-    if (!widget.isDisabled && widget.onTap != null) {
+    if (!widget.isLocked && widget.onTap != null) {
       setState(() {
         _isPressed = false;
       });
@@ -76,7 +77,15 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final Color baseColor = widget.isDisabled ? Colors.grey.shade400 : widget.color;
+    // Determine the base color - if locked, use a gray version
+    Color baseColor;
+    if (widget.isLocked) {
+      // Convert to grayscale with reduced opacity
+      final grayValue = _getGrayscaleValue(widget.color);
+      baseColor = Color.fromRGBO(grayValue, grayValue, grayValue, 0.7);
+    } else {
+      baseColor = widget.color;
+    }
     
     // Create gradient colors for 3D effect
     final Color lightColor = _getLighterColor(baseColor);
@@ -84,14 +93,14 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
     
     return Semantics(
       button: true,
-      enabled: !widget.isDisabled,
+      enabled: !widget.isLocked,
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: GestureDetector(
-              onTap: widget.isDisabled ? null : widget.onTap,
+              onTap: widget.isLocked ? null : widget.onTap,
               onTapDown: _handleTapDown,
               onTapUp: _handleTapUp,
               onTapCancel: _handleTapCancel,
@@ -110,7 +119,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
                     ],
                     stops: const [0.1, 0.5, 0.9],
                   ),
-                  boxShadow: widget.isDisabled
+                  boxShadow: widget.isLocked
                     ? []
                     : [
                         // Outer shadow
@@ -141,6 +150,9 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   Widget _buildNormalContent() {
+    // Adjust the text color based on locked state
+    final textColor = widget.isLocked ? Colors.white.withOpacity(0.7) : Colors.white;
+    
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -152,7 +164,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             shape: BoxShape.circle,
             color: Colors.transparent,
             border: Border.all(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withOpacity(widget.isLocked ? 0.1 : 0.15),
               width: widget.size * 0.03,
             ),
           ),
@@ -170,7 +182,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
                 style: TextStyle(
                   fontSize: widget.size * 0.45,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: textColor,
                   shadows: [
                     Shadow(
                       color: Colors.black38,
@@ -184,24 +196,35 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
           ),
         ),
         
-        // Shine effect (subtle arc at top-left)
-        Positioned(
-          top: widget.size * 0.15,
-          left: widget.size * 0.15,
-          child: Container(
-            width: widget.size * 0.2,
-            height: widget.size * 0.1,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(widget.size * 0.1),
+        // Shine effect (subtle arc at top-left) - only if not locked
+        if (!widget.isLocked)
+          Positioned(
+            top: widget.size * 0.15,
+            left: widget.size * 0.15,
+            child: Container(
+              width: widget.size * 0.2,
+              height: widget.size * 0.1,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(widget.size * 0.1),
+              ),
             ),
           ),
-        ),
+          
+        // Add a lock icon if locked
+        if (widget.isLocked)
+          Icon(
+            Icons.lock,
+            color: Colors.white.withOpacity(0.5),
+            size: widget.size * 0.3,
+          ),
       ],
     );
   }
 
   Widget _buildPressedContent() {
+    final textColor = widget.isLocked ? Colors.white.withOpacity(0.6) : Colors.white.withOpacity(0.9);
+    
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -231,7 +254,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
                 style: TextStyle(
                   fontSize: widget.size * 0.45,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white.withOpacity(0.9),
+                  color: textColor,
                   shadows: [
                     Shadow(
                       color: Colors.black26,
@@ -244,8 +267,21 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             ),
           ),
         ),
+        
+        // Add a lock icon if locked
+        if (widget.isLocked)
+          Icon(
+            Icons.lock,
+            color: Colors.white.withOpacity(0.5),
+            size: widget.size * 0.3,
+          ),
       ],
     );
+  }
+
+  // Helper method to calculate grayscale equivalent
+  int _getGrayscaleValue(Color color) {
+    return ((0.299 * color.red) + (0.587 * color.green) + (0.114 * color.blue)).round();
   }
 
   Color _getLighterColor(Color color) {

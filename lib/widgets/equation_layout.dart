@@ -1,12 +1,16 @@
-// File: lib/widgets/equation_layout.dart
+// lib/widgets/equation_layout.dart
 import 'package:flutter/material.dart';
 import '../models/operation_config.dart';
+import '../models/locked_equation.dart';
+import 'clickable_equals.dart';
 
 class EquationLayout extends StatelessWidget {
   final double boardSize;
   final double innerRingSize;
   final double outerRingSize;
   final OperationConfig operation;
+  final List<LockedEquation> lockedEquations;
+  final Function(int cornerIndex) onEquationTap;
 
   const EquationLayout({
     Key? key,
@@ -14,6 +18,8 @@ class EquationLayout extends StatelessWidget {
     required this.innerRingSize,
     required this.outerRingSize,
     required this.operation,
+    required this.lockedEquations,
+    required this.onEquationTap,
   }) : super(key: key);
 
   @override
@@ -36,10 +42,10 @@ class EquationLayout extends StatelessWidget {
     
     // Calculate positions for the inner ring corner tiles
     final innerCornerPositions = [
-      _calculateInnerTilePosition(0), // Top-left
-      _calculateInnerTilePosition(3), // Top-right
-      _calculateInnerTilePosition(6), // Bottom-right
-      _calculateInnerTilePosition(9), // Bottom-left
+      _calculateInnerTilePosition(0), // Top
+      _calculateInnerTilePosition(3), // Right
+      _calculateInnerTilePosition(6), // Bottom
+      _calculateInnerTilePosition(9), // Left
     ];
     
     // Center position of the board
@@ -48,24 +54,38 @@ class EquationLayout extends StatelessWidget {
     
     // Create operation symbols at the midpoints between center and inner corners
     return List.generate(4, (index) {
+      // Check if this corner is locked
+      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == index);
+      
       // Calculate midpoint between center and inner corner
       final cornerPos = innerCornerPositions[index];
       final midX = (centerX + cornerPos.dx) / 2;
       final midY = (centerY + cornerPos.dy) / 2 + verticalAdjustment;
       
+      // Use a greyed-out color if locked
+      final Color textColor = isLocked ? Colors.grey : Colors.red;
+      final double opacity = isLocked ? 0.7 : 1.0;
+      
       return Positioned(
         left: midX - symbolSize / 2,
         top: midY - symbolSize / 2,
-        child: Container(
-          width: symbolSize,
-          height: symbolSize,
-          alignment: Alignment.center,
-          child: Text(
-            operation.symbol,
-            style: TextStyle(
-              fontSize: 30,
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
+        child: GestureDetector(
+          onTap: isLocked ? null : () => onEquationTap(index),
+          child: Container(
+            width: symbolSize,
+            height: symbolSize,
+            alignment: Alignment.center,
+            decoration: isLocked ? BoxDecoration(
+              color: Colors.black12,
+              shape: BoxShape.circle,
+            ) : null,
+            child: Text(
+              operation.symbol,
+              style: TextStyle(
+                fontSize: 30,
+                color: textColor.withOpacity(opacity),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
@@ -82,21 +102,24 @@ class EquationLayout extends StatelessWidget {
     
     // Get positions for inner and outer ring corner tiles
     final innerCornerPositions = [
-      _calculateInnerTilePosition(0), // Top-left
-      _calculateInnerTilePosition(3), // Top-right
-      _calculateInnerTilePosition(6), // Bottom-right
-      _calculateInnerTilePosition(9), // Bottom-left
+      _calculateInnerTilePosition(0), // Top
+      _calculateInnerTilePosition(3), // Right
+      _calculateInnerTilePosition(6), // Bottom
+      _calculateInnerTilePosition(9), // Left
     ];
     
     final outerCornerPositions = [
-      _calculateOuterTilePosition(0), // Top-left
-      _calculateOuterTilePosition(4), // Top-right
-      _calculateOuterTilePosition(8), // Bottom-right
-      _calculateOuterTilePosition(12), // Bottom-left
+      _calculateOuterTilePosition(0), // Top
+      _calculateOuterTilePosition(4), // Right
+      _calculateOuterTilePosition(8), // Bottom
+      _calculateOuterTilePosition(12), // Left
     ];
     
-    // Create equals symbols exactly between inner and outer corners
+    // Create equals symbols between inner and outer corners
     return List.generate(4, (index) {
+      // Check if this corner is locked
+      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == index);
+      
       final innerPos = innerCornerPositions[index];
       final outerPos = outerCornerPositions[index];
       
@@ -107,18 +130,10 @@ class EquationLayout extends StatelessWidget {
       return Positioned(
         left: midX - symbolSize / 2,
         top: midY - symbolSize / 2,
-        child: Container(
-          width: symbolSize,
-          height: symbolSize,
-          alignment: Alignment.center,
-          child: Text(
-            "=",
-            style: TextStyle(
-              fontSize: 30,
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        child: ClickableEquals(
+          onTap: () => onEquationTap(index),
+          isLocked: isLocked,
+          size: symbolSize,
         ),
       );
     });
@@ -126,7 +141,6 @@ class EquationLayout extends StatelessWidget {
   
   // Calculate position for inner ring tile at a given index
   Offset _calculateInnerTilePosition(int index) {
-    // Use the same calculation logic as in SimpleRing widget
     final innerTileSize = innerRingSize * 0.16;
     final availableSpace = innerRingSize - innerTileSize;
     double x, y;
@@ -159,7 +173,6 @@ class EquationLayout extends StatelessWidget {
   
   // Calculate position for outer ring tile at a given index
   Offset _calculateOuterTilePosition(int index) {
-    // Use the same calculation logic as in SimpleRing widget
     final outerTileSize = boardSize * 0.12;
     final availableSpace = boardSize - outerTileSize;
     double x, y;

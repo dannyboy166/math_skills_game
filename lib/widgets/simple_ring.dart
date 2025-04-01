@@ -1,6 +1,9 @@
+// lib/widgets/simple_ring.dart
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
+import '../models/locked_equation.dart';
+import '../widgets/number_tile.dart';
 import 'dart:math' as math;
 
 class SimpleRing extends StatefulWidget {
@@ -9,6 +12,8 @@ class SimpleRing extends StatefulWidget {
   final double tileSize;
   final bool isInner;
   final ValueChanged<int> onRotateSteps;
+  final List<LockedEquation> lockedEquations;
+  final Function(int, int) onTileTap; // (cornerIndex, position)
   
   const SimpleRing({
     Key? key,
@@ -17,6 +22,8 @@ class SimpleRing extends StatefulWidget {
     required this.tileSize,
     required this.isInner,
     required this.onRotateSteps,
+    required this.lockedEquations,
+    required this.onTileTap,
   }) : super(key: key);
   
   @override
@@ -31,6 +38,11 @@ class _SimpleRingState extends State<SimpleRing> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanStart: (details) {
+        // Don't start a pan if we tapped on a locked corner
+        if (_isPositionOnLockedCorner(details.localPosition)) {
+          return;
+        }
+        
         setState(() {
           _startPosition = details.localPosition;
         });
@@ -57,7 +69,13 @@ class _SimpleRingState extends State<SimpleRing> {
         );
         
         if (rotationStep != 0) {
-          widget.onRotateSteps(widget.ringModel.rotationSteps + rotationStep);
+          // Calculate the new rotation steps
+          final newRotationSteps = widget.ringModel.rotationSteps + rotationStep;
+          
+          // Check if rotation would impact a locked position
+          if (!_wouldRotationAffectLockedCorner(newRotationSteps)) {
+            widget.onRotateSteps(newRotationSteps);
+          }
           
           // Reset the start position to the current position
           setState(() {
@@ -74,6 +92,92 @@ class _SimpleRingState extends State<SimpleRing> {
         ),
       ),
     );
+  }
+  
+  // Check if rotation would affect a locked corner
+  bool _wouldRotationAffectLockedCorner(int newRotationSteps) {
+    // If no equations are locked, we're free to rotate
+    if (widget.lockedEquations.isEmpty) return false;
+    
+    // Check for each locked equation if the affected corners would move
+    for (final equation in widget.lockedEquations) {
+      // We only care about corners that involve this ring
+      final int lockedPosition = widget.isInner 
+          ? equation.innerPosition 
+          : equation.outerPosition;
+      
+      // Get corner index for this position
+      final cornerIndex = _getCornerIndexForPosition(lockedPosition);
+      if (cornerIndex == -1) continue; // Not a corner position in this ring
+      
+      // If this rotation would move a locked tile, reject the rotation
+      final int currentRotatedIndex = _getRotatedIndex(lockedPosition, widget.ringModel.rotationSteps);
+      final int newRotatedIndex = _getRotatedIndex(lockedPosition, newRotationSteps);
+      
+      if (currentRotatedIndex != newRotatedIndex) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  // Get corner index (0-3) for a position if it's a corner, or -1 if not
+  int _getCornerIndexForPosition(int position) {
+    final cornerIndices = widget.ringModel.cornerIndices;
+    for (int i = 0; i < cornerIndices.length; i++) {
+      if (cornerIndices[i] == position) {
+        return i;
+      }
+    }
+    return -1; // Not a corner
+  }
+  
+  // Helper to calculate rotated index
+  int _getRotatedIndex(int position, int rotationSteps) {
+    final itemCount = widget.ringModel.numbers.length;
+    final actualSteps = rotationSteps % itemCount;
+    
+    if (actualSteps == 0) return position;
+    
+    if (actualSteps > 0) {
+      // Counterclockwise rotation
+      return (position + actualSteps) % itemCount;
+    } else {
+      // Clockwise rotation
+      return (position - (-actualSteps) + itemCount) % itemCount;
+    }
+  }
+  
+  // Check if the touch position is on a locked corner
+  bool _isPositionOnLockedCorner(Offset position) {
+    for (int i = 0; i < widget.ringModel.cornerIndices.length; i++) {
+      // Check if this corner is locked
+      final cornerIndex = i;
+      final hasLockedEquation = widget.lockedEquations.any((eq) => eq.cornerIndex == cornerIndex);
+      
+      if (hasLockedEquation) {
+        // Get the position of this corner tile
+        final cornerPosition = widget.ringModel.cornerIndices[i];
+        final tilePosition = widget.isInner
+            ? SquarePositionUtils.calculateInnerSquarePosition(cornerPosition, widget.size, widget.tileSize)
+            : SquarePositionUtils.calculateSquarePosition(cornerPosition, widget.size, widget.tileSize);
+        
+        // Check if the touch is within this tile
+        final tileRect = Rect.fromLTWH(
+          tilePosition.dx, 
+          tilePosition.dy, 
+          widget.tileSize, 
+          widget.tileSize
+        );
+        
+        if (tileRect.contains(position)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
   
   int _determineRotationDirection(Offset startPos, Offset dragDelta, double size) {
@@ -239,46 +343,28 @@ class _SimpleRingState extends State<SimpleRing> {
       final number = widget.ringModel.getNumberAtPosition(i);
       
       // Is this a corner?
-      final isCorner = widget.ringModel.cornerIndices.contains(i);
+      final cornerIndex = _getCornerIndexForPosition(i);
+      final isCorner = cornerIndex != -1;
       
-      // Keep console logging for debugging
+      // Is this corner locked?
+      final isLocked = isCorner && widget.lockedEquations.any((eq) => eq.cornerIndex == cornerIndex);
+      
+      // For console debugging
       if (isCorner) {
-        print('Corner ${widget.ringModel.cornerIndices.indexOf(i)}: Position $i, Number $number');
+        print('${widget.isInner ? "Inner" : "Outer"} Ring - Corner $cornerIndex: Position $i, Number $number, Locked: $isLocked');
       }
       
       tiles.add(
         Positioned(
           left: offset.dx,
           top: offset.dy,
-          child: Container(
-            width: widget.tileSize,
-            height: widget.tileSize,
-            decoration: BoxDecoration(
+          child: GestureDetector(
+            onTap: isCorner ? () => widget.onTileTap(cornerIndex, i) : null,
+            child: NumberTile(
+              number: number,
               color: isCorner ? widget.ringModel.color : widget.ringModel.color.withOpacity(0.7),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white,
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 4,
-                  offset: Offset(2, 2),
-                ),
-              ],
-            ),
-            // Fix: Use a simple centered Text widget for all tiles
-            child: Center(
-              child: Text(
-                '$number',
-                style: TextStyle(
-                  fontSize: isCorner ? 20 : 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              isLocked: isLocked,
+              size: widget.tileSize,
             ),
           ),
         ),
