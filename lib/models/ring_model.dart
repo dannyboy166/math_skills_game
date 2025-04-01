@@ -150,6 +150,8 @@ class RingModel {
     if (steps > 0) {
       // Counterclockwise rotation (positive steps)
       final rotationCount = steps % unlockedNumbers.length;
+      print(
+          'ROTATION DEBUG: Rotating ${unlockedNumbers.length} unlocked numbers counterclockwise by $rotationCount steps');
       final rotatedNumbers = [
         ...unlockedNumbers.sublist(rotationCount),
         ...unlockedNumbers.sublist(0, rotationCount)
@@ -158,6 +160,8 @@ class RingModel {
     } else {
       // Clockwise rotation (negative steps)
       final rotationCount = (-steps) % unlockedNumbers.length;
+      print(
+          'ROTATION DEBUG: Rotating ${unlockedNumbers.length} unlocked numbers clockwise by $rotationCount steps');
       final rotatedNumbers = [
         ...unlockedNumbers.sublist(unlockedNumbers.length - rotationCount),
         ...unlockedNumbers.sublist(0, unlockedNumbers.length - rotationCount)
@@ -187,8 +191,9 @@ class RingModel {
     }
   }
 
-  // Get the number at a position
   int getNumberAtPosition(int position) {
+    // Always return from _currentNumbers, which contains our current state
+    // Fall back to original numbers array only if not found in _currentNumbers
     return _currentNumbers[position] ?? numbers[position];
   }
 

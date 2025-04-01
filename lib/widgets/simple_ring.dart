@@ -283,14 +283,23 @@ class _SimpleRingState extends State<SimpleRing> {
     // Default to center if not on an edge or corner
     return 'center';
   }
-// Updated _buildTiles method in SimpleRing widget to display locked numbers correctly
 
+// Updated _buildTiles method in SimpleRing widget to display locked numbers correctly
   List<Widget> _buildTiles() {
     final itemCount = widget.ringModel.numbers.length;
     List<Widget> tiles = [];
 
     // Get locked positions for this ring
     final lockedPositions = _getLockedPositionsForRing();
+
+    // DEBUG: Print current state before building tiles
+    print(
+        '${widget.isInner ? "INNER" : "OUTER"} RING DEBUG: Building tiles with current state:');
+    for (int i = 0; i < itemCount; i++) {
+      String lockStatus = lockedPositions.contains(i) ? '(LOCKED)' : '';
+      print(
+          '${widget.isInner ? "INNER" : "OUTER"} RING DEBUG: Position $i: ${widget.ringModel.getNumberAtPosition(i)} $lockStatus');
+    }
 
     for (int i = 0; i < itemCount; i++) {
       // Get position for this tile
@@ -307,16 +316,12 @@ class _SimpleRingState extends State<SimpleRing> {
       // Is this corner locked?
       final isLocked = lockedPositions.contains(i);
 
-      // Get the number to display
-      int numberToDisplay;
+      // Get the number to display - explicitly call getNumberAtPosition
+      int numberToDisplay = widget.ringModel.getNumberAtPosition(i);
 
-      numberToDisplay = widget.ringModel.getNumberAtPosition(i);
-
-      // For console debugging
-      if (isCorner && isLocked) {
-        print(
-            '${widget.isInner ? "Inner" : "Outer"} Ring - Locked Corner $cornerIndex: Position $i, Number $numberToDisplay');
-      }
+      // For console debugging of what's being displayed
+      print(
+          '${widget.isInner ? "INNER" : "OUTER"} RING DEBUG: Drawing tile at position $i: number=$numberToDisplay, corner=$isCorner, locked=$isLocked');
 
       tiles.add(
         Positioned(
