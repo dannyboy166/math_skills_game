@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
-import '../../models/game_operation.dart';
-import '../../models/ring_model.dart';
-import '../celebrations/animated_border.dart';
-import '../celebrations/audio_manager.dart';
-import '../celebrations/burst_animation.dart';
-import '../celebrations/candy_crush_explosion.dart';
+import 'package:math_skills_game/models/game_operation.dart';
+import 'package:math_skills_game/models/ring_model.dart';
+import 'package:math_skills_game/widgets/celebrations/animated_border.dart';
+import 'package:math_skills_game/widgets/celebrations/audio_manager.dart';
+import 'package:math_skills_game/widgets/celebrations/burst_animation.dart';
+import 'package:math_skills_game/widgets/celebrations/candy_crush_explosion.dart';
 
 class GameBoardController {
   // Models for our rings
@@ -62,7 +62,7 @@ class GameBoardController {
   }
 
   bool get isShowingCelebration => _showingCelebration;
-  
+
   GlobalKey<State<BurstAnimation>> getBurstKey(int index) => _burstKeys[index];
 
   void dispose() {
@@ -95,7 +95,7 @@ class GameBoardController {
       squareSize: innerRingSize,
       rotationSteps: innerRingModel.rotationSteps,
     );
-    
+
     onStateChanged();
   }
 
@@ -110,7 +110,7 @@ class GameBoardController {
     innerRingModel = innerRingModel.copyWith(rotationSteps: steps);
     onStateChanged();
   }
-  
+
   // Hide celebration overlay
   void hideCelebration() {
     _showingCelebration = false;
@@ -125,23 +125,43 @@ class GameBoardController {
       (state as dynamic).play();
     }
   }
-  
+
+  // Helper method to get the number at a specific position after rotation
+  int _getNumberAtPosition(
+      List<int> numbers, int position, int rotationSteps, int itemCount) {
+    if (rotationSteps == 0) return numbers[position];
+
+    final actualSteps = rotationSteps % itemCount;
+
+    // Calculate the original position before rotation
+    int originalPos;
+    if (actualSteps > 0) {
+      // Clockwise rotation
+      originalPos = (position + actualSteps) % itemCount;
+    } else {
+      // Counter-clockwise rotation
+      originalPos = (position - actualSteps) % itemCount;
+    }
+
+    return numbers[originalPos];
+  }
+
   // Check if a corner equation is correct
   void checkCornerEquation(int cornerIndex) {
-    // Get the numbers at the corners
-    final outerCornerNumbers = outerRingModel.getCornerNumbers();
+    // Get the corner indices
+    final outerCornerIndices = outerRingModel.cornerIndices;
+    final innerCornerIndices = [0, 3, 6, 9]; // Standard for inner 12-item ring
 
-    // For inner ring, map cornerIndex to the corresponding positions
-    final innerCornerIndices = [0, 3, 6, 9]; // Positions in inner ring that align with corners
-    final rotatedInnerNumbers = innerRingModel.getRotatedNumbers();
-    final innerCornerNumbers = innerCornerIndices.map((index) {
-      // Make sure to wrap around properly for the 12-item inner ring
-      return rotatedInnerNumbers[index % 12];
-    }).toList();
+    // Get the actual outer and inner corner positions
+    final outerCornerPos = outerCornerIndices[cornerIndex];
+    final innerCornerPos = innerCornerIndices[cornerIndex];
 
-    // Get the current corner numbers based on rotation
-    final outerNumber = outerCornerNumbers[cornerIndex];
-    final innerNumber = innerCornerNumbers[cornerIndex];
+    // Get the numbers at these positions after rotation
+    final outerNumber = _getNumberAtPosition(outerRingModel.numbers,
+        outerCornerPos, outerRingModel.rotationSteps, outerRingModel.itemCount);
+
+    final innerNumber = _getNumberAtPosition(innerRingModel.numbers,
+        innerCornerPos, innerRingModel.rotationSteps, innerRingModel.itemCount);
 
     // Check if the equation is correct using the operation strategy
     bool isCorrect = operation.checkEquation(
@@ -167,14 +187,15 @@ class GameBoardController {
     } else if (!isCorrect) {
       solvedCorners[cornerIndex] = false;
       onStateChanged();
-      
+
       // Play incorrect feedback
       _audioManager.playWrongFeedback();
     }
   }
-  
+
   // Handle swipes on corner tiles
-  void handleCornerSwipe(DragEndDetails details, int cornerIndex, bool isHorizontal) {
+  void handleCornerSwipe(
+      DragEndDetails details, int cornerIndex, bool isHorizontal) {
     // Ensure there's meaningful velocity
     if (details.primaryVelocity == null || details.primaryVelocity!.abs() < 50)
       return;
@@ -237,14 +258,15 @@ class GameBoardController {
 
   // Build confetti widgets for all corners
   List<Widget> buildConfettiWidgets(double boardSize) {
-    return List.generate(4, (index) => _buildConfettiWidget(index, boardSize: boardSize));
+    return List.generate(
+        4, (index) => _buildConfettiWidget(index, boardSize: boardSize));
   }
 
   // Helper method to build confetti widget at a specific corner
   Widget _buildConfettiWidget(int cornerIndex, {required double boardSize}) {
     // Corner offset (distance from edge)
     final cornerOffset = boardSize * 0.15;
-    
+
     // Determine the alignment and direction based on corner
     double blastDirection;
 
@@ -326,7 +348,7 @@ class GameBoardController {
     _showingCelebration = true;
     onStateChanged();
   }
-  
+
   // Play explosion animation for a corner
   void playCornerExplosion(int cornerIndex, BuildContext context) {
     // Get corner position
