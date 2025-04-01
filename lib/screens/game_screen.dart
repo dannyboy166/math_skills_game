@@ -1,3 +1,4 @@
+// File: lib/screens/game_screen.dart (updated version)
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../models/ring_model.dart';
@@ -43,7 +44,6 @@ class _GameScreenState extends State<GameScreen> {
     
     // For outer ring: Generate numbers based on operation
     List<int> outerNumbers;
-    List<int> cornerPositions;
     
     // Different number generation based on operation
     switch (widget.operationName) {
