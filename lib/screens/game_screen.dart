@@ -260,7 +260,6 @@ class _GameScreenState extends State<GameScreen> {
         innerNumber, outerNumber, widget.targetNumber);
   }
 
-  // Update outer ring rotation
   void _updateOuterRing(int steps) {
     setState(() {
       outerRingModel = outerRingModel.copyWith(rotationSteps: steps);
@@ -268,13 +267,14 @@ class _GameScreenState extends State<GameScreen> {
     _checkAllEquations();
   }
 
-  // Update inner ring rotation
   void _updateInnerRing(int steps) {
     setState(() {
       innerRingModel = innerRingModel.copyWith(rotationSteps: steps);
     });
     _checkAllEquations();
   }
+
+// Helper to get locked positions for a specific ring
 
   // Handle tapping on an equation element (corner tiles or equals sign)
   void _handleEquationTap(int cornerIndex) {
@@ -300,7 +300,7 @@ class _GameScreenState extends State<GameScreen> {
     _handleEquationTap(cornerIndex);
   }
 
-  // Lock an equation that is correct
+// Updated _lockEquation method for GameScreen that properly stores the actual numbers
   void _lockEquation(int cornerIndex) {
     // If already locked, do nothing
     if (lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
@@ -327,9 +327,19 @@ class _GameScreenState extends State<GameScreen> {
           innerNumber, widget.targetNumber, outerNumber),
     );
 
-    // Update state
+    // Update state - just mark these positions as locked without changing the numbers
     setState(() {
       lockedEquations.add(lockedEquation);
+
+      // Update locked positions in ring models
+      Set<int> innerLocked = Set<int>.from(innerRingModel.lockedPositions);
+      Set<int> outerLocked = Set<int>.from(outerRingModel.lockedPositions);
+
+      innerLocked.add(innerCornerPos);
+      outerLocked.add(outerCornerPos);
+
+      innerRingModel = innerRingModel.copyWith(lockedPositions: innerLocked);
+      outerRingModel = outerRingModel.copyWith(lockedPositions: outerLocked);
 
       // Check if all four corners are locked (win condition)
       if (lockedEquations.length == 4) {
