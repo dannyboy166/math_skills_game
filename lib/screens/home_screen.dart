@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'game_screen.dart';
 import '../models/difficulty_level.dart'; // Import from models instead of defining locally
@@ -12,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String selectedOperation = 'addition';
   DifficultyLevel selectedLevel = DifficultyLevel.standard;
+  int? selectedMultiplicationTable;
 
   @override
   Widget build(BuildContext context) {
@@ -46,39 +49,61 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             SizedBox(height: 30),
-            Text(
-              'Choose difficulty:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 20),
 
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: [
-                for (final level in DifficultyLevel.values)
-                  _buildLevelButton(level),
-              ],
-            ),
-
-            SizedBox(height: 20),
-
-            // Difficulty information
-            _buildDifficultyInfo(),
+            // Show either difficulty selection or multiplication table selection based on operation
+            if (selectedOperation == 'multiplication')
+              _buildMultiplicationTablesUI()
+            else
+              Column(
+                children: [
+                  Text(
+                    'Choose difficulty:',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 20),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: [
+                      for (final level in DifficultyLevel.values)
+                        _buildLevelButton(level),
+                    ],
+                  ),
+                  SizedBox(height: 20),
+                  _buildDifficultyInfo(),
+                ],
+              ),
 
             Spacer(),
 
             // Start button
             ElevatedButton(
               onPressed: () {
+                // Don't allow starting multiplication game without selecting a table
+                if (selectedOperation == 'multiplication' &&
+                    selectedMultiplicationTable == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Please select a times table first'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => GameScreen(
                       operationName: selectedOperation,
                       difficultyLevel: selectedLevel,
+                      // Pass the selected multiplication table if applicable
+                      targetNumber: (selectedOperation == 'multiplication' &&
+                              selectedMultiplicationTable != null)
+                          ? selectedMultiplicationTable
+                          : null,
                     ),
                   ),
                 );
@@ -123,6 +148,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ? () {
               setState(() {
                 selectedOperation = operation;
+                // Reset multiplication table if changing operations
+                if (operation != 'multiplication') {
+                  selectedMultiplicationTable = null;
+                }
               });
             }
           : null,
@@ -257,5 +286,203 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildMultiplicationTablesUI() {
+    return Column(
+      children: [
+        Text(
+          'Choose times table:',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 20),
+
+        // Random selection based on difficulty
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: [
+            _buildCategoryButton('Standard', [1, 2, 5, 10]),
+            _buildCategoryButton('Challenging', [3, 4, 6, 11]),
+            _buildCategoryButton('Difficult', [7, 8, 9, 12]),
+            _buildCategoryButton('Expert', [13, 14, 15]),
+          ],
+        ),
+
+        SizedBox(height: 15),
+        Text(
+          'Or select specific times table:',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 10),
+
+        // Specific table selection
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: [
+            for (int i = 1; i <= 15; i++) _buildTableButton(i),
+          ],
+        ),
+
+        SizedBox(height: 20),
+
+        // Selected table info
+        if (selectedMultiplicationTable != null)
+          Container(
+            margin: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '${selectedMultiplicationTable}× Times Table',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: _getTableColor(selectedMultiplicationTable!)),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+// Helper method to build category button
+  Widget _buildCategoryButton(String categoryName, List<int> tables) {
+    final bool isSelected = selectedMultiplicationTable != null &&
+        tables.contains(selectedMultiplicationTable);
+
+    Color getColor() {
+      switch (categoryName) {
+        case 'Standard':
+          return Colors.green.shade600;
+        case 'Challenging':
+          return Colors.blue.shade600;
+        case 'Difficult':
+          return Colors.orange.shade600;
+        case 'Expert':
+          return Colors.red.shade600;
+        default:
+          return Colors.blue;
+      }
+    }
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          // Select a random table from this category
+          final Random random = Random();
+          selectedMultiplicationTable = tables[random.nextInt(tables.length)];
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? getColor() : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected
+              ? [BoxShadow(color: getColor().withOpacity(0.5), blurRadius: 3)]
+              : null,
+        ),
+        child: Text(
+          categoryName,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
+
+// Helper method to build individual table button
+  Widget _buildTableButton(int tableNumber) {
+    final bool isSelected = selectedMultiplicationTable == tableNumber;
+
+    // Get difficulty category of this table
+    String getCategory() {
+      if ([1, 2, 5, 10].contains(tableNumber)) return 'Standard';
+      if ([3, 4, 6, 11].contains(tableNumber)) return 'Challenging';
+      if ([7, 8, 9, 12].contains(tableNumber)) return 'Difficult';
+      return 'Expert';
+    }
+
+    Color getColor() {
+      final category = getCategory();
+      switch (category) {
+        case 'Standard':
+          return Colors.green.shade600;
+        case 'Challenging':
+          return Colors.blue.shade600;
+        case 'Difficult':
+          return Colors.orange.shade600;
+        case 'Expert':
+          return Colors.red.shade600;
+        default:
+          return Colors.blue;
+      }
+    }
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          selectedMultiplicationTable = tableNumber;
+        });
+      },
+      child: Container(
+        width: 45,
+        height: 45,
+        decoration: BoxDecoration(
+          color: isSelected ? getColor() : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected
+              ? [BoxShadow(color: getColor().withOpacity(0.5), blurRadius: 3)]
+              : null,
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Text(
+                '$tableNumber×',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
+              ),
+            ),
+            if (getCategory() == 'Expert')
+              Positioned(
+                right: 3,
+                bottom: 3,
+                child: Icon(
+                  Icons.star,
+                  size: 10,
+                  color: isSelected ? Colors.white70 : Colors.red,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+// Helper method to get color for a specific table
+  Color _getTableColor(int tableNumber) {
+    if ([1, 2, 5, 10].contains(tableNumber)) return Colors.green.shade600;
+    if ([3, 4, 6, 11].contains(tableNumber)) return Colors.blue.shade600;
+    if ([7, 8, 9, 12].contains(tableNumber)) return Colors.orange.shade600;
+    return Colors.red.shade600;
   }
 }

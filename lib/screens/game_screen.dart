@@ -59,23 +59,28 @@ class _GameScreenState extends State<GameScreen> {
   void _generateGameNumbers() {
     final random = Random();
 
-    // Get inner ring numbers based on difficulty level
-    final innerNumbers = widget.difficultyLevel.innerRingNumbers;
-
-    // For outer ring: Generate numbers based on operation and difficulty
+    List<int> innerNumbers;
     List<int> outerNumbers;
 
-    // Different number generation based on operation
-    switch (widget.operationName) {
-      case 'addition':
-        outerNumbers = _generateAdditionNumbers(innerNumbers, random);
-        break;
-      case 'subtraction':
-        outerNumbers = _generateSubtractionNumbers(innerNumbers, random);
-        break;
-      default:
-        outerNumbers = _generateAdditionNumbers(innerNumbers, random);
-        break;
+    // For multiplication, always use 1-12 for inner ring regardless of difficulty
+    if (widget.operationName == 'multiplication') {
+      innerNumbers = List.generate(12, (index) => index + 1); // 1-12
+      outerNumbers = _generateMultiplicationNumbers(random);
+    } else {
+      // Original logic for other operations
+      innerNumbers = widget.difficultyLevel.innerRingNumbers;
+
+      switch (widget.operationName) {
+        case 'addition':
+          outerNumbers = _generateAdditionNumbers(innerNumbers, random);
+          break;
+        case 'subtraction':
+          outerNumbers = _generateSubtractionNumbers(innerNumbers, random);
+          break;
+        default:
+          outerNumbers = _generateAdditionNumbers(innerNumbers, random);
+          break;
+      }
     }
 
     // Initialize ring models
@@ -284,6 +289,53 @@ class _GameScreenState extends State<GameScreen> {
     return outerNumbers;
   }
 
+// Updated method to generate numbers for multiplication
+  List<int> _generateMultiplicationNumbers(Random random) {
+    final maxOuterNumber = targetNumber * 12; // Maximum product possible
+
+    // Initialize outer numbers list
+    final outerNumbers = List.filled(16, 0);
+
+    // 1. Choose 4 random numbers from 1-12 (not visible to player, just for calculation)
+    Set<int> selectedInnerNumbers = {};
+    while (selectedInnerNumbers.length < 4) {
+      selectedInnerNumbers.add(random.nextInt(12) + 1);
+    }
+
+    // 2. Calculate the 4 products with the center number
+    List<int> productNumbers =
+        selectedInnerNumbers.map((n) => n * targetNumber).toList();
+
+    // 3. Randomly place the 4 product numbers anywhere in the outer ring
+    List<int> outerPositions = List.generate(16, (index) => index);
+    outerPositions.shuffle(random);
+
+    for (int i = 0; i < 4; i++) {
+      outerNumbers[outerPositions[i]] = productNumbers[i];
+    }
+
+    // 4. Fill remaining positions with numbers that:
+    //    - Are not duplicates of our chosen products
+    //    - Are not duplicates of any previously generated number
+    //    - Are within range 1 to maxOuterNumber
+    Set<int> usedOuterNumbers = Set.from(productNumbers);
+
+    for (int i = 0; i < 16; i++) {
+      if (outerNumbers[i] == 0) {
+        // Generate a random number that's not already used
+        int randomNum;
+        do {
+          randomNum = random.nextInt(maxOuterNumber) + 1;
+        } while (usedOuterNumbers.contains(randomNum));
+
+        outerNumbers[i] = randomNum;
+        usedOuterNumbers.add(randomNum);
+      }
+    }
+
+    return outerNumbers;
+  }
+
   // Check if equation is correct at the given corner
   bool _checkEquation(int cornerIndex) {
     // If this corner is already locked, don't check it again
@@ -460,6 +512,7 @@ class _GameScreenState extends State<GameScreen> {
 
   void _showHelpDialog() {
     String equationFormat;
+    String additionalInfo = '';
 
     switch (widget.operationName) {
       case 'addition':
@@ -468,10 +521,14 @@ class _GameScreenState extends State<GameScreen> {
       case 'subtraction':
         equationFormat = 'outer - inner = $targetNumber';
         break;
+      case 'multiplication':
+        equationFormat = 'inner × $targetNumber = outer';
+        additionalInfo =
+            'For multiplication, find numbers from the inner ring (1-12) that, when multiplied by $targetNumber, match values in the outer ring. There are at least 4 valid solutions to find!';
+        break;
       case 'division':
         equationFormat = 'outer ÷ inner = $targetNumber';
         break;
-      case 'multiplication':
       default:
         equationFormat = 'inner × $targetNumber = outer';
         break;
@@ -493,14 +550,22 @@ class _GameScreenState extends State<GameScreen> {
             Text(
                 '4. Locked equations stay in place while you continue rotating to solve the remaining corners.'),
             Text('5. Complete all four corners to win!'),
+            if (additionalInfo.isNotEmpty) ...[
+              SizedBox(height: 10),
+              Text(additionalInfo),
+            ],
             SizedBox(height: 16),
             Text('Note:', style: TextStyle(fontWeight: FontWeight.bold)),
             Text('• For addition and multiplication: inner → outer'),
             Text('• For subtraction and division: outer → inner'),
             Text('This reflects how these operations relate to each other!'),
             SizedBox(height: 10),
-            Text('Difficulty: ${widget.difficultyLevel.displayName}',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            widget.operationName == 'multiplication' &&
+                    widget.targetNumber != null
+                ? Text('Times Table: ${widget.targetNumber}×',
+                    style: TextStyle(fontWeight: FontWeight.bold))
+                : Text('Difficulty: ${widget.difficultyLevel.displayName}',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
