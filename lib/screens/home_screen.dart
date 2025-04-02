@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(width: 10),
                 _buildOperationButton('-', 'subtraction'),
                 SizedBox(width: 10),
-                _buildOperationButton('×', 'multiplication', enabled: false),
+                _buildOperationButton('×', 'multiplication'),
                 SizedBox(width: 10),
                 _buildOperationButton('÷', 'division', enabled: false),
               ],
