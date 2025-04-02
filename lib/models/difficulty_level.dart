@@ -2,18 +2,18 @@
 import 'dart:math';
 
 enum DifficultyLevel {
-  easy,
-  medium,
-  hard,
+  standard,
+  challenging,
+  difficult,
   expert,
 }
 
 extension DifficultyLevelExtension on DifficultyLevel {
   String get displayName {
     switch (this) {
-      case DifficultyLevel.easy: return 'Easy';
-      case DifficultyLevel.medium: return 'Medium';
-      case DifficultyLevel.hard: return 'Hard';
+      case DifficultyLevel.standard: return 'Standard';
+      case DifficultyLevel.challenging: return 'Challenging';
+      case DifficultyLevel.difficult: return 'Difficult';
       case DifficultyLevel.expert: return 'Expert';
     }
   }
@@ -21,18 +21,18 @@ extension DifficultyLevelExtension on DifficultyLevel {
   // Center number range
   int get minCenterNumber {
     switch (this) {
-      case DifficultyLevel.easy: return 1;
-      case DifficultyLevel.medium: return 6;
-      case DifficultyLevel.hard: return 11;
+      case DifficultyLevel.standard: return 1;
+      case DifficultyLevel.challenging: return 6;
+      case DifficultyLevel.difficult: return 11;
       case DifficultyLevel.expert: return 21;
     }
   }
   
   int get maxCenterNumber {
     switch (this) {
-      case DifficultyLevel.easy: return 5;
-      case DifficultyLevel.medium: return 10;
-      case DifficultyLevel.hard: return 20;
+      case DifficultyLevel.standard: return 5;
+      case DifficultyLevel.challenging: return 10;
+      case DifficultyLevel.difficult: return 20;
       case DifficultyLevel.expert: return 50;
     }
   }
@@ -40,9 +40,9 @@ extension DifficultyLevelExtension on DifficultyLevel {
   // Outer ring number range
   int get maxOuterNumber {
     switch (this) {
-      case DifficultyLevel.easy: return 18;
-      case DifficultyLevel.medium: return 24;
-      case DifficultyLevel.hard: return 36;
+      case DifficultyLevel.standard: return 18;
+      case DifficultyLevel.challenging: return 24;
+      case DifficultyLevel.difficult: return 36;
       case DifficultyLevel.expert: return 100;
     }
   }
@@ -50,9 +50,9 @@ extension DifficultyLevelExtension on DifficultyLevel {
   // Inner ring numbers
   List<int> get innerRingNumbers {
     switch (this) {
-      case DifficultyLevel.easy:
-      case DifficultyLevel.medium:
-      case DifficultyLevel.hard:
+      case DifficultyLevel.standard:
+      case DifficultyLevel.challenging:
+      case DifficultyLevel.difficult:
         return List.generate(12, (index) => index + 1); // 1-12
       case DifficultyLevel.expert:
         return List.generate(12, (index) => index + 13); // 13-24

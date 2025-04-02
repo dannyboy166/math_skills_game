@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'game_screen.dart';
-import '../models/difficulty_level.dart';  // Import from models instead of defining locally
+import '../models/difficulty_level.dart'; // Import from models instead of defining locally
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -11,8 +11,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String selectedOperation = 'addition';
-  DifficultyLevel selectedLevel = DifficultyLevel.easy;
-  
+  DifficultyLevel selectedLevel = DifficultyLevel.standard;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 20),
-            
+
             // Operation buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildOperationButton('÷', 'division', enabled: false),
               ],
             ),
-            
+
             SizedBox(height: 30),
             Text(
               'Choose difficulty:',
@@ -52,26 +52,24 @@ class _HomeScreenState extends State<HomeScreen> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 20),
-            
-            // Difficulty level selection
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8.0,
+              runSpacing: 8.0,
               children: [
                 for (final level in DifficultyLevel.values)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: _buildLevelButton(level),
-                  ),
+                  _buildLevelButton(level),
               ],
             ),
-            
+
             SizedBox(height: 20),
-            
+
             // Difficulty information
             _buildDifficultyInfo(),
-            
+
             Spacer(),
-            
+
             // Start button
             ElevatedButton(
               onPressed: () {
@@ -98,28 +96,36 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
-  Widget _buildOperationButton(String symbol, String operation, {bool enabled = true}) {
+
+  Widget _buildOperationButton(String symbol, String operation,
+      {bool enabled = true}) {
     final isSelected = selectedOperation == operation;
-    
+
     Color getColor() {
       if (!enabled) return Colors.grey.shade400;
-      
+
       switch (operation) {
-        case 'addition': return Colors.green;
-        case 'subtraction': return Colors.purple;
-        case 'multiplication': return Colors.blue;
-        case 'division': return Colors.orange;
-        default: return Colors.grey;
+        case 'addition':
+          return Colors.green;
+        case 'subtraction':
+          return Colors.purple;
+        case 'multiplication':
+          return Colors.blue;
+        case 'division':
+          return Colors.orange;
+        default:
+          return Colors.grey;
       }
     }
-    
+
     return InkWell(
-      onTap: enabled ? () {
-        setState(() {
-          selectedOperation = operation;
-        });
-      } : null,
+      onTap: enabled
+          ? () {
+              setState(() {
+                selectedOperation = operation;
+              });
+            }
+          : null,
       child: Container(
         width: 60,
         height: 60,
@@ -157,19 +163,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+
   Widget _buildLevelButton(DifficultyLevel level) {
     final isSelected = selectedLevel == level;
-    
+
     Color getColor() {
       switch (level) {
-        case DifficultyLevel.easy: return Colors.green.shade600;
-        case DifficultyLevel.medium: return Colors.blue.shade600;
-        case DifficultyLevel.hard: return Colors.orange.shade600;
-        case DifficultyLevel.expert: return Colors.red.shade600;
+        case DifficultyLevel.standard:
+          return Colors.green.shade600;
+        case DifficultyLevel.challenging:
+          return Colors.blue.shade600;
+        case DifficultyLevel.difficult:
+          return Colors.orange.shade600;
+        case DifficultyLevel.expert:
+          return Colors.red.shade600;
       }
     }
-    
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -196,24 +206,24 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+
   Widget _buildDifficultyInfo() {
     String centerRange;
     String innerRange;
     String outerRange;
-    
+
     switch (selectedLevel) {
-      case DifficultyLevel.easy:
+      case DifficultyLevel.standard:
         centerRange = '1-5';
         innerRange = '1-12';
         outerRange = '1-18';
         break;
-      case DifficultyLevel.medium:
+      case DifficultyLevel.challenging:
         centerRange = '6-10';
         innerRange = '1-12';
         outerRange = '1-24';
         break;
-      case DifficultyLevel.hard:
+      case DifficultyLevel.difficult:
         centerRange = '11-20';
         innerRange = '1-12';
         outerRange = '1-36';
@@ -224,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
         outerRange = '1-100';
         break;
     }
-    
+
     return Container(
       margin: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
       padding: EdgeInsets.all(12),
