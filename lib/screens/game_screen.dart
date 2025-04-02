@@ -150,16 +150,15 @@ class _GameScreenState extends State<GameScreen> {
     return outerNumbers;
   }
 
-  // Generate numbers for subtraction operation
+// Generate numbers for subtraction operation
   List<int> _generateSubtractionNumbers(List<int> innerNumbers, Random random) {
     final outerNumbers = List.generate(16, (index) {
       // Generate random numbers
-      return random.nextInt(20) + 1;
+      return random.nextInt(50) + 1;
     });
 
     List<int> validInnerNumbers = [];
-    List<int> validResults = [];
-    List<bool> isTargetMinusInner = [];
+    List<int> validOuterNumbers = [];
 
     // Shuffle inner numbers to pick 4 random ones
     final shuffledInner = List<int>.from(innerNumbers);
@@ -170,42 +169,35 @@ class _GameScreenState extends State<GameScreen> {
     for (int i = 0; i < shuffledInner.length && count < 4; i++) {
       final innerNum = shuffledInner[i];
 
-      if (innerNum > widget.targetNumber) {
-        // inner - target = result
-        validInnerNumbers.add(innerNum);
-        validResults.add(innerNum - widget.targetNumber);
-        isTargetMinusInner.add(false);
-        count++;
-      } else if (innerNum < widget.targetNumber) {
-        // target - inner = result
-        validInnerNumbers.add(innerNum);
-        validResults.add(widget.targetNumber - innerNum);
-        isTargetMinusInner.add(true);
-        count++;
-      }
+      // For each inner number, generate a valid outer number
+      // such that outer - inner = target
+      final outerNum = innerNum + widget.targetNumber;
+
+      validInnerNumbers.add(innerNum);
+      validOuterNumbers.add(outerNum);
+      count++;
     }
 
-    // Place valid results at corner positions
+    // Place valid outer numbers at corner positions
     List<int> possiblePositions = [0, 4, 8, 12]; // Corner positions
     possiblePositions.shuffle(random);
 
     for (int i = 0; i < count; i++) {
-      outerNumbers[possiblePositions[i]] = validResults[i];
+      outerNumbers[possiblePositions[i]] = validOuterNumbers[i];
     }
 
     return outerNumbers;
   }
 
-  // Generate numbers for division operation
+// Generate numbers for division operation
   List<int> _generateDivisionNumbers(List<int> innerNumbers, Random random) {
     final outerNumbers = List.generate(16, (index) {
       // Generate random numbers for non-corner positions
-      return random.nextInt(12) + 1;
+      return random.nextInt(60) + 1;
     });
 
     List<int> validInnerNumbers = [];
-    List<int> validResults = [];
-    List<bool> isTargetDividedByInner = [];
+    List<int> validOuterNumbers = [];
 
     // Shuffle inner numbers to pick 4 random ones
     final shuffledInner = List<int>.from(innerNumbers);
@@ -216,27 +208,23 @@ class _GameScreenState extends State<GameScreen> {
     for (int i = 0; i < shuffledInner.length && count < 4; i++) {
       final innerNum = shuffledInner[i];
 
-      if (innerNum % widget.targetNumber == 0) {
-        // inner ÷ target = result
-        validInnerNumbers.add(innerNum);
-        validResults.add(innerNum ~/ widget.targetNumber);
-        isTargetDividedByInner.add(false);
-        count++;
-      } else if (widget.targetNumber % innerNum == 0) {
-        // target ÷ inner = result
-        validInnerNumbers.add(innerNum);
-        validResults.add(widget.targetNumber ~/ innerNum);
-        isTargetDividedByInner.add(true);
-        count++;
-      }
+      // Skip zero to avoid division by zero
+      if (innerNum == 0) continue;
+
+      // Generate a valid outer number such that outer ÷ inner = target
+      final outerNum = innerNum * widget.targetNumber;
+
+      validInnerNumbers.add(innerNum);
+      validOuterNumbers.add(outerNum);
+      count++;
     }
 
-    // Place valid results at corner positions
+    // Place valid outer numbers at corner positions
     List<int> possiblePositions = [0, 4, 8, 12]; // Corner positions
     possiblePositions.shuffle(random);
 
     for (int i = 0; i < count; i++) {
-      outerNumbers[possiblePositions[i]] = validResults[i];
+      outerNumbers[possiblePositions[i]] = validOuterNumbers[i];
     }
 
     return outerNumbers;
@@ -261,7 +249,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _updateOuterRing(int steps) {
-    print("Outer ring rotation requested: $steps");
     setState(() {
       // Create a new model with the rotation applied
       outerRingModel = outerRingModel.copyWithRotation(steps);
@@ -270,7 +257,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _updateInnerRing(int steps) {
-    print("Inner ring rotation requested: $steps");
     setState(() {
       // Create a new model with the rotation applied
       innerRingModel = innerRingModel.copyWithRotation(steps);
@@ -341,13 +327,6 @@ class _GameScreenState extends State<GameScreen> {
           innerRingModel.copyWithLockedPosition(innerCornerPos, innerNumber);
       outerRingModel =
           outerRingModel.copyWithLockedPosition(outerCornerPos, outerNumber);
-
-      // Debug - print the new state
-      print('After locking corner $cornerIndex:');
-      print('Inner ring state:');
-      innerRingModel.debugPrintState();
-      print('Outer ring state:');
-      outerRingModel.debugPrintState();
 
       // Check if all four corners are locked (win condition)
       if (lockedEquations.length == 4) {
@@ -424,6 +403,59 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  // Show help dialog
+  void _showHelpDialog() {
+    String equationFormat;
+
+    switch (widget.operationName) {
+      case 'addition':
+        equationFormat = 'inner + ${widget.targetNumber} = outer';
+        break;
+      case 'subtraction':
+        equationFormat = 'outer - inner = ${widget.targetNumber}';
+        break;
+      case 'division':
+        equationFormat = 'outer ÷ inner = ${widget.targetNumber}';
+        break;
+      case 'multiplication':
+      default:
+        equationFormat = 'inner × ${widget.targetNumber} = outer';
+        break;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('How to Play'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                '1. Rotate the rings to form correct equations at the four corners.'),
+            Text('2. Each corner should satisfy: $equationFormat'),
+            Text(
+                '3. When a corner has a correct equation, tap any part of it to lock it.'),
+            Text(
+                '4. Locked equations stay in place while you continue rotating to solve the remaining corners.'),
+            Text('5. Complete all four corners to win!'),
+            SizedBox(height: 16),
+            Text('Note:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('• For addition and multiplication: inner → outer'),
+            Text('• For subtraction and division: outer → inner'),
+            Text('This reflects how these operations relate to each other!'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Got it!'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -433,44 +465,33 @@ class _GameScreenState extends State<GameScreen> {
     final outerTileSize = boardSize * 0.12;
     final innerTileSize = innerRingSize * 0.16;
 
+    // Determine the appropriate title based on operation
+    String title;
+    switch (widget.operationName) {
+      case 'addition':
+        title = 'Math Game - Inner + ${widget.targetNumber} = Outer';
+        break;
+      case 'subtraction':
+        title = 'Math Game - Outer - Inner = ${widget.targetNumber}';
+        break;
+      case 'division':
+        title = 'Math Game - Outer ÷ Inner = ${widget.targetNumber}';
+        break;
+      case 'multiplication':
+      default:
+        title = 'Math Game - Inner × ${widget.targetNumber} = Outer';
+        break;
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Math Game - ${widget.targetNumber} ${operation.symbol}'),
+        title: Text(title),
         backgroundColor: operation.color,
         actions: [
           // Help button
           IconButton(
             icon: Icon(Icons.help_outline),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text('How to Play'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                          '1. Rotate the rings to form correct equations at the four corners.'),
-                      Text(
-                          '2. Each corner should satisfy: inner ${operation.symbol} ${widget.targetNumber} = outer'),
-                      Text(
-                          '3. When a corner has a correct equation, tap any part of it to lock it.'),
-                      Text(
-                          '4. Locked equations stay in place while you continue rotating to solve the remaining corners.'),
-// Continuing from the previous implementation
-                      Text('5. Complete all four corners to win!'),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text('Got it!'),
-                    ),
-                  ],
-                ),
-              );
-            },
+            onPressed: _showHelpDialog,
           ),
         ],
       ),

@@ -67,7 +67,6 @@ class _SimpleRingState extends State<SimpleRing> {
 
         if (rotationStep != 0) {
           // Print the rotation step for debugging
-          print("Applying rotation step: $rotationStep");
 
           // Apply the rotation using copyWithRotation
           widget.onRotateSteps(rotationStep);
@@ -293,14 +292,7 @@ class _SimpleRingState extends State<SimpleRing> {
     // Get locked positions for this ring
     final lockedPositions = _getLockedPositionsForRing();
 
-    // DEBUG: Print current state before building tiles
-    print(
-        '${widget.isInner ? "INNER" : "OUTER"} RING DEBUG: Building tiles with current state:');
-    for (int i = 0; i < itemCount; i++) {
-      String lockStatus = lockedPositions.contains(i) ? '(LOCKED)' : '';
-      print(
-          '${widget.isInner ? "INNER" : "OUTER"} RING DEBUG: Position $i: ${widget.ringModel.getNumberAtPosition(i)} $lockStatus');
-    }
+    for (int i = 0; i < itemCount; i++) {}
 
     for (int i = 0; i < itemCount; i++) {
       // Get position for this tile
@@ -319,10 +311,6 @@ class _SimpleRingState extends State<SimpleRing> {
 
       // Get the number to display - explicitly call getNumberAtPosition
       int numberToDisplay = widget.ringModel.getNumberAtPosition(i);
-
-      // For console debugging of what's being displayed
-      print(
-          '${widget.isInner ? "INNER" : "OUTER"} RING DEBUG: Drawing tile at position $i: number=$numberToDisplay, corner=$isCorner, locked=$isLocked');
 
       // In the _buildTiles method in simple_ring.dart
       tiles.add(

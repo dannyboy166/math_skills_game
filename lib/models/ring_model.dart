@@ -112,15 +112,10 @@ class RingModel {
   }
 
   void _applyRotation(int steps) {
-    print('ROTATION DEBUG: Starting rotation by $steps steps');
-    print(
-        'ROTATION DEBUG: Locked positions: ${_lockedPositions.keys.toList()}');
-
     if (steps == 0) return;
 
     // Force steps to be in range -1 to 1 (simplify to just direction)
     steps = steps > 0 ? 1 : -1;
-    print('ROTATION DEBUG: Simplified rotation steps: $steps');
 
     // Get all unlocked positions
     List<int> unlockedPositions = [];
@@ -148,8 +143,6 @@ class RingModel {
 
       // Last position gets the first value
       newNumbers[unlockedPositions.last] = firstVal;
-
-      print('ROTATION DEBUG: Performed simple counterclockwise shift');
     } else {
       // Clockwise: last value becomes first
       int lastPos = unlockedPositions.last;
@@ -163,8 +156,6 @@ class RingModel {
 
       // First position gets the last value
       newNumbers[unlockedPositions.first] = lastVal;
-
-      print('ROTATION DEBUG: Performed simple clockwise shift');
     }
 
     // Replace current numbers with new arrangement
@@ -172,10 +163,8 @@ class RingModel {
     _currentNumbers.addAll(newNumbers);
 
     // Debug output
-    print('ROTATION DEBUG: Numbers after rotation:');
     for (int i = 0; i < numbers.length; i++) {
       String lockStatus = _lockedPositions.containsKey(i) ? '(LOCKED)' : '';
-      print('ROTATION DEBUG:   Position $i: ${_currentNumbers[i]} $lockStatus');
     }
   }
 
@@ -183,14 +172,5 @@ class RingModel {
     // Always return from _currentNumbers, which contains our current state
     // Fall back to original numbers array only if not found in _currentNumbers
     return _currentNumbers[position] ?? numbers[position];
-  }
-
-  // For debugging: print the current state
-  void debugPrintState() {
-    print('Current numbers:');
-    for (int i = 0; i < numbers.length; i++) {
-      String lockStatus = _lockedPositions.containsKey(i) ? '(LOCKED)' : '';
-      print('Position $i: ${_currentNumbers[i]} $lockStatus');
-    }
   }
 }

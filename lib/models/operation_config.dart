@@ -44,13 +44,9 @@ class OperationConfig {
           name: 'subtraction',
           symbol: '-',
           color: Colors.purple,
-          // Two valid cases: inner - target = outer OR target - inner = outer
-          checkEquation: (inner, outer, target) => 
-            inner - target == outer || target - inner == outer,
-          getEquationString: (inner, target, outer) => 
-            inner - target == outer 
-              ? '$inner - $target = $outer' 
-              : '$target - $inner = $outer',
+          // For subtraction: outer - inner = target
+          checkEquation: (inner, outer, target) => outer - inner == target,
+          getEquationString: (inner, target, outer) => '$outer - $inner = $target',
         );
       
       case 'division':
@@ -58,14 +54,10 @@ class OperationConfig {
           name: 'division',
           symbol: '÷',
           color: Colors.orange,
-          // Two valid cases: inner ÷ target = outer OR target ÷ inner = outer
+          // For division: outer ÷ inner = target
           checkEquation: (inner, outer, target) => 
-            (inner % target == 0 && inner ~/ target == outer) || 
-            (target % inner == 0 && target ~/ inner == outer),
-          getEquationString: (inner, target, outer) => 
-            (inner % target == 0 && inner ~/ target == outer)
-              ? '$inner ÷ $target = $outer' 
-              : '$target ÷ $inner = $outer',
+            inner != 0 && outer % inner == 0 && outer ~/ inner == target,
+          getEquationString: (inner, target, outer) => '$outer ÷ $inner = $target',
         );
       
       case 'multiplication':
