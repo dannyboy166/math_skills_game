@@ -23,17 +23,27 @@ class EquationLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Determine if we're using reverse equation format (outside to inside)
+    final bool isReverseFormat = 
+        operation.name == 'subtraction' || operation.name == 'division';
+    
     return Stack(
       children: [
-        // Operation symbols (between center and inner ring)
-        ..._buildOperationSymbols(),
+        // Operation symbols 
+        // For addition and multiplication, between center and inner ring
+        // For subtraction and division, between inner and outer ring
+        ...(isReverseFormat ? _buildOperationSymbolsReverse() : _buildOperationSymbols()),
 
-        // Equals signs (between inner and outer ring)
-        ..._buildEqualsSymbols(),
+        // Equals signs 
+        // For addition and multiplication, between inner and outer ring
+        // For subtraction and division, between center and inner ring
+        ...(isReverseFormat ? _buildEqualsSymbolsReverse() : _buildEqualsSymbols()),
       ],
     );
   }
 
+  // STANDARD DIRECTION: Inner -> Target -> Outer
+  // For addition and multiplication
   List<Widget> _buildOperationSymbols() {
     // We need to place the operation symbols (×) exactly between the center and the inner ring
     final symbolSize = 30.0;
@@ -100,6 +110,80 @@ class EquationLayout extends StatelessWidget {
     });
   }
 
+  // REVERSE DIRECTION: Outer -> Inner -> Target
+  // For subtraction and division, operation symbols between inner and outer rings
+  List<Widget> _buildOperationSymbolsReverse() {
+    final symbolSize = 30.0;
+    final verticalAdjustment = -5.0; // Move all symbols up a bit
+    
+    // Get positions for inner and outer ring corner tiles
+    final innerCornerPositions = [
+      _calculateInnerTilePosition(0), // Top
+      _calculateInnerTilePosition(3), // Right
+      _calculateInnerTilePosition(6), // Bottom
+      _calculateInnerTilePosition(9), // Left
+    ];
+    
+    final outerCornerPositions = [
+      _calculateOuterTilePosition(0), // Top
+      _calculateOuterTilePosition(4), // Right
+      _calculateOuterTilePosition(8), // Bottom
+      _calculateOuterTilePosition(12), // Left
+    ];
+    
+    // Create operation symbols between inner and outer corners
+    return List.generate(4, (index) {
+      // Check if this corner is locked
+      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == index);
+      
+      final innerPos = innerCornerPositions[index];
+      final outerPos = outerCornerPositions[index];
+      
+      // Calculate exact midpoint between inner and outer tiles
+      final midX = (innerPos.dx + outerPos.dx) / 2;
+      final midY = (innerPos.dy + outerPos.dy) / 2 + verticalAdjustment;
+      
+      // Use a greyed-out color if locked
+      final Color textColor = isLocked ? Colors.grey : Colors.red;
+      final double opacity = isLocked ? 0.7 : 1.0;
+      
+      return Positioned(
+        left: midX - symbolSize / 2,
+        top: midY - symbolSize / 2,
+        child: GestureDetector(
+          onTap: isLocked ? null : () => onEquationTap(index),
+          child: Container(
+            width: symbolSize,
+            height: symbolSize,
+            alignment: Alignment.center,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Show operation symbol when not locked, lock icon when locked
+                isLocked
+                  ? Icon(
+                      Icons.lock,
+                      size: 24,
+                      color: Colors.grey.shade600,
+                    )
+                  : Text(
+                      operation.symbol,
+                      style: TextStyle(
+                        fontSize: 30,
+                        color: textColor.withOpacity(opacity),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  // STANDARD DIRECTION: Inner -> Target -> Outer
+  // For addition and multiplication, equals sign between inner and outer rings
   List<Widget> _buildEqualsSymbols() {
     final symbolSize = 30.0;
     final verticalAdjustment = -5.0; // Move all symbols up a bit
@@ -133,6 +217,51 @@ class EquationLayout extends StatelessWidget {
       // Calculate exact midpoint between inner and outer tiles
       final midX = (innerPos.dx + outerPos.dx) / 2;
       final midY = (innerPos.dy + outerPos.dy) / 2 + verticalAdjustment;
+      
+      return Positioned(
+        left: midX - symbolSize / 2,
+        top: midY - symbolSize / 2,
+        child: Container(
+          width: symbolSize,
+          height: symbolSize,
+          alignment: Alignment.center,
+          child: ClickableEquals(
+            onTap: () => onEquationTap(index),
+            isLocked: isLocked,
+            size: symbolSize,
+          ),
+        ),
+      );
+    });
+  }
+  
+  // REVERSE DIRECTION: Outer -> Inner -> Target
+  // For subtraction and division, equals sign between center and inner ring
+  List<Widget> _buildEqualsSymbolsReverse() {
+    final symbolSize = 30.0;
+    final verticalAdjustment = -5.0; // Move all symbols up a bit
+    
+    // Calculate positions for the inner ring corner tiles
+    final innerCornerPositions = [
+      _calculateInnerTilePosition(0), // Top
+      _calculateInnerTilePosition(3), // Right
+      _calculateInnerTilePosition(6), // Bottom
+      _calculateInnerTilePosition(9), // Left
+    ];
+    
+    // Center position of the board
+    final centerX = boardSize / 2;
+    final centerY = boardSize / 2;
+    
+    // Create equals symbols at the midpoints between center and inner corners
+    return List.generate(4, (index) {
+      // Check if this corner is locked
+      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == index);
+      
+      // Calculate midpoint between center and inner corner
+      final cornerPos = innerCornerPositions[index];
+      final midX = (centerX + cornerPos.dx) / 2;
+      final midY = (centerY + cornerPos.dy) / 2 + verticalAdjustment;
       
       return Positioned(
         left: midX - symbolSize / 2,
