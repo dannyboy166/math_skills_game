@@ -163,9 +163,7 @@ class RingModel {
     _currentNumbers.addAll(newNumbers);
 
     // Debug output
-    for (int i = 0; i < numbers.length; i++) {
-      String lockStatus = _lockedPositions.containsKey(i) ? '(LOCKED)' : '';
-    }
+    for (int i = 0; i < numbers.length; i++) {}
   }
 
   int getNumberAtPosition(int position) {

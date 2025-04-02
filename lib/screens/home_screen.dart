@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'game_screen.dart';
+import '../models/difficulty_level.dart';  // Import from models instead of defining locally
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -9,8 +10,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int selectedNumber = 2;
-  String selectedOperation = 'multiplication';
+  String selectedOperation = 'addition';
+  DifficultyLevel selectedLevel = DifficultyLevel.easy;
   
   @override
   Widget build(BuildContext context) {
@@ -23,25 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Choose a number to practice:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 20),
-            
-            // Number grid
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (int i = 2; i <= 12; i++)
-                  _buildNumberButton(i),
-              ],
-            ),
-            
-            SizedBox(height: 30),
             Text(
               'Choose operation:',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -57,11 +39,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(width: 10),
                 _buildOperationButton('-', 'subtraction'),
                 SizedBox(width: 10),
-                _buildOperationButton('×', 'multiplication'),
+                _buildOperationButton('×', 'multiplication', enabled: false),
                 SizedBox(width: 10),
-                _buildOperationButton('÷', 'division'),
+                _buildOperationButton('÷', 'division', enabled: false),
               ],
             ),
+            
+            SizedBox(height: 30),
+            Text(
+              'Choose difficulty:',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 20),
+            
+            // Difficulty level selection
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (final level in DifficultyLevel.values)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: _buildLevelButton(level),
+                  ),
+              ],
+            ),
+            
+            SizedBox(height: 20),
+            
+            // Difficulty information
+            _buildDifficultyInfo(),
             
             Spacer(),
             
@@ -72,8 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => GameScreen(
-                      targetNumber: selectedNumber,
                       operationName: selectedOperation,
+                      difficultyLevel: selectedLevel,
                     ),
                   ),
                 );
@@ -92,43 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
-  Widget _buildNumberButton(int number) {
-    final isSelected = selectedNumber == number;
-    
-    return InkWell(
-      onTap: () {
-        setState(() {
-          selectedNumber = number;
-        });
-      },
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isSelected
-              ? [BoxShadow(color: Colors.blue.shade200, blurRadius: 5)]
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            '$number',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : Colors.black87,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildOperationButton(String symbol, String operation) {
+  Widget _buildOperationButton(String symbol, String operation, {bool enabled = true}) {
     final isSelected = selectedOperation == operation;
     
     Color getColor() {
+      if (!enabled) return Colors.grey.shade400;
+      
       switch (operation) {
         case 'addition': return Colors.green;
         case 'subtraction': return Colors.purple;
@@ -139,31 +115,136 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     
     return InkWell(
-      onTap: () {
+      onTap: enabled ? () {
         setState(() {
           selectedOperation = operation;
         });
-      },
+      } : null,
       child: Container(
         width: 60,
         height: 60,
         decoration: BoxDecoration(
-          color: isSelected ? getColor() : Colors.grey.shade200,
+          color: isSelected && enabled ? getColor() : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: isSelected
+          boxShadow: isSelected && enabled
               ? [BoxShadow(color: getColor().withOpacity(0.5), blurRadius: 5)]
               : null,
         ),
-        child: Center(
-          child: Text(
-            symbol,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : Colors.black87,
+        child: Stack(
+          children: [
+            Center(
+              child: Text(
+                symbol,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected && enabled ? Colors.white : Colors.black87,
+                ),
+              ),
             ),
+            if (!enabled)
+              Positioned(
+                right: 5,
+                bottom: 5,
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildLevelButton(DifficultyLevel level) {
+    final isSelected = selectedLevel == level;
+    
+    Color getColor() {
+      switch (level) {
+        case DifficultyLevel.easy: return Colors.green.shade600;
+        case DifficultyLevel.medium: return Colors.blue.shade600;
+        case DifficultyLevel.hard: return Colors.orange.shade600;
+        case DifficultyLevel.expert: return Colors.red.shade600;
+      }
+    }
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          selectedLevel = level;
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? getColor() : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected
+              ? [BoxShadow(color: getColor().withOpacity(0.5), blurRadius: 3)]
+              : null,
+        ),
+        child: Text(
+          level.displayName,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : Colors.black87,
           ),
         ),
+      ),
+    );
+  }
+  
+  Widget _buildDifficultyInfo() {
+    String centerRange;
+    String innerRange;
+    String outerRange;
+    
+    switch (selectedLevel) {
+      case DifficultyLevel.easy:
+        centerRange = '1-5';
+        innerRange = '1-12';
+        outerRange = '1-18';
+        break;
+      case DifficultyLevel.medium:
+        centerRange = '6-10';
+        innerRange = '1-12';
+        outerRange = '1-24';
+        break;
+      case DifficultyLevel.hard:
+        centerRange = '11-20';
+        innerRange = '1-12';
+        outerRange = '1-36';
+        break;
+      case DifficultyLevel.expert:
+        centerRange = '21-50';
+        innerRange = '13-24';
+        outerRange = '1-100';
+        break;
+    }
+    
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Difficulty: ${selectedLevel.displayName}',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text('• Center number: $centerRange'),
+          Text('• Inner ring: $innerRange'),
+          Text('• Outer ring: $outerRange'),
+        ],
       ),
     );
   }

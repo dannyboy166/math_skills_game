@@ -1,5 +1,6 @@
 // lib/screens/game_screen.dart
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/models/difficulty_level.dart';
 import 'dart:math';
 import '../models/ring_model.dart';
 import '../models/operation_config.dart';
@@ -8,13 +9,16 @@ import '../widgets/simple_ring.dart';
 import '../widgets/equation_layout.dart';
 
 class GameScreen extends StatefulWidget {
-  final int targetNumber;
   final String operationName;
+  final DifficultyLevel difficultyLevel;
+  final int?
+      targetNumber; // Optional - if not provided, will be randomly generated
 
   const GameScreen({
     Key? key,
-    required this.targetNumber,
     required this.operationName,
+    required this.difficultyLevel,
+    this.targetNumber,
   }) : super(key: key);
 
   @override
@@ -25,6 +29,7 @@ class _GameScreenState extends State<GameScreen> {
   late RingModel outerRingModel;
   late RingModel innerRingModel;
   late OperationConfig operation;
+  late int targetNumber;
 
   // Track locked equations
   List<LockedEquation> lockedEquations = [];
@@ -39,6 +44,14 @@ class _GameScreenState extends State<GameScreen> {
     // Initialize the operation configuration
     operation = OperationConfig.forOperation(widget.operationName);
 
+    // Set target number based on difficulty level
+    if (widget.targetNumber != null) {
+      targetNumber = widget.targetNumber!;
+    } else {
+      final random = Random();
+      targetNumber = widget.difficultyLevel.getRandomCenterNumber(random);
+    }
+
     // Generate game numbers
     _generateGameNumbers();
   }
@@ -46,10 +59,10 @@ class _GameScreenState extends State<GameScreen> {
   void _generateGameNumbers() {
     final random = Random();
 
-    // For inner ring: Use fixed numbers 1-12
-    final innerNumbers = List.generate(12, (index) => index + 1);
+    // Get inner ring numbers based on difficulty level
+    final innerNumbers = widget.difficultyLevel.innerRingNumbers;
 
-    // For outer ring: Generate numbers based on operation
+    // For outer ring: Generate numbers based on operation and difficulty
     List<int> outerNumbers;
 
     // Different number generation based on operation
@@ -60,12 +73,8 @@ class _GameScreenState extends State<GameScreen> {
       case 'subtraction':
         outerNumbers = _generateSubtractionNumbers(innerNumbers, random);
         break;
-      case 'division':
-        outerNumbers = _generateDivisionNumbers(innerNumbers, random);
-        break;
-      case 'multiplication':
       default:
-        outerNumbers = _generateMultiplicationNumbers(innerNumbers, random);
+        outerNumbers = _generateAdditionNumbers(innerNumbers, random);
         break;
     }
 
@@ -83,148 +92,193 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  // Generate numbers for multiplication operation
-  List<int> _generateMultiplicationNumbers(
-      List<int> innerNumbers, Random random) {
-    final outerNumbers = List.generate(16, (index) {
-      // Generate random non-product numbers
-      return random.nextInt(100) + 1;
-    });
-
-    // Select 4 inner numbers to create valid products
-    List<int> validInnerNumbers = [];
-    List<int> validProducts = [];
-
-    // Shuffle inner numbers to pick 4 random ones
-    final shuffledInner = List<int>.from(innerNumbers);
-    shuffledInner.shuffle(random);
-
-    // Take 4 numbers from the shuffled list
-    for (int i = 0; i < 4; i++) {
-      final innerNum = shuffledInner[i];
-      validInnerNumbers.add(innerNum);
-      validProducts.add(innerNum * widget.targetNumber);
-    }
-
-    // Place valid products at corner positions
-    List<int> possiblePositions = [0, 4, 8, 12]; // Corner positions
-    possiblePositions.shuffle(random);
-
-    for (int i = 0; i < 4; i++) {
-      outerNumbers[possiblePositions[i]] = validProducts[i];
-    }
-
-    return outerNumbers;
-  }
-
   // Generate numbers for addition operation
   List<int> _generateAdditionNumbers(List<int> innerNumbers, Random random) {
-    final outerNumbers = List.generate(16, (index) {
-      // Generate random numbers
-      return random.nextInt(24) + 1;
-    });
+    final maxOuterNumber = widget.difficultyLevel.maxOuterNumber;
 
-    // Select 4 inner numbers to create valid sums
+    // Initialize outer numbers list with placeholders
+    final outerNumbers = List.filled(16, 0);
+
+    // 1. First, ensure we have exactly 4 valid equations
     List<int> validInnerNumbers = [];
-    List<int> validSums = [];
+    List<int> validOuterNumbers = [];
+    Set<int> usedOuterNumbers = {};
 
     // Shuffle inner numbers to pick 4 random ones
     final shuffledInner = List<int>.from(innerNumbers);
     shuffledInner.shuffle(random);
 
-    // Take 4 numbers from the shuffled list
+    // Take 4 numbers from the shuffled list for our valid equations
     for (int i = 0; i < 4; i++) {
       final innerNum = shuffledInner[i];
       validInnerNumbers.add(innerNum);
-      validSums.add(innerNum + widget.targetNumber);
+
+      // For addition: inner + target = outer
+      final outerNum = innerNum + targetNumber;
+
+      // Make sure we don't exceed max range and don't have duplicates
+      if (outerNum <= maxOuterNumber && !usedOuterNumbers.contains(outerNum)) {
+        validOuterNumbers.add(outerNum);
+        usedOuterNumbers.add(outerNum);
+      } else {
+        // If we can't use this number, try another until we find a valid one
+        int attempts = 0;
+        bool found = false;
+        while (attempts < 20 && !found) {
+          final newInnerNum = innerNumbers[random.nextInt(innerNumbers.length)];
+          final newOuterNum = newInnerNum + targetNumber;
+
+          if (newOuterNum <= maxOuterNumber &&
+              !usedOuterNumbers.contains(newOuterNum)) {
+            validInnerNumbers[i] = newInnerNum;
+            validOuterNumbers.add(newOuterNum);
+            usedOuterNumbers.add(newOuterNum);
+            found = true;
+          }
+          attempts++;
+        }
+
+        // If we still couldn't find a valid number, create one by decrementing
+        if (!found) {
+          int newOuterNum = maxOuterNumber;
+          while (usedOuterNumbers.contains(newOuterNum) &&
+              newOuterNum > targetNumber) {
+            newOuterNum--;
+          }
+
+          if (!usedOuterNumbers.contains(newOuterNum)) {
+            validOuterNumbers.add(newOuterNum);
+            usedOuterNumbers.add(newOuterNum);
+            // Recalculate corresponding inner number
+            validInnerNumbers[i] = newOuterNum - targetNumber;
+          } else {
+            // Extreme fallback - just use a number and accept the duplicate
+            final fallbackOuter = innerNum + targetNumber;
+            validOuterNumbers.add(fallbackOuter);
+            usedOuterNumbers.add(fallbackOuter);
+          }
+        }
+      }
     }
 
-    // Place valid sums at corner positions
-    List<int> possiblePositions = [0, 4, 8, 12]; // Corner positions
-    possiblePositions.shuffle(random);
+    // 2. Place valid outer numbers at corners
+    List<int> cornerPositions = [0, 4, 8, 12]; // Corner positions
+    cornerPositions.shuffle(random);
 
     for (int i = 0; i < 4; i++) {
-      outerNumbers[possiblePositions[i]] = validSums[i];
+      outerNumbers[cornerPositions[i]] = validOuterNumbers[i];
+    }
+
+    // 3. Fill remaining positions with random numbers within range
+    for (int i = 0; i < 16; i++) {
+      if (outerNumbers[i] == 0) {
+        // Generate a random number that's not already used
+        int randomNum;
+        do {
+          randomNum = random.nextInt(maxOuterNumber) + 1;
+        } while (usedOuterNumbers.contains(randomNum));
+
+        outerNumbers[i] = randomNum;
+        usedOuterNumbers.add(randomNum);
+      }
     }
 
     return outerNumbers;
   }
 
-// Generate numbers for subtraction operation
+  // Generate numbers for subtraction operation
   List<int> _generateSubtractionNumbers(List<int> innerNumbers, Random random) {
-    final outerNumbers = List.generate(16, (index) {
-      // Generate random numbers
-      return random.nextInt(50) + 1;
-    });
+    final maxOuterNumber = widget.difficultyLevel.maxOuterNumber;
 
+    // Initialize outer numbers list with placeholders
+    final outerNumbers = List.filled(16, 0);
+
+    // For subtraction: outer - inner = target
+    // This means: outer = inner + target
+    // So we can reuse the addition logic but be clearer about what we're doing
+
+    // 1. First, ensure we have exactly 4 valid equations
     List<int> validInnerNumbers = [];
     List<int> validOuterNumbers = [];
+    Set<int> usedOuterNumbers = {};
 
     // Shuffle inner numbers to pick 4 random ones
     final shuffledInner = List<int>.from(innerNumbers);
     shuffledInner.shuffle(random);
 
-    // Take up to 4 numbers that satisfy our criteria
-    int count = 0;
-    for (int i = 0; i < shuffledInner.length && count < 4; i++) {
+    // Take 4 numbers from the shuffled list for our valid equations
+    for (int i = 0; i < 4; i++) {
       final innerNum = shuffledInner[i];
-
-      // For each inner number, generate a valid outer number
-      // such that outer - inner = target
-      final outerNum = innerNum + widget.targetNumber;
-
       validInnerNumbers.add(innerNum);
-      validOuterNumbers.add(outerNum);
-      count++;
+
+      // For subtraction: outer = inner + target
+      final outerNum = innerNum + targetNumber;
+
+      // Make sure we don't exceed max range and don't have duplicates
+      if (outerNum <= maxOuterNumber && !usedOuterNumbers.contains(outerNum)) {
+        validOuterNumbers.add(outerNum);
+        usedOuterNumbers.add(outerNum);
+      } else {
+        // If we can't use this number, try another until we find a valid one
+        int attempts = 0;
+        bool found = false;
+        while (attempts < 20 && !found) {
+          final newInnerNum = innerNumbers[random.nextInt(innerNumbers.length)];
+          final newOuterNum = newInnerNum + targetNumber;
+
+          if (newOuterNum <= maxOuterNumber &&
+              !usedOuterNumbers.contains(newOuterNum)) {
+            validInnerNumbers[i] = newInnerNum;
+            validOuterNumbers.add(newOuterNum);
+            usedOuterNumbers.add(newOuterNum);
+            found = true;
+          }
+          attempts++;
+        }
+
+        // If we still couldn't find a valid number, create one by decrementing
+        if (!found) {
+          int newOuterNum = maxOuterNumber;
+          while (usedOuterNumbers.contains(newOuterNum) &&
+              newOuterNum > targetNumber) {
+            newOuterNum--;
+          }
+
+          if (!usedOuterNumbers.contains(newOuterNum)) {
+            validOuterNumbers.add(newOuterNum);
+            usedOuterNumbers.add(newOuterNum);
+            // Recalculate corresponding inner number
+            validInnerNumbers[i] = newOuterNum - targetNumber;
+          } else {
+            // Extreme fallback - just use a number and accept the duplicate
+            final fallbackOuter = innerNum + targetNumber;
+            validOuterNumbers.add(fallbackOuter);
+            usedOuterNumbers.add(fallbackOuter);
+          }
+        }
+      }
     }
 
-    // Place valid outer numbers at corner positions
-    List<int> possiblePositions = [0, 4, 8, 12]; // Corner positions
-    possiblePositions.shuffle(random);
+    // 2. Place valid outer numbers at corners
+    List<int> cornerPositions = [0, 4, 8, 12]; // Corner positions
+    cornerPositions.shuffle(random);
 
-    for (int i = 0; i < count; i++) {
-      outerNumbers[possiblePositions[i]] = validOuterNumbers[i];
+    for (int i = 0; i < 4; i++) {
+      outerNumbers[cornerPositions[i]] = validOuterNumbers[i];
     }
 
-    return outerNumbers;
-  }
+    // 3. Fill remaining positions with random numbers within range
+    for (int i = 0; i < 16; i++) {
+      if (outerNumbers[i] == 0) {
+        // Generate a random number that's not already used
+        int randomNum;
+        do {
+          randomNum = random.nextInt(maxOuterNumber) + 1;
+        } while (usedOuterNumbers.contains(randomNum));
 
-// Generate numbers for division operation
-  List<int> _generateDivisionNumbers(List<int> innerNumbers, Random random) {
-    final outerNumbers = List.generate(16, (index) {
-      // Generate random numbers for non-corner positions
-      return random.nextInt(60) + 1;
-    });
-
-    List<int> validInnerNumbers = [];
-    List<int> validOuterNumbers = [];
-
-    // Shuffle inner numbers to pick 4 random ones
-    final shuffledInner = List<int>.from(innerNumbers);
-    shuffledInner.shuffle(random);
-
-    // Take up to 4 numbers that satisfy our criteria
-    int count = 0;
-    for (int i = 0; i < shuffledInner.length && count < 4; i++) {
-      final innerNum = shuffledInner[i];
-
-      // Skip zero to avoid division by zero
-      if (innerNum == 0) continue;
-
-      // Generate a valid outer number such that outer ÷ inner = target
-      final outerNum = innerNum * widget.targetNumber;
-
-      validInnerNumbers.add(innerNum);
-      validOuterNumbers.add(outerNum);
-      count++;
-    }
-
-    // Place valid outer numbers at corner positions
-    List<int> possiblePositions = [0, 4, 8, 12]; // Corner positions
-    possiblePositions.shuffle(random);
-
-    for (int i = 0; i < count; i++) {
-      outerNumbers[possiblePositions[i]] = validOuterNumbers[i];
+        outerNumbers[i] = randomNum;
+        usedOuterNumbers.add(randomNum);
+      }
     }
 
     return outerNumbers;
@@ -244,8 +298,7 @@ class _GameScreenState extends State<GameScreen> {
     final outerNumber = outerRingModel.getNumberAtPosition(outerCornerPos);
     final innerNumber = innerRingModel.getNumberAtPosition(innerCornerPos);
 
-    return operation.checkEquation(
-        innerNumber, outerNumber, widget.targetNumber);
+    return operation.checkEquation(innerNumber, outerNumber, targetNumber);
   }
 
   void _updateOuterRing(int steps) {
@@ -263,8 +316,6 @@ class _GameScreenState extends State<GameScreen> {
     });
     _checkAllEquations();
   }
-
-// Helper to get locked positions for a specific ring
 
   // Handle tapping on an equation element (corner tiles or equals sign)
   void _handleEquationTap(int cornerIndex) {
@@ -308,13 +359,13 @@ class _GameScreenState extends State<GameScreen> {
     final lockedEquation = LockedEquation(
       cornerIndex: cornerIndex,
       innerNumber: innerNumber,
-      targetNumber: widget.targetNumber,
+      targetNumber: targetNumber,
       outerNumber: outerNumber,
       innerPosition: innerCornerPos,
       outerPosition: outerCornerPos,
       operation: widget.operationName,
-      equationString: operation.getEquationString(
-          innerNumber, widget.targetNumber, outerNumber),
+      equationString:
+          operation.getEquationString(innerNumber, targetNumber, outerNumber),
     );
 
     // Update state with locked positions
@@ -363,7 +414,6 @@ class _GameScreenState extends State<GameScreen> {
               },
               child: Text('Return to Menu'),
             ),
-            // Update this in your _showWinDialog method
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
@@ -371,6 +421,11 @@ class _GameScreenState extends State<GameScreen> {
                 setState(() {
                   lockedEquations = [];
                   isGameComplete = false;
+
+                  // Generate a new target number
+                  final random = Random();
+                  targetNumber =
+                      widget.difficultyLevel.getRandomCenterNumber(random);
 
                   // Recreate the ring models from scratch
                   _generateGameNumbers();
@@ -398,28 +453,27 @@ class _GameScreenState extends State<GameScreen> {
       final outerNumber = outerRingModel.getNumberAtPosition(outerCornerPos);
       final innerNumber = innerRingModel.getNumberAtPosition(innerCornerPos);
 
-      print(operation.getEquationString(
-          innerNumber, widget.targetNumber, outerNumber));
+      print(
+          operation.getEquationString(innerNumber, targetNumber, outerNumber));
     }
   }
 
-  // Show help dialog
   void _showHelpDialog() {
     String equationFormat;
 
     switch (widget.operationName) {
       case 'addition':
-        equationFormat = 'inner + ${widget.targetNumber} = outer';
+        equationFormat = 'inner + $targetNumber = outer';
         break;
       case 'subtraction':
-        equationFormat = 'outer - inner = ${widget.targetNumber}';
+        equationFormat = 'outer - inner = $targetNumber';
         break;
       case 'division':
-        equationFormat = 'outer ÷ inner = ${widget.targetNumber}';
+        equationFormat = 'outer ÷ inner = $targetNumber';
         break;
       case 'multiplication':
       default:
-        equationFormat = 'inner × ${widget.targetNumber} = outer';
+        equationFormat = 'inner × $targetNumber = outer';
         break;
     }
 
@@ -444,6 +498,9 @@ class _GameScreenState extends State<GameScreen> {
             Text('• For addition and multiplication: inner → outer'),
             Text('• For subtraction and division: outer → inner'),
             Text('This reflects how these operations relate to each other!'),
+            SizedBox(height: 10),
+            Text('Difficulty: ${widget.difficultyLevel.displayName}',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -469,17 +526,17 @@ class _GameScreenState extends State<GameScreen> {
     String title;
     switch (widget.operationName) {
       case 'addition':
-        title = 'Math Game - Inner + ${widget.targetNumber} = Outer';
+        title = 'Addition - Target: $targetNumber';
         break;
       case 'subtraction':
-        title = 'Math Game - Outer - Inner = ${widget.targetNumber}';
+        title = 'Subtraction - Target: $targetNumber';
         break;
       case 'division':
-        title = 'Math Game - Outer ÷ Inner = ${widget.targetNumber}';
+        title = 'Division - Target: $targetNumber';
         break;
       case 'multiplication':
       default:
-        title = 'Math Game - Inner × ${widget.targetNumber} = Outer';
+        title = 'Multiplication - Target: $targetNumber';
         break;
     }
 
@@ -502,8 +559,17 @@ class _GameScreenState extends State<GameScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
+              '${widget.difficultyLevel.displayName} Mode',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: operation.color,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
               'Rotate the rings to make equations',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 16),
 
@@ -565,10 +631,10 @@ class _GameScreenState extends State<GameScreen> {
 
                   // Center target number
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: 70,
+                    height: 70,
                     decoration: BoxDecoration(
-                      color: Colors.orange,
+                      color: operation.color,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                       boxShadow: [
@@ -581,9 +647,9 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        '${widget.targetNumber}',
+                        '$targetNumber',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
