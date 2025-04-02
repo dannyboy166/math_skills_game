@@ -5,7 +5,7 @@ import 'dart:math' as math;
 class NumberTile extends StatefulWidget {
   final int number;
   final Color color;
-  final bool isLocked;  // Changed from isDisabled to isLocked
+  final bool isLocked;
   final VoidCallback? onTap;
   final double size;
 
@@ -13,7 +13,7 @@ class NumberTile extends StatefulWidget {
     Key? key,
     required this.number,
     required this.color,
-    this.isLocked = false,  // Changed from isDisabled to isLocked
+    this.isLocked = false,
     this.onTap,
     this.size = 45,
   }) : super(key: key);
@@ -211,13 +211,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             ),
           ),
           
-        // Add a lock icon if locked
-        if (widget.isLocked)
-          Icon(
-            Icons.lock,
-            color: Colors.white.withOpacity(0.5),
-            size: widget.size * 0.3,
-          ),
+        // Removed lock icon from number tiles
       ],
     );
   }
@@ -268,13 +262,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
           ),
         ),
         
-        // Add a lock icon if locked
-        if (widget.isLocked)
-          Icon(
-            Icons.lock,
-            color: Colors.white.withOpacity(0.5),
-            size: widget.size * 0.3,
-          ),
+        // Removed lock icon from number tiles
       ],
     );
   }

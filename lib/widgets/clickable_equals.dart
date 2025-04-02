@@ -1,4 +1,3 @@
-// lib/widgets/clickable_equals.dart
 import 'package:flutter/material.dart';
 
 class ClickableEquals extends StatefulWidget {
@@ -44,24 +43,18 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
 
   void _handleTapDown(TapDownDetails details) {
     if (!widget.isLocked) {
-      setState(() {
-      });
       _controller.forward();
     }
   }
 
   void _handleTapUp(TapUpDetails details) {
     if (!widget.isLocked) {
-      setState(() {
-      });
       _controller.reverse();
     }
   }
 
   void _handleTapCancel() {
     if (!widget.isLocked) {
-      setState(() {
-      });
       _controller.reverse();
     }
   }
@@ -87,17 +80,25 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
               width: widget.size,
               height: widget.size,
               alignment: Alignment.center,
-              decoration: widget.isLocked ? BoxDecoration(
-                color: Colors.black12,
-                shape: BoxShape.circle,
-              ) : null,
-              child: Text(
-                "=",
-                style: TextStyle(
-                  fontSize: 30,
-                  color: textColor.withOpacity(textOpacity),
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Show equals sign when not locked, lock icon when locked
+                  widget.isLocked
+                    ? Icon(
+                        Icons.lock,
+                        size: 24,
+                        color: Colors.grey.shade600,
+                      )
+                    : Text(
+                        "=",
+                        style: TextStyle(
+                          fontSize: 30,
+                          color: textColor.withOpacity(textOpacity),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                ],
               ),
             ),
           ),

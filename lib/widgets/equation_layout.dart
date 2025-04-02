@@ -1,4 +1,3 @@
-// lib/widgets/equation_layout.dart
 import 'package:flutter/material.dart';
 import '../models/operation_config.dart';
 import '../models/locked_equation.dart';
@@ -75,17 +74,25 @@ class EquationLayout extends StatelessWidget {
             width: symbolSize,
             height: symbolSize,
             alignment: Alignment.center,
-            decoration: isLocked ? BoxDecoration(
-              color: Colors.black12,
-              shape: BoxShape.circle,
-            ) : null,
-            child: Text(
-              operation.symbol,
-              style: TextStyle(
-                fontSize: 30,
-                color: textColor.withOpacity(opacity),
-                fontWeight: FontWeight.bold,
-              ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Show operation symbol when not locked, lock icon when locked
+                isLocked
+                  ? Icon(
+                      Icons.lock,
+                      size: 24,
+                      color: Colors.grey.shade600,
+                    )
+                  : Text(
+                      operation.symbol,
+                      style: TextStyle(
+                        fontSize: 30,
+                        color: textColor.withOpacity(opacity),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+              ],
             ),
           ),
         ),
@@ -130,10 +137,15 @@ class EquationLayout extends StatelessWidget {
       return Positioned(
         left: midX - symbolSize / 2,
         top: midY - symbolSize / 2,
-        child: ClickableEquals(
-          onTap: () => onEquationTap(index),
-          isLocked: isLocked,
-          size: symbolSize,
+        child: Container(
+          width: symbolSize,
+          height: symbolSize,
+          alignment: Alignment.center,
+          child: ClickableEquals(
+            onTap: () => onEquationTap(index),
+            isLocked: isLocked,
+            size: symbolSize,
+          ),
         ),
       );
     });
