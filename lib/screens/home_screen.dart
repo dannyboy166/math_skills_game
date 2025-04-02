@@ -44,14 +44,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(width: 10),
                 _buildOperationButton('×', 'multiplication'),
                 SizedBox(width: 10),
-                _buildOperationButton('÷', 'division', enabled: false),
+                _buildOperationButton('÷', 'division'),
               ],
             ),
 
             SizedBox(height: 30),
 
-            // Show either difficulty selection or multiplication table selection based on operation
-            if (selectedOperation == 'multiplication')
+            if (selectedOperation == 'multiplication' ||
+                selectedOperation == 'division')
               _buildMultiplicationTablesUI()
             else
               Column(
@@ -78,15 +78,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
             Spacer(),
 
-            // Start button
             ElevatedButton(
               onPressed: () {
-                // Don't allow starting multiplication game without selecting a table
-                if (selectedOperation == 'multiplication' &&
+                // Don't allow starting multiplication/division game without selecting a table
+                if ((selectedOperation == 'multiplication' ||
+                        selectedOperation == 'division') &&
                     selectedMultiplicationTable == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Please select a times table first'),
+                      content: Text('Please select a table first'),
                       duration: Duration(seconds: 2),
                     ),
                   );
@@ -99,9 +99,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (context) => GameScreen(
                       operationName: selectedOperation,
                       difficultyLevel: selectedLevel,
-                      // Pass the selected multiplication table if applicable
-                      targetNumber: (selectedOperation == 'multiplication' &&
-                              selectedMultiplicationTable != null)
+                      // Pass the selected table if applicable
+                      targetNumber: (selectedOperation == 'multiplication' ||
+                                  selectedOperation == 'division') &&
+                              selectedMultiplicationTable != null
                           ? selectedMultiplicationTable
                           : null,
                     ),
@@ -289,10 +290,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMultiplicationTablesUI() {
+    String operation =
+        selectedOperation == 'multiplication' ? 'times' : 'division';
+    String symbol = selectedOperation == 'multiplication' ? '×' : '÷';
+
     return Column(
       children: [
         Text(
-          'Choose times table:',
+          'Choose $operation table:',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
@@ -344,12 +349,21 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 Text(
-                  '${selectedMultiplicationTable}× Times Table',
+                  '$selectedMultiplicationTable$symbol Table',
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: _getTableColor(selectedMultiplicationTable!)),
                 ),
+                SizedBox(height: 10),
+                if (selectedOperation == 'multiplication')
+                  Text(
+                      'Find products of $selectedMultiplicationTable in the outer ring')
+                else
+                  Text(
+                      'Find numbers that, when divided by inner ring numbers, equal $selectedMultiplicationTable'),
+                SizedBox(height: 5),
+                Text('Inner ring will contain numbers 1-12'),
               ],
             ),
           ),

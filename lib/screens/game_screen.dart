@@ -62,10 +62,13 @@ class _GameScreenState extends State<GameScreen> {
     List<int> innerNumbers;
     List<int> outerNumbers;
 
-    // For multiplication, always use 1-12 for inner ring regardless of difficulty
+    // Special handling for multiplication and division
     if (widget.operationName == 'multiplication') {
       innerNumbers = List.generate(12, (index) => index + 1); // 1-12
       outerNumbers = _generateMultiplicationNumbers(random);
+    } else if (widget.operationName == 'division') {
+      innerNumbers = List.generate(12, (index) => index + 1); // 1-12
+      outerNumbers = _generateDivisionNumbers(random);
     } else {
       // Original logic for other operations
       innerNumbers = widget.difficultyLevel.innerRingNumbers;
@@ -336,6 +339,53 @@ class _GameScreenState extends State<GameScreen> {
     return outerNumbers;
   }
 
+  List<int> _generateDivisionNumbers(Random random) {
+    final maxOuterNumber = targetNumber * 12; // Maximum possible dividend
+
+    // Initialize outer numbers list
+    final outerNumbers = List.filled(16, 0);
+
+    // 1. Choose 4 random numbers from 1-12 as divisors
+    Set<int> selectedInnerNumbers = {};
+    while (selectedInnerNumbers.length < 4) {
+      selectedInnerNumbers.add(random.nextInt(12) + 1);
+    }
+
+    // 2. Calculate the 4 dividends (outer = inner × target)
+    // This ensures outer ÷ inner = target
+    List<int> dividendNumbers =
+        selectedInnerNumbers.map((n) => n * targetNumber).toList();
+
+    // 3. Randomly place the 4 dividend numbers anywhere in the outer ring
+    List<int> outerPositions = List.generate(16, (index) => index);
+    outerPositions.shuffle(random);
+
+    for (int i = 0; i < 4; i++) {
+      outerNumbers[outerPositions[i]] = dividendNumbers[i];
+    }
+
+    // 4. Fill remaining positions with numbers that:
+    //    - Are not duplicates of our chosen dividends
+    //    - Are not duplicates of any previously generated number
+    //    - Are within range 1 to maxOuterNumber
+    Set<int> usedOuterNumbers = Set.from(dividendNumbers);
+
+    for (int i = 0; i < 16; i++) {
+      if (outerNumbers[i] == 0) {
+        // Generate a random number that's not already used
+        int randomNum;
+        do {
+          randomNum = random.nextInt(maxOuterNumber) + 1;
+        } while (usedOuterNumbers.contains(randomNum));
+
+        outerNumbers[i] = randomNum;
+        usedOuterNumbers.add(randomNum);
+      }
+    }
+
+    return outerNumbers;
+  }
+
   // Check if equation is correct at the given corner
   bool _checkEquation(int cornerIndex) {
     // If this corner is already locked, don't check it again
@@ -528,6 +578,8 @@ class _GameScreenState extends State<GameScreen> {
         break;
       case 'division':
         equationFormat = 'outer ÷ inner = $targetNumber';
+        additionalInfo =
+            'For division, find pairs of numbers where an outer ring number divided by an inner ring number (1-12) equals $targetNumber exactly (no remainder). There are at least 4 valid solutions to find!';
         break;
       default:
         equationFormat = 'inner × $targetNumber = outer';
@@ -560,9 +612,11 @@ class _GameScreenState extends State<GameScreen> {
             Text('• For subtraction and division: outer → inner'),
             Text('This reflects how these operations relate to each other!'),
             SizedBox(height: 10),
-            widget.operationName == 'multiplication' &&
+            (widget.operationName == 'multiplication' ||
+                        widget.operationName == 'division') &&
                     widget.targetNumber != null
-                ? Text('Times Table: ${widget.targetNumber}×',
+                ? Text(
+                    '${widget.operationName.capitalize()} Number: ${widget.targetNumber}',
                     style: TextStyle(fontWeight: FontWeight.bold))
                 : Text('Difficulty: ${widget.difficultyLevel.displayName}',
                     style: TextStyle(fontWeight: FontWeight.bold)),
@@ -812,5 +866,12 @@ class _GameScreenState extends State<GameScreen> {
         ),
       ),
     );
+  }
+}
+
+// Add this extension method somewhere in your file or in a utilities file
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${this.substring(1)}";
   }
 }
