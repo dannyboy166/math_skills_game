@@ -140,76 +140,41 @@ class _SimpleRingState extends State<SimpleRing> {
     final region = _determineRegion(startPos, size);
 
     // Threshold for drag sensitivity - increased for less sensitivity
-    final dragThreshold = 15.0; // Increased from 3 to 15
-
-    // Determine rotation direction based on region and drag direction
+    final dragThreshold = 65.0; // Increased from 3 to 15
+// Determine rotation direction based on region and drag direction
     switch (region) {
       case 'top':
-        // For top edge: left drag -> counterclockwise, right drag -> clockwise
+        // For top edge: left drag -> clockwise, right drag -> counterclockwise
         return dragDelta.dx < -dragThreshold
-            ? -1
-            : (dragDelta.dx > dragThreshold ? 1 : 0);
+            ? 1
+            : (dragDelta.dx > dragThreshold ? -1 : 0);
 
       case 'right':
-        // For right edge: up drag -> counterclockwise, down drag -> clockwise
+        // For right edge: up drag -> clockwise, down drag -> counterclockwise
         return dragDelta.dy < -dragThreshold
-            ? -1
-            : (dragDelta.dy > dragThreshold ? 1 : 0);
+            ? 1
+            : (dragDelta.dy > dragThreshold ? -1 : 0);
 
       case 'bottom':
-        // For bottom edge: right drag -> counterclockwise, left drag -> clockwise
+        // For bottom edge: right drag -> clockwise, left drag -> counterclockwise
         return dragDelta.dx > dragThreshold
-            ? -1
-            : (dragDelta.dx < -dragThreshold ? 1 : 0);
+            ? 1
+            : (dragDelta.dx < -dragThreshold ? -1 : 0);
 
       case 'left':
-        // For left edge: down drag -> counterclockwise, up drag -> clockwise
+        // For left edge: down drag -> clockwise, up drag -> counterclockwise
         return dragDelta.dy > dragThreshold
-            ? -1
-            : (dragDelta.dy < -dragThreshold ? 1 : 0);
+            ? 1
+            : (dragDelta.dy < -dragThreshold ? -1 : 0);
 
       case 'topLeft':
         // For top-left corner
         if (dragDelta.dx > dragThreshold) {
-          // Moving right -> clockwise
-          return 1;
+          // Moving right -> counterclockwise
+          return -1;
         } else if (dragDelta.dx < -dragThreshold) {
-          // Moving left -> counterclockwise
-          return -1;
-        } else if (dragDelta.dy < -dragThreshold) {
-          // Moving up -> counterclockwise (reversed)
-          return 1;
-        } else if (dragDelta.dy > dragThreshold) {
-          // Moving down -> clockwise (reversed)
-          return -1;
-        }
-        return 0;
-
-      case 'topRight':
-        // For top-right corner
-        if (dragDelta.dx < -dragThreshold) {
-          // Moving left -> clockwise
-          return -1;
-        } else if (dragDelta.dx > dragThreshold) {
-          // Moving right -> counterclockwise
-          return 1;
-        } else if (dragDelta.dy > dragThreshold) {
-          // Moving down -> clockwise
-          return 1;
-        } else if (dragDelta.dy < -dragThreshold) {
-          // Moving up -> counterclockwise
-          return -1;
-        }
-        return 0;
-
-      case 'bottomRight':
-        // For bottom-right corner
-        if (dragDelta.dx < -dragThreshold) {
           // Moving left -> clockwise
           return 1;
-        } else if (dragDelta.dx > dragThreshold) {
-          // Moving right -> counterclockwise
-          return -1;
         } else if (dragDelta.dy < -dragThreshold) {
           // Moving up -> clockwise (reversed)
           return -1;
@@ -219,14 +184,14 @@ class _SimpleRingState extends State<SimpleRing> {
         }
         return 0;
 
-      case 'bottomLeft':
-        // For bottom-left corner
-        if (dragDelta.dx > dragThreshold) {
-          // Moving right -> clockwise
-          return -1;
-        } else if (dragDelta.dx < -dragThreshold) {
+      case 'topRight':
+        // For top-right corner
+        if (dragDelta.dx < -dragThreshold) {
           // Moving left -> counterclockwise
           return 1;
+        } else if (dragDelta.dx > dragThreshold) {
+          // Moving right -> clockwise
+          return -1;
         } else if (dragDelta.dy > dragThreshold) {
           // Moving down -> counterclockwise
           return -1;
@@ -236,6 +201,39 @@ class _SimpleRingState extends State<SimpleRing> {
         }
         return 0;
 
+      case 'bottomRight':
+        // For bottom-right corner
+        if (dragDelta.dx < -dragThreshold) {
+          // Moving left -> counterclockwise
+          return -1;
+        } else if (dragDelta.dx > dragThreshold) {
+          // Moving right -> clockwise
+          return 1;
+        } else if (dragDelta.dy < -dragThreshold) {
+          // Moving up -> counterclockwise (reversed)
+          return 1;
+        } else if (dragDelta.dy > dragThreshold) {
+          // Moving down -> clockwise (reversed)
+          return -1;
+        }
+        return 0;
+
+      case 'bottomLeft':
+        // For bottom-left corner
+        if (dragDelta.dx > dragThreshold) {
+          // Moving right -> counterclockwise
+          return 1;
+        } else if (dragDelta.dx < -dragThreshold) {
+          // Moving left -> clockwise
+          return -1;
+        } else if (dragDelta.dy > dragThreshold) {
+          // Moving down -> clockwise
+          return 1;
+        } else if (dragDelta.dy < -dragThreshold) {
+          // Moving up -> counterclockwise
+          return -1;
+        }
+        return 0;
       default:
         // Central area - determine based on drag angle relative to center
         final dragAngle = math.atan2(dragDelta.dy, dragDelta.dx);
