@@ -1,4 +1,4 @@
-// lib/widgets/simple_ring.dart - updated with better corner positioning
+// lib/widgets/simple_ring.dart - updated with smooth corner size transitions
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
@@ -14,6 +14,7 @@ class SimpleRing extends StatefulWidget {
   final ValueChanged<int> onRotateSteps;
   final List<LockedEquation> lockedEquations;
   final Function(int, int) onTileTap; // (cornerIndex, position)
+  final double sizeTransitionRate; // Control how quickly size changes happen
 
   const SimpleRing({
     Key? key,
@@ -24,6 +25,7 @@ class SimpleRing extends StatefulWidget {
     required this.onRotateSteps,
     required this.lockedEquations,
     required this.onTileTap,
+    this.sizeTransitionRate = 1.5, // Default to 1.0 (normal speed)
   }) : super(key: key);
 
   @override
@@ -46,18 +48,30 @@ class _SimpleRingState extends State<SimpleRing>
   Map<int, Offset> _targetPositions = {};
   Map<int, int> _positionToNumber = {};
   Map<int, int> _previousPositionToNumber = {};
+  
+  // Track tile size multipliers for smooth transitions
+  Map<int, double> _currentSizeMultipliers = {};
+  Map<int, double> _targetSizeMultipliers = {};
 
   // Corner size multiplier (25% larger for corners)
   final double _cornerSizeMultiplier = 1.25;
+  final double _regularSizeMultiplier = 1.0;
+  
+  // Size transition control - higher values make size changes happen more quickly
+  // during the animation (values between 0.5 and 3.0 work well)
+  late final double _sizeTransitionRate;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize the size transition rate from widget
+    _sizeTransitionRate = widget.sizeTransitionRate;
 
     // Initialize animation controller
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400), // Slightly longer for smoother transition
     );
 
     // Listen for animation completion
@@ -78,6 +92,7 @@ class _SimpleRingState extends State<SimpleRing>
     _positionToNumber.clear();
     _currentPositions.clear();
     _targetPositions.clear();
+    _targetSizeMultipliers.clear();
 
     final itemCount = widget.ringModel.numbers.length;
 
@@ -87,15 +102,23 @@ class _SimpleRingState extends State<SimpleRing>
 
       // Determine if this position is a corner
       final isCorner = widget.ringModel.cornerIndices.contains(i);
+      
+      // Set the target size multiplier for this position
+      _targetSizeMultipliers[i] = isCorner ? _cornerSizeMultiplier : _regularSizeMultiplier;
+      
+      // If we don't have a current size multiplier for this index, initialize it
+      if (!_currentSizeMultipliers.containsKey(i)) {
+        _currentSizeMultipliers[i] = _targetSizeMultipliers[i]!;
+      }
 
-      // Calculate the position for this tile, using the corner multiplier for corners
+      // Calculate the position for this tile, using the target size multiplier
       final position = widget.isInner
           ? SquarePositionUtils.calculateInnerSquarePosition(
               i, widget.size, widget.tileSize, 
-              cornerSizeMultiplier: isCorner ? _cornerSizeMultiplier : 1.0)
+              cornerSizeMultiplier: _targetSizeMultipliers[i]!)
           : SquarePositionUtils.calculateSquarePosition(
               i, widget.size, widget.tileSize,
-              cornerSizeMultiplier: isCorner ? _cornerSizeMultiplier : 1.0);
+              cornerSizeMultiplier: _targetSizeMultipliers[i]!);
 
       _targetPositions[i] = position;
       _currentPositions[i] = position;
@@ -105,6 +128,11 @@ class _SimpleRingState extends State<SimpleRing>
   @override
   void didUpdateWidget(SimpleRing oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
+    // Update size transition rate if it changed
+    if (widget.sizeTransitionRate != oldWidget.sizeTransitionRate) {
+      _sizeTransitionRate = widget.sizeTransitionRate;
+    }
 
     // Check if the ring model has changed
     if (widget.ringModel != oldWidget.ringModel) {
@@ -146,14 +174,17 @@ class _SimpleRingState extends State<SimpleRing>
           // Determine if previous position was a corner
           final wasPreviousCorner = widget.ringModel.cornerIndices.contains(previousPosition);
           
-          // Calculate the old physical position of this number
+          // Set the current size multiplier based on the previous position
+          _currentSizeMultipliers[i] = wasPreviousCorner ? _cornerSizeMultiplier : _regularSizeMultiplier;
+          
+          // Calculate the old physical position of this number using the previous size multiplier
           final oldPosition = widget.isInner
               ? SquarePositionUtils.calculateInnerSquarePosition(
                   previousPosition, widget.size, widget.tileSize,
-                  cornerSizeMultiplier: wasPreviousCorner ? _cornerSizeMultiplier : 1.0)
+                  cornerSizeMultiplier: _currentSizeMultipliers[i]!)
               : SquarePositionUtils.calculateSquarePosition(
                   previousPosition, widget.size, widget.tileSize,
-                  cornerSizeMultiplier: wasPreviousCorner ? _cornerSizeMultiplier : 1.0);
+                  cornerSizeMultiplier: _currentSizeMultipliers[i]!);
 
           // Set as current position for animation
           _currentPositions[i] = oldPosition;
@@ -232,17 +263,20 @@ class _SimpleRingState extends State<SimpleRing>
       // Is this a corner?
       final isCorner = widget.ringModel.cornerIndices.contains(positionIndex);
       
+      // Get the size multiplier for this position
+      final sizeMultiplier = isCorner ? _cornerSizeMultiplier : _regularSizeMultiplier;
+      
       // Get the position of this tile
       final tilePosition = widget.isInner
           ? SquarePositionUtils.calculateInnerSquarePosition(
               positionIndex, widget.size, widget.tileSize,
-              cornerSizeMultiplier: isCorner ? _cornerSizeMultiplier : 1.0)
+              cornerSizeMultiplier: sizeMultiplier)
           : SquarePositionUtils.calculateSquarePosition(
               positionIndex, widget.size, widget.tileSize,
-              cornerSizeMultiplier: isCorner ? _cornerSizeMultiplier : 1.0);
+              cornerSizeMultiplier: sizeMultiplier);
 
       // Calculate the actual size of this tile
-      final actualTileSize = isCorner ? widget.tileSize * _cornerSizeMultiplier : widget.tileSize;
+      final actualTileSize = widget.tileSize * sizeMultiplier;
 
       // Check if the touch is within this tile
       final tileRect = Rect.fromLTWH(
@@ -428,7 +462,7 @@ class _SimpleRingState extends State<SimpleRing>
     return 'center';
   }
 
-  // Updated _buildTiles method for proper corner tile positioning
+  // Updated _buildTiles method for smooth corner size transitions
   List<Widget> _buildTiles() {
     final itemCount = widget.ringModel.numbers.length;
     List<Widget> tiles = [];
@@ -447,18 +481,19 @@ class _SimpleRingState extends State<SimpleRing>
       // Get the number to display
       int numberToDisplay = widget.ringModel.getNumberAtPosition(i);
 
-      // Calculate the size multiplier for this tile
-      final sizeMultiplier = isCorner ? _cornerSizeMultiplier : 1.0;
-
-      // Calculate current position for animation
+      // Calculate start and end positions for animation
       Offset startPosition = _currentPositions[i] ?? _targetPositions[i]!;
       Offset endPosition = _targetPositions[i]!;
+      
+      // Get starting and target size multipliers for animation
+      double startSize = _currentSizeMultipliers[i] ?? (isCorner ? _cornerSizeMultiplier : _regularSizeMultiplier);
+      double endSize = _targetSizeMultipliers[i] ?? (isCorner ? _cornerSizeMultiplier : _regularSizeMultiplier);
 
       // Create animation for this tile
       Widget tileWidget;
 
       if (_isAnimating && !isLocked) {
-        // Animated position for unlocked tiles
+        // Animated position and size for unlocked tiles
         tileWidget = AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
@@ -469,6 +504,21 @@ class _SimpleRingState extends State<SimpleRing>
             final currentY = startPosition.dy +
                 (_animationController.value *
                     (endPosition.dy - startPosition.dy));
+                    
+            // Use custom curve with rate control for size transitions
+            // Apply the size transition rate to control how quickly size changes happen
+            double adjustedProgress = _animationController.value;
+            
+            // Apply the rate: higher values make size changes happen earlier in the animation
+            if (_sizeTransitionRate != 1.0) {
+              adjustedProgress = _sizeTransitionRate > 1.0
+                  ? math.pow(adjustedProgress, 1 / _sizeTransitionRate).toDouble()
+                  : math.pow(adjustedProgress, _sizeTransitionRate).toDouble();
+            }
+            
+            // Apply easing curve on top of the rate adjustment
+            final easedProgress = Curves.easeInOut.transform(adjustedProgress);
+            final easedSize = startSize + (easedProgress * (endSize - startSize));
 
             return Positioned(
               left: currentX,
@@ -483,7 +533,7 @@ class _SimpleRingState extends State<SimpleRing>
                   isLocked: isLocked,
                   isCorner: isCorner,
                   size: widget.tileSize,
-                  sizeMultiplier: sizeMultiplier,
+                  sizeMultiplier: easedSize, // Use the animated size multiplier
                 ),
               ),
             );
@@ -504,7 +554,7 @@ class _SimpleRingState extends State<SimpleRing>
               isLocked: isLocked,
               isCorner: isCorner,
               size: widget.tileSize,
-              sizeMultiplier: sizeMultiplier,
+              sizeMultiplier: endSize, // Use the final size multiplier
             ),
           ),
         );
