@@ -121,6 +121,9 @@ class GameScreenUI extends StatelessWidget {
                   // Top section: title and instructions
                   Column(
                     children: [
+                      SizedBox(
+                        height: 20,
+                      ),
                       Text(
                         '${difficultyLevel.displayName} Mode',
                         style: TextStyle(
