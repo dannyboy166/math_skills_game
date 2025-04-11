@@ -343,7 +343,7 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  // Handle tapping on an equation element (corner tiles or equals sign)
+// Handle tapping on an equation element (corner tiles or equals sign)
   void _handleEquationTap(int cornerIndex) {
     // Check if this equation is correct
     if (_checkEquation(cornerIndex)) {
@@ -357,9 +357,11 @@ class _GameScreenState extends State<GameScreen> {
             children: [
               Icon(Icons.error_outline, color: Colors.white),
               SizedBox(width: 10),
-              Text(
-                'Not quite right! Rotate the rings to make a correct equation.',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  'Not quite right! Rotate the rings to make a correct equation.',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),

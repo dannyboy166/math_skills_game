@@ -53,6 +53,7 @@ class GameScreenUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final boardSize = screenWidth * 0.9;
     final innerRingSize = boardSize * 0.6;
 
@@ -115,206 +116,225 @@ class GameScreenUI extends StatelessWidget {
         child: SafeArea(
           child: Stack(
             children: [
-              // Main content column
+              // Main content column with better space management
               Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    '${difficultyLevel.displayName} Mode',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: operation.color,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Rotate the rings to make equations',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  SizedBox(height: 16),
-
-                  // Progress stars at the top
-                  ProgressStars(
-                    total: 4,
-                    completed: lockedEquations.length,
-                  ),
-
-                  SizedBox(height: 20),
-
-                  // Game board
-                  Container(
-                    width: boardSize,
-                    height: boardSize,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Outer ring
-                        SimpleRing(
-                          ringModel: outerRingModel,
-                          size: boardSize,
-                          tileSize: outerTileSize,
-                          isInner: false,
-                          onRotateSteps: onUpdateOuterRing,
-                          lockedEquations: lockedEquations,
-                          onTileTap: onTileTap,
-                        ),
-
-                        // Inner ring
-                        SimpleRing(
-                          ringModel: innerRingModel,
-                          size: innerRingSize,
-                          tileSize: innerTileSize,
-                          isInner: true,
-                          onRotateSteps: onUpdateInnerRing,
-                          lockedEquations: lockedEquations,
-                          onTileTap: onTileTap,
-                        ),
-
-                        // Center target number with enhanced styling
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: operation.color,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 4),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                operation.color.withOpacity(0.7),
-                                operation.color,
-                              ],
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '$targetNumber',
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black38,
-                                    blurRadius: 4,
-                                    offset: Offset(2, 2),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Equation symbols (properly positioned)
-                        EquationLayout(
-                          boardSize: boardSize,
-                          innerRingSize: innerRingSize,
-                          outerRingSize: boardSize,
-                          operation: operation,
-                          lockedEquations: lockedEquations,
-                          onEquationTap: onEquationTap,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 20),
-
-                  // Locked equations display
-                  if (lockedEquations.isNotEmpty)
-                    Container(
-                      padding: EdgeInsets.all(15),
-                      margin: EdgeInsets.symmetric(horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(
-                            color: operation.color.withOpacity(0.3), width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 5,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Locked Equations:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: operation.color,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          ...lockedEquations
-                              .map((eq) => Container(
-                                    margin: EdgeInsets.symmetric(vertical: 4),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.lock,
-                                            size: 18, color: operation.color),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          eq.equationString,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ))
-                              .toList(),
-                        ],
-                      ),
-                    ),
-
-                  SizedBox(height: 20),
-
-                  // Hint button with enhanced styling
-                  if (!isGameComplete)
-                    Container(
-                      margin: EdgeInsets.symmetric(horizontal: 60),
-                      child: ElevatedButton.icon(
-                        onPressed: onShowHint,
-                        icon: Icon(Icons.lightbulb_outline),
-                        label: Text('Hint', style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: operation.color.withOpacity(0.8),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 24),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 3,
+                  // Top section: title and instructions
+                  Column(
+                    children: [
+                      Text(
+                        '${difficultyLevel.displayName} Mode',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: operation.color,
                         ),
                       ),
-                    ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Rotate the rings to make equations',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      SizedBox(height: 16),
+                      // Progress stars at the top
+                      ProgressStars(
+                        total: 4,
+                        completed: lockedEquations.length,
+                      ),
+                    ],
+                  ),
 
                   SizedBox(height: 10),
+
+                  // Game board section - using Expanded to take available space
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        width: boardSize,
+                        height: boardSize,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Outer ring
+                            SimpleRing(
+                              ringModel: outerRingModel,
+                              size: boardSize,
+                              tileSize: outerTileSize,
+                              isInner: false,
+                              onRotateSteps: onUpdateOuterRing,
+                              lockedEquations: lockedEquations,
+                              onTileTap: onTileTap,
+                            ),
+
+                            // Inner ring
+                            SimpleRing(
+                              ringModel: innerRingModel,
+                              size: innerRingSize,
+                              tileSize: innerTileSize,
+                              isInner: true,
+                              onRotateSteps: onUpdateInnerRing,
+                              lockedEquations: lockedEquations,
+                              onTileTap: onTileTap,
+                            ),
+
+                            // Center target number with enhanced styling
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: operation.color,
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 4),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 10,
+                                    spreadRadius: 2,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    operation.color.withOpacity(0.7),
+                                    operation.color,
+                                  ],
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$targetNumber',
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black38,
+                                        blurRadius: 4,
+                                        offset: Offset(2, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Equation symbols
+                            EquationLayout(
+                              boardSize: boardSize,
+                              innerRingSize: innerRingSize,
+                              outerRingSize: boardSize,
+                              operation: operation,
+                              lockedEquations: lockedEquations,
+                              onEquationTap: onEquationTap,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Bottom section: Only show hint button during gameplay
+                  // When game is complete, show locked equations
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                    child: isGameComplete
+                        ? _buildCompletedEquationsUI()
+                        : _buildHintButton(),
+                  ),
                 ],
               ),
 
-              // Star animations layer (placed at the end so they appear on top)
+              // Star animations layer
               ...starAnimations,
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Helper method to build the hint button
+  Widget _buildHintButton() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 60, vertical: 10),
+      child: ElevatedButton.icon(
+        onPressed: onShowHint,
+        icon: Icon(Icons.lightbulb_outline),
+        label: Text('Hint', style: TextStyle(fontSize: 16)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: operation.color.withOpacity(0.8),
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          elevation: 3,
+        ),
+      ),
+    );
+  }
+
+  // Helper method to build the completed equations summary
+  Widget _buildCompletedEquationsUI() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: operation.color.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 5,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Completed Equations:',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: operation.color,
+            ),
+          ),
+          SizedBox(height: 10),
+          Container(
+            constraints: BoxConstraints(maxHeight: 120),
+            child: SingleChildScrollView(
+              child: Column(
+                children: lockedEquations
+                    .map((eq) => Container(
+                          margin: EdgeInsets.symmetric(vertical: 5),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, 
+                                  size: 20, 
+                                  color: Colors.green),
+                              SizedBox(width: 8),
+                              Text(
+                                eq.equationString,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
