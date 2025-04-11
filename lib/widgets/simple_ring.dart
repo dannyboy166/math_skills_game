@@ -1,4 +1,4 @@
-// lib/widgets/simple_ring.dart - updated to skip locked positions
+// lib/widgets/simple_ring.dart - updated with animations
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
@@ -30,16 +30,140 @@ class SimpleRing extends StatefulWidget {
   State<SimpleRing> createState() => _SimpleRingState();
 }
 
-class _SimpleRingState extends State<SimpleRing> {
+class _SimpleRingState extends State<SimpleRing>
+    with SingleTickerProviderStateMixin {
   // Store initial touch position
   Offset? _startPosition;
+
+  // Animation controller for rotation
+  late AnimationController _animationController;
+
+  // Track whether we're currently animating
+  bool _isAnimating = false;
+
+  // Track tile positions for animation
+  Map<int, Offset> _currentPositions = {};
+  Map<int, Offset> _targetPositions = {};
+  Map<int, int> _positionToNumber = {};
+  Map<int, int> _previousPositionToNumber = {};
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    // Listen for animation completion
+    _animationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          _isAnimating = false;
+        });
+        _animationController.reset();
+      }
+    });
+
+    // Initialize position mappings
+    _updatePositionMappings();
+  }
+
+  void _updatePositionMappings() {
+    _positionToNumber.clear();
+    _currentPositions.clear();
+    _targetPositions.clear();
+
+    final itemCount = widget.ringModel.numbers.length;
+
+    for (int i = 0; i < itemCount; i++) {
+      final number = widget.ringModel.getNumberAtPosition(i);
+      _positionToNumber[i] = number;
+
+      // Calculate the position for this tile
+      final position = widget.isInner
+          ? SquarePositionUtils.calculateInnerSquarePosition(
+              i, widget.size, widget.tileSize)
+          : SquarePositionUtils.calculateSquarePosition(
+              i, widget.size, widget.tileSize);
+
+      _targetPositions[i] = position;
+      _currentPositions[i] = position;
+    }
+  }
+
+  @override
+  void didUpdateWidget(SimpleRing oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Check if the ring model has changed
+    if (widget.ringModel != oldWidget.ringModel) {
+      // Store current positions and numbers before updating
+      _previousPositionToNumber = Map.from(_positionToNumber);
+
+      // Update position mappings for new model
+      _updatePositionMappings();
+
+      // Animate if not already animating
+      if (!_isAnimating) {
+        _animateRotation();
+      }
+    }
+  }
+
+  void _animateRotation() {
+    // Don't animate if there's no previous data
+    if (_previousPositionToNumber.isEmpty) return;
+
+    setState(() {
+      _isAnimating = true;
+
+      // For each position in the new model, find where its number was in the old model
+      final itemCount = widget.ringModel.numbers.length;
+      for (int i = 0; i < itemCount; i++) {
+        final currentNumber = _positionToNumber[i];
+
+        // Find this number's previous position
+        int? previousPosition;
+        for (final entry in _previousPositionToNumber.entries) {
+          if (entry.value == currentNumber) {
+            previousPosition = entry.key;
+            break;
+          }
+        }
+
+        if (previousPosition != null) {
+          // Calculate the old physical position of this number
+          final oldPosition = widget.isInner
+              ? SquarePositionUtils.calculateInnerSquarePosition(
+                  previousPosition, widget.size, widget.tileSize)
+              : SquarePositionUtils.calculateSquarePosition(
+                  previousPosition, widget.size, widget.tileSize);
+
+          // Set as current position for animation
+          _currentPositions[i] = oldPosition;
+        }
+      }
+    });
+
+    // Start animation
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanStart: (details) {
         // Don't start a pan if we tapped on a locked corner
-        if (_isPositionOnLockedCorner(details.localPosition)) {
+        if (_isPositionOnLockedCorner(details.localPosition) || _isAnimating) {
           return;
         }
 
@@ -56,7 +180,7 @@ class _SimpleRingState extends State<SimpleRing> {
         });
       },
       onPanUpdate: (details) {
-        if (_startPosition == null) return;
+        if (_startPosition == null || _isAnimating) return;
 
         // Get the drag delta
         final dragDelta = details.localPosition - _startPosition!;
@@ -66,8 +190,6 @@ class _SimpleRingState extends State<SimpleRing> {
             _startPosition!, dragDelta, widget.size);
 
         if (rotationStep != 0) {
-          // Print the rotation step for debugging
-
           // Apply the rotation using copyWithRotation
           widget.onRotateSteps(rotationStep);
 
@@ -88,7 +210,7 @@ class _SimpleRingState extends State<SimpleRing> {
     );
   }
 
-// Check if the touch position is on a locked corner
+  // Check if the touch position is on a locked corner
   bool _isPositionOnLockedCorner(Offset touchPosition) {
     // Get locked positions for this ring
     final lockedPositions = _getLockedPositionsForRing();
@@ -140,7 +262,8 @@ class _SimpleRingState extends State<SimpleRing> {
 
     // Threshold for drag sensitivity - increased for less sensitivity
     final dragThreshold = 65.0; // Increased from 3 to 15
-// Determine rotation direction based on region and drag direction
+
+    // Determine rotation direction based on region and drag direction
     switch (region) {
       case 'top':
         // For top edge: left drag -> clockwise, right drag -> counterclockwise
@@ -284,7 +407,7 @@ class _SimpleRingState extends State<SimpleRing> {
     return 'center';
   }
 
-// Updated _buildTiles method in SimpleRing widget to display locked numbers correctly
+  // Updated _buildTiles method to include animations
   List<Widget> _buildTiles() {
     final itemCount = widget.ringModel.numbers.length;
     List<Widget> tiles = [];
@@ -292,16 +415,7 @@ class _SimpleRingState extends State<SimpleRing> {
     // Get locked positions for this ring
     final lockedPositions = _getLockedPositionsForRing();
 
-    for (int i = 0; i < itemCount; i++) {}
-
     for (int i = 0; i < itemCount; i++) {
-      // Get position for this tile
-      final offset = widget.isInner
-          ? SquarePositionUtils.calculateInnerSquarePosition(
-              i, widget.size, widget.tileSize)
-          : SquarePositionUtils.calculateSquarePosition(
-              i, widget.size, widget.tileSize);
-
       // Is this a corner?
       final cornerIndex = widget.ringModel.cornerIndices.indexOf(i);
       final isCorner = cornerIndex != -1;
@@ -309,16 +423,51 @@ class _SimpleRingState extends State<SimpleRing> {
       // Is this corner locked?
       final isLocked = lockedPositions.contains(i);
 
-      // Get the number to display - explicitly call getNumberAtPosition
+      // Get the number to display
       int numberToDisplay = widget.ringModel.getNumberAtPosition(i);
 
-      // In the _buildTiles method in simple_ring.dart
-      tiles.add(
-        Positioned(
-          key: ValueKey(
-              'tile_${widget.isInner ? 'inner' : 'outer'}_${i}_${numberToDisplay}'),
-          left: offset.dx,
-          top: offset.dy,
+      // Calculate current position for animation
+      Offset startPosition = _currentPositions[i] ?? _targetPositions[i]!;
+      Offset endPosition = _targetPositions[i]!;
+
+      // Create animation for this tile
+      Widget tileWidget;
+
+      if (_isAnimating && !isLocked) {
+        // Animated position for unlocked tiles
+        tileWidget = AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            // Calculate current position based on animation progress
+            final currentX = startPosition.dx +
+                (_animationController.value *
+                    (endPosition.dx - startPosition.dx));
+            final currentY = startPosition.dy +
+                (_animationController.value *
+                    (endPosition.dy - startPosition.dy));
+
+            return Positioned(
+              left: currentX,
+              top: currentY,
+              child: GestureDetector(
+                onTap: isCorner ? () => widget.onTileTap(cornerIndex, i) : null,
+                child: NumberTile(
+                  number: numberToDisplay,
+                  color: isCorner
+                      ? widget.ringModel.color
+                      : widget.ringModel.color.withOpacity(0.7),
+                  isLocked: isLocked,
+                  size: widget.tileSize,
+                ),
+              ),
+            );
+          },
+        );
+      } else {
+        // Static position for locked tiles or when not animating
+        tileWidget = Positioned(
+          left: endPosition.dx,
+          top: endPosition.dy,
           child: GestureDetector(
             onTap: isCorner ? () => widget.onTileTap(cornerIndex, i) : null,
             child: NumberTile(
@@ -330,8 +479,10 @@ class _SimpleRingState extends State<SimpleRing> {
               size: widget.tileSize,
             ),
           ),
-        ),
-      );
+        );
+      }
+
+      tiles.add(tileWidget);
     }
 
     return tiles;
