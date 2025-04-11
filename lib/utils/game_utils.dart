@@ -4,8 +4,8 @@ import 'dart:math';
 /// Utility class for generating number sets for different operations
 class GameGenerator {
   /// Generate numbers for addition operation
-  static List<int> generateAdditionNumbers(
-      List<int> innerNumbers, int targetNumber, int maxOuterNumber, Random random) {
+  static List<int> generateAdditionNumbers(List<int> innerNumbers,
+      int targetNumber, int maxOuterNumber, Random random) {
     // Initialize outer numbers list with placeholders
     final outerNumbers = List.filled(16, 0);
 
@@ -97,18 +97,28 @@ class GameGenerator {
   }
 
   /// Generate numbers for subtraction operation
-  static List<int> generateSubtractionNumbers(
-      List<int> innerNumbers, int targetNumber, int maxOuterNumber, Random random) {
+  static List<int> generateSubtractionNumbers(List<int> innerNumbers,
+      int targetNumber, int maxOuterNumber, Random random) {
     // For subtraction: outer - inner = target
     // This means: outer = inner + target
     // So we can reuse the addition logic but be clearer about what we're doing
 
-    return generateAdditionNumbers(innerNumbers, targetNumber, maxOuterNumber, random);
+    return generateAdditionNumbers(
+        innerNumbers, targetNumber, maxOuterNumber, random);
   }
 
   /// Generate numbers for multiplication operation
   static List<int> generateMultiplicationNumbers(
       int targetNumber, int maxOuterNumber, Random random) {
+    // Special case for target=1
+    if (targetNumber == 1) {
+      // For target=1, just create a list of numbers 1-16 and shuffle them
+      final outerNumbers = List.generate(16, (index) => index + 1);
+      outerNumbers.shuffle(random);
+      return outerNumbers;
+    }
+
+    // Regular case (existing code for target > 1)
     // Maximum product possible (may be adjusted if it's too large)
     final effectiveMaxOuter = min(targetNumber * 12, maxOuterNumber);
 
@@ -155,9 +165,17 @@ class GameGenerator {
     return outerNumbers;
   }
 
-  /// Generate numbers for division operation
   static List<int> generateDivisionNumbers(
       int targetNumber, int maxOuterNumber, Random random) {
+    // Special case for target=1
+    if (targetNumber == 1) {
+      // For target=1, just create a list of numbers 1-16 and shuffle them
+      final outerNumbers = List.generate(16, (index) => index + 1);
+      outerNumbers.shuffle(random);
+      return outerNumbers;
+    }
+
+    // Regular case (existing code for target > 1)
     // Maximum dividend possible
     final effectiveMaxOuter = min(targetNumber * 12, maxOuterNumber);
 
