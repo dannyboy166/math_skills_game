@@ -491,7 +491,7 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  // Win dialog shown when all four corners are completed
+// Win dialog shown when all four corners are completed
   void _showWinDialog() {
     // Show a celebratory dialog
     showDialog(
@@ -544,6 +544,59 @@ class _GameScreenState extends State<GameScreen> {
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.orange.shade800,
+              ),
+            ),
+            SizedBox(height: 15),
+            // Add completed equations to the dialog content
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(
+                    color: operation.color.withOpacity(0.3), width: 2),
+              ),
+              padding: EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Completed Equations:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: operation.color,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Container(
+                    constraints: BoxConstraints(maxHeight: 120),
+                    width: double.infinity,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: lockedEquations
+                            .map((eq) => Container(
+                                  margin: EdgeInsets.symmetric(vertical: 5),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.check_circle,
+                                          size: 20, color: Colors.green),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        eq.equationString,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

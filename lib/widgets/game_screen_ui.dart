@@ -249,7 +249,7 @@ class GameScreenUI extends StatelessWidget {
                   Container(
                     padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                     child: isGameComplete
-                        ? _buildCompletedEquationsUI()
+                        ? _buildCompletionMessage()
                         : _buildHintButton(),
                   ),
                 ],
@@ -285,8 +285,7 @@ class GameScreenUI extends StatelessWidget {
     );
   }
 
-  // Helper method to build the completed equations summary
-  Widget _buildCompletedEquationsUI() {
+  Widget _buildCompletionMessage() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.7),
@@ -302,43 +301,31 @@ class GameScreenUI extends StatelessWidget {
       ),
       padding: EdgeInsets.all(15),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
+          Icon(
+            Icons.check_circle,
+            color: Colors.green,
+            size: 40,
+          ),
+          SizedBox(height: 10),
           Text(
-            'Completed Equations:',
+            'All Equations Completed!',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
               color: operation.color,
             ),
+            textAlign: TextAlign.center,
           ),
-          SizedBox(height: 10),
-          Container(
-            constraints: BoxConstraints(maxHeight: 120),
-            child: SingleChildScrollView(
-              child: Column(
-                children: lockedEquations
-                    .map((eq) => Container(
-                          margin: EdgeInsets.symmetric(vertical: 5),
-                          child: Row(
-                            children: [
-                              Icon(Icons.check_circle,
-                                  size: 20, color: Colors.green),
-                              SizedBox(width: 8),
-                              Text(
-                                eq.equationString,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ))
-                    .toList(),
-              ),
+          Text(
+            '${lockedEquations.length}/4 equations solved',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
