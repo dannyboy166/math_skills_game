@@ -1,9 +1,10 @@
-// lib/widgets/simple_ring.dart - fixed smooth transitions
+// lib/widgets/simple_ring.dart - refactored with separate animation controller
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
 import '../models/locked_equation.dart';
 import '../widgets/number_tile.dart';
+import '../controllers/ring_animation_controller.dart';
 import 'dart:math' as math;
 
 class SimpleRing extends StatefulWidget {
@@ -36,59 +37,23 @@ class _SimpleRingState extends State<SimpleRing>
     with SingleTickerProviderStateMixin {
   // Store initial touch position
   Offset? _startPosition;
-
-  // Animation controller for rotation
-  late AnimationController _animationController;
-
-  // Track whether we're currently animating
-  bool _isAnimating = false;
-
-  // Track tile positions for animation
-  Map<int, Offset> _currentPositions = {};
-  Map<int, Offset> _targetPositions = {};
-  Map<int, int> _positionToNumber = {};
-  Map<int, int> _previousPositionToNumber = {};
   
-  // Track tile sizes for smooth transitions
-  Map<int, double> _currentSizes = {};
-  Map<int, double> _targetSizes = {};
-  
-  // Track tile color opacities for smooth transitions
-  Map<int, double> _currentOpacities = {};
-  Map<int, double> _targetOpacities = {};
-
-  // Corner size multiplier (25% larger for corners)
-  final double _cornerSize = 1.20;
-  final double _regularSize = 1.0;
-  
-  // Corner and regular opacity
-  final double _cornerOpacity = 1.0;
-  final double _regularOpacity = 0.6;
-  
-  // Transition rate - controls how quickly changes happen
-  late final double _transitionRate;
+  // Animation controller
+  late RingAnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
     
-    // Initialize the transition rate from widget
-    _transitionRate = widget.transitionRate;
-
     // Initialize animation controller
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400), // Slightly longer for smoother transition
+    _animationController = RingAnimationController(
+      this,
+      transitionRate: widget.transitionRate
     );
-
-    // Listen for animation completion
-    _animationController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          _isAnimating = false;
-        });
-        _animationController.reset();
-      }
+    
+    // Set callback for when animation completes
+    _animationController.setOnAnimationComplete(() {
+      setState(() {});
     });
 
     // Initialize position mappings
@@ -96,49 +61,12 @@ class _SimpleRingState extends State<SimpleRing>
   }
 
   void _updatePositionMappings() {
-    _positionToNumber.clear();
-    _currentPositions.clear();
-    _targetPositions.clear();
-    _targetSizes.clear();
-    _targetOpacities.clear();
-
-    final itemCount = widget.ringModel.numbers.length;
-
-    for (int i = 0; i < itemCount; i++) {
-      final number = widget.ringModel.getNumberAtPosition(i);
-      _positionToNumber[i] = number;
-
-      // Determine if this position is a corner
-      final isCorner = widget.ringModel.cornerIndices.contains(i);
-      
-      // Set the target size for this position
-      _targetSizes[i] = isCorner ? _cornerSize : _regularSize;
-      
-      // Set the target opacity for this position
-      _targetOpacities[i] = isCorner ? _cornerOpacity : _regularOpacity;
-      
-      // If we don't have a current size for this index, initialize it
-      if (!_currentSizes.containsKey(i)) {
-        _currentSizes[i] = _targetSizes[i]!;
-      }
-      
-      // If we don't have a current opacity for this index, initialize it
-      if (!_currentOpacities.containsKey(i)) {
-        _currentOpacities[i] = _targetOpacities[i]!;
-      }
-
-      // Calculate the position for this tile, using the target size
-      final position = widget.isInner
-          ? SquarePositionUtils.calculateInnerSquarePosition(
-              i, widget.size, widget.tileSize, 
-              cornerSizeMultiplier: _targetSizes[i]!)
-          : SquarePositionUtils.calculateSquarePosition(
-              i, widget.size, widget.tileSize,
-              cornerSizeMultiplier: _targetSizes[i]!);
-
-      _targetPositions[i] = position;
-      _currentPositions[i] = position;
-    }
+    _animationController.updatePositionMappings(
+      ringModel: widget.ringModel,
+      size: widget.size,
+      tileSize: widget.tileSize,
+      isInner: widget.isInner
+    );
   }
 
   @override
@@ -147,72 +75,31 @@ class _SimpleRingState extends State<SimpleRing>
     
     // Update transition rate if it changed
     if (widget.transitionRate != oldWidget.transitionRate) {
-      _transitionRate = widget.transitionRate;
+      _animationController.updateTransitionRate(widget.transitionRate);
     }
 
     // Check if the ring model has changed
     if (widget.ringModel != oldWidget.ringModel) {
-      // Store current positions and numbers before updating
-      _previousPositionToNumber = Map.from(_positionToNumber);
-
-      // Update position mappings for new model
-      _updatePositionMappings();
-
-      // Animate if not already animating
-      if (!_isAnimating) {
+      // Prepare and start animation
+      if (!_animationController.isAnimating) {
         _animateRotation();
       }
     }
   }
 
   void _animateRotation() {
-    // Don't animate if there's no previous data
-    if (_previousPositionToNumber.isEmpty) return;
-
+    // Prepare the animation
+    _animationController.prepareAnimation(
+      ringModel: widget.ringModel,
+      size: widget.size,
+      tileSize: widget.tileSize,
+      isInner: widget.isInner
+    );
+    
+    // Start the animation
     setState(() {
-      _isAnimating = true;
-
-      // For each position in the new model, find where its number was in the old model
-      final itemCount = widget.ringModel.numbers.length;
-      for (int i = 0; i < itemCount; i++) {
-        final currentNumber = _positionToNumber[i];
-
-        // Find this number's previous position
-        int? previousPosition;
-        for (final entry in _previousPositionToNumber.entries) {
-          if (entry.value == currentNumber) {
-            previousPosition = entry.key;
-            break;
-          }
-        }
-
-        if (previousPosition != null) {
-          // Determine if previous position was a corner
-          final wasPreviousCorner = widget.ringModel.cornerIndices.contains(previousPosition);
-          
-          // Set the current size based on the previous position
-          _currentSizes[i] = wasPreviousCorner ? _cornerSize : _regularSize;
-          
-          // Set the current opacity based on the previous position
-          _currentOpacities[i] = wasPreviousCorner ? _cornerOpacity : _regularOpacity;
-          
-          // Calculate the old physical position of this number using the previous size
-          final oldPosition = widget.isInner
-              ? SquarePositionUtils.calculateInnerSquarePosition(
-                  previousPosition, widget.size, widget.tileSize,
-                  cornerSizeMultiplier: _currentSizes[i]!)
-              : SquarePositionUtils.calculateSquarePosition(
-                  previousPosition, widget.size, widget.tileSize,
-                  cornerSizeMultiplier: _currentSizes[i]!);
-
-          // Set as current position for animation
-          _currentPositions[i] = oldPosition;
-        }
-      }
+      _animationController.startAnimation();
     });
-
-    // Start animation
-    _animationController.forward();
   }
 
   @override
@@ -226,7 +113,7 @@ class _SimpleRingState extends State<SimpleRing>
     return GestureDetector(
       onPanStart: (details) {
         // Don't start a pan if we tapped on a locked corner
-        if (_isPositionOnLockedCorner(details.localPosition) || _isAnimating) {
+        if (_isPositionOnLockedCorner(details.localPosition) || _animationController.isAnimating) {
           return;
         }
 
@@ -243,7 +130,7 @@ class _SimpleRingState extends State<SimpleRing>
         });
       },
       onPanUpdate: (details) {
-        if (_startPosition == null || _isAnimating) return;
+        if (_startPosition == null || _animationController.isAnimating) return;
 
         // Get the drag delta
         final dragDelta = details.localPosition - _startPosition!;
@@ -283,7 +170,7 @@ class _SimpleRingState extends State<SimpleRing>
       final isCorner = widget.ringModel.cornerIndices.contains(positionIndex);
       
       // Get the size multiplier for this position
-      final sizeMultiplier = isCorner ? _cornerSize : _regularSize;
+      final sizeMultiplier = isCorner ? 1.20 : 1.0;
       
       // Get the position of this tile
       final tilePosition = widget.isInner
@@ -481,7 +368,7 @@ class _SimpleRingState extends State<SimpleRing>
     return 'center';
   }
 
-  // Updated _buildTiles method for smooth transitions
+  // Updated _buildTiles method using the animation controller
   List<Widget> _buildTiles() {
     final itemCount = widget.ringModel.numbers.length;
     List<Widget> tiles = [];
@@ -500,89 +387,66 @@ class _SimpleRingState extends State<SimpleRing>
       // Get the number to display
       int numberToDisplay = widget.ringModel.getNumberAtPosition(i);
 
-      // Calculate start and end positions for animation
-      Offset startPosition = _currentPositions[i] ?? _targetPositions[i]!;
-      Offset endPosition = _targetPositions[i]!;
-      
-      // Get starting and target size multipliers for animation
-      double startSize = _currentSizes[i] ?? (isCorner ? _cornerSize : _regularSize);
-      double endSize = _targetSizes[i] ?? (isCorner ? _cornerSize : _regularSize);
-
       // Create animation for this tile
       Widget tileWidget;
 
-      if (_isAnimating && !isLocked) {
+      if (_animationController.shouldAnimate() && !isLocked) {
+        // Get animation info for this tile
+        final animInfo = _animationController.getAnimatedTileInfo(i, isCorner, isLocked);
+        
         // Animated position and size for unlocked tiles
         tileWidget = AnimatedBuilder(
-          animation: _animationController,
+          animation: animInfo.animationController,
           builder: (context, child) {
-            // Calculate current position based on animation progress
-            final currentX = startPosition.dx +
-                (_animationController.value *
-                    (endPosition.dx - startPosition.dx));
-            final currentY = startPosition.dy +
-                (_animationController.value *
-                    (endPosition.dy - startPosition.dy));
-                    
-            // Use custom curve with rate control for transitions
-            // Apply the transition rate to control how quickly changes happen
-            double adjustedProgress = _animationController.value;
+            // Get the current position based on animation progress
+            final currentPosition = animInfo.calculateCurrentPosition(
+              animInfo.animationController.value
+            );
             
-            // Apply the rate: higher values make changes happen earlier in the animation
-            if (_transitionRate != 1.0) {
-              adjustedProgress = _transitionRate > 1.0
-                  ? math.pow(adjustedProgress, 1 / _transitionRate).toDouble()
-                  : math.pow(adjustedProgress, _transitionRate).toDouble();
-            }
+            // Get the current size
+            final currentSize = animInfo.calculateCurrentSize(
+              animInfo.animationController.value
+            );
             
-            // Apply easing curve on top of the rate adjustment
-            final easedProgress = Curves.easeInOut.transform(adjustedProgress);
-            
-            // Calculate the animated size
-            final easedSize = startSize + (easedProgress * (endSize - startSize));
-            
-            // Get starting and target opacity values for this tile
-            double startOpacity = _currentOpacities[i] ?? 
-                (isCorner ? _cornerOpacity : _regularOpacity);
-            double endOpacity = _targetOpacities[i] ?? 
-                (isCorner ? _cornerOpacity : _regularOpacity);
-                
-            // Calculate the animated opacity
-            final easedOpacity = startOpacity + (easedProgress * (endOpacity - startOpacity));
+            // Get the current opacity
+            final currentOpacity = animInfo.calculateCurrentOpacity(
+              animInfo.animationController.value
+            );
 
             return Positioned(
-              left: currentX,
-              top: currentY,
+              left: currentPosition.dx,
+              top: currentPosition.dy,
               child: GestureDetector(
                 onTap: isCorner ? () => widget.onTileTap(cornerIndex, i) : null,
                 child: NumberTile(
                   number: numberToDisplay,
-                  color: widget.ringModel.color.withOpacity(easedOpacity),
+                  color: widget.ringModel.color.withOpacity(currentOpacity),
                   isLocked: isLocked,
                   isCorner: isCorner,
                   size: widget.tileSize,
-                  sizeMultiplier: easedSize, // Use the animated size multiplier
+                  sizeMultiplier: currentSize,
                 ),
               ),
             );
           },
         );
       } else {
+        // Get static position and appearance for this tile
+        final animInfo = _animationController.getAnimatedTileInfo(i, isCorner, isLocked);
+        
         // Static position for locked tiles or when not animating
         tileWidget = Positioned(
-          left: endPosition.dx,
-          top: endPosition.dy,
+          left: animInfo.endPosition.dx,
+          top: animInfo.endPosition.dy,
           child: GestureDetector(
             onTap: isCorner ? () => widget.onTileTap(cornerIndex, i) : null,
             child: NumberTile(
               number: numberToDisplay,
-              color: widget.ringModel.color.withOpacity(
-                  _targetOpacities[i] ?? (isCorner ? _cornerOpacity : _regularOpacity)
-                ),
+              color: widget.ringModel.color.withOpacity(animInfo.endOpacity),
               isLocked: isLocked,
               isCorner: isCorner,
               size: widget.tileSize,
-              sizeMultiplier: endSize, // Use the final size multiplier
+              sizeMultiplier: animInfo.endSize,
             ),
           ),
         );
