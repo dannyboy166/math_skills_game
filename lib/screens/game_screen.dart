@@ -409,12 +409,17 @@ class _GameScreenState extends State<GameScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
+              mainAxisSize: MainAxisSize.min, // Use minimum needed space
               children: [
                 Icon(Icons.lightbulb, color: Colors.yellow),
                 SizedBox(width: 10),
-                Text(
-                  'There\'s a correct equation at corner ${i + 1}. Tap to lock it!',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Expanded(
+                  // Wrap the Text in an Expanded widget
+                  child: Text(
+                    'There\'s a correct equation at corner ${i + 1}. Tap to lock it!',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis, // Add overflow handling
+                  ),
                 ),
               ],
             ),
@@ -435,12 +440,19 @@ class _GameScreenState extends State<GameScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
+            crossAxisAlignment:
+                CrossAxisAlignment.start, // Align items to the top
             children: [
               Icon(Icons.touch_app, color: Colors.white),
               SizedBox(width: 10),
-              Text(
-                'Keep rotating the rings until the equations match!',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Expanded(
+                // Add Expanded to allow the text to take available width
+                child: Text(
+                  'Keep rotating the rings until the equations match!',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                  softWrap: true, // Allow text to wrap to multiple lines
+                  maxLines: 2, // Limit to 2 lines (increase if needed)
+                ),
               ),
             ],
           ),
@@ -500,16 +512,16 @@ class _GameScreenState extends State<GameScreen> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            // Fixed: Wrap in a flexible container and reduce padding or star size
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 5, // horizontal space between stars
+              runSpacing: 5, // vertical space between lines
               children: List.generate(
                 4,
-                (index) => Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 5),
-                  child: StarWidget(
-                    size: 30,
-                    color: Color(0xFFFFD700),
-                  ),
+                (index) => StarWidget(
+                  size: 25, // Reduced from 30
+                  color: Color(0xFFFFD700),
                 ),
               ),
             ),
@@ -618,10 +630,11 @@ class _GameScreenState extends State<GameScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
+          mainAxisSize: MainAxisSize.min, // Added to prevent overflow
           children: [
             Icon(Icons.info_outline, color: operation.color),
             SizedBox(width: 10),
-            Text('How to Play'),
+            Flexible(child: Text('How to Play')), // Added Flexible
           ],
         ),
         shape: RoundedRectangleBorder(
