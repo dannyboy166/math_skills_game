@@ -411,16 +411,17 @@ class _GameScreenState extends State<GameScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
-              mainAxisSize: MainAxisSize.min, // Use minimum needed space
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.lightbulb, color: Colors.yellow),
                 SizedBox(width: 10),
                 Expanded(
-                  // Wrap the Text in an Expanded widget
                   child: Text(
-                    'There\'s a correct equation at corner ${i + 1}. Tap to lock it!',
+                    'There\'s a correct equation in one of the corners. Tap to lock it in!',
                     style: TextStyle(fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis, // Add overflow handling
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
                   ),
                 ),
               ],

@@ -203,9 +203,9 @@ class _HomeScreenState extends State<HomeScreen> {
           return Colors.green.shade600;
         case DifficultyLevel.challenging:
           return Colors.blue.shade600;
-        case DifficultyLevel.difficult:
+        case DifficultyLevel.Expert:
           return Colors.orange.shade600;
-        case DifficultyLevel.expert:
+        case DifficultyLevel.Impossible:
           return Colors.red.shade600;
       }
     }
@@ -253,12 +253,12 @@ class _HomeScreenState extends State<HomeScreen> {
         innerRange = '1-12';
         outerRange = '1-24';
         break;
-      case DifficultyLevel.difficult:
+      case DifficultyLevel.Expert:
         centerRange = '11-20';
         innerRange = '1-12';
         outerRange = '1-36';
         break;
-      case DifficultyLevel.expert:
+      case DifficultyLevel.Impossible:
         centerRange = '21-50';
         innerRange = '13-24';
         outerRange = '1-100';
@@ -311,8 +311,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _buildCategoryButton('Standard', [1, 2, 5, 10]),
             _buildCategoryButton('Challenging', [3, 4, 6, 11]),
-            _buildCategoryButton('Difficult', [7, 8, 9, 12]),
-            _buildCategoryButton('Expert', [13, 14, 15]),
+            _buildCategoryButton('Expert', [7, 8, 9, 12]),
+            _buildCategoryButton('Impossible', [13, 14, 15]),
           ],
         ),
 
@@ -382,9 +382,9 @@ class _HomeScreenState extends State<HomeScreen> {
           return Colors.green.shade600;
         case 'Challenging':
           return Colors.blue.shade600;
-        case 'Difficult':
-          return Colors.orange.shade600;
         case 'Expert':
+          return Colors.orange.shade600;
+        case 'Impossible':
           return Colors.red.shade600;
         default:
           return Colors.blue;
@@ -428,8 +428,8 @@ class _HomeScreenState extends State<HomeScreen> {
     String getCategory() {
       if ([1, 2, 5, 10].contains(tableNumber)) return 'Standard';
       if ([3, 4, 6, 11].contains(tableNumber)) return 'Challenging';
-      if ([7, 8, 9, 12].contains(tableNumber)) return 'Difficult';
-      return 'Expert';
+      if ([7, 8, 9, 12].contains(tableNumber)) return 'Expert';
+      return 'Impossible';
     }
 
     Color getColor() {
@@ -439,9 +439,9 @@ class _HomeScreenState extends State<HomeScreen> {
           return Colors.green.shade600;
         case 'Challenging':
           return Colors.blue.shade600;
-        case 'Difficult':
-          return Colors.orange.shade600;
         case 'Expert':
+          return Colors.orange.shade600;
+        case 'Impossible':
           return Colors.red.shade600;
         default:
           return Colors.blue;
@@ -476,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            if (getCategory() == 'Expert')
+            if (getCategory() == 'Impossible')
               Positioned(
                 right: 3,
                 bottom: 3,
