@@ -1,4 +1,4 @@
-// lib/widgets/simple_ring.dart - updated with animations
+// lib/widgets/simple_ring.dart - updated with better corner positioning
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
@@ -47,6 +47,9 @@ class _SimpleRingState extends State<SimpleRing>
   Map<int, int> _positionToNumber = {};
   Map<int, int> _previousPositionToNumber = {};
 
+  // Corner size multiplier (25% larger for corners)
+  final double _cornerSizeMultiplier = 1.25;
+
   @override
   void initState() {
     super.initState();
@@ -82,12 +85,17 @@ class _SimpleRingState extends State<SimpleRing>
       final number = widget.ringModel.getNumberAtPosition(i);
       _positionToNumber[i] = number;
 
-      // Calculate the position for this tile
+      // Determine if this position is a corner
+      final isCorner = widget.ringModel.cornerIndices.contains(i);
+
+      // Calculate the position for this tile, using the corner multiplier for corners
       final position = widget.isInner
           ? SquarePositionUtils.calculateInnerSquarePosition(
-              i, widget.size, widget.tileSize)
+              i, widget.size, widget.tileSize, 
+              cornerSizeMultiplier: isCorner ? _cornerSizeMultiplier : 1.0)
           : SquarePositionUtils.calculateSquarePosition(
-              i, widget.size, widget.tileSize);
+              i, widget.size, widget.tileSize,
+              cornerSizeMultiplier: isCorner ? _cornerSizeMultiplier : 1.0);
 
       _targetPositions[i] = position;
       _currentPositions[i] = position;
@@ -135,12 +143,17 @@ class _SimpleRingState extends State<SimpleRing>
         }
 
         if (previousPosition != null) {
+          // Determine if previous position was a corner
+          final wasPreviousCorner = widget.ringModel.cornerIndices.contains(previousPosition);
+          
           // Calculate the old physical position of this number
           final oldPosition = widget.isInner
               ? SquarePositionUtils.calculateInnerSquarePosition(
-                  previousPosition, widget.size, widget.tileSize)
+                  previousPosition, widget.size, widget.tileSize,
+                  cornerSizeMultiplier: wasPreviousCorner ? _cornerSizeMultiplier : 1.0)
               : SquarePositionUtils.calculateSquarePosition(
-                  previousPosition, widget.size, widget.tileSize);
+                  previousPosition, widget.size, widget.tileSize,
+                  cornerSizeMultiplier: wasPreviousCorner ? _cornerSizeMultiplier : 1.0);
 
           // Set as current position for animation
           _currentPositions[i] = oldPosition;
@@ -216,16 +229,24 @@ class _SimpleRingState extends State<SimpleRing>
     final lockedPositions = _getLockedPositionsForRing();
 
     for (int positionIndex in lockedPositions) {
+      // Is this a corner?
+      final isCorner = widget.ringModel.cornerIndices.contains(positionIndex);
+      
       // Get the position of this tile
       final tilePosition = widget.isInner
           ? SquarePositionUtils.calculateInnerSquarePosition(
-              positionIndex, widget.size, widget.tileSize)
+              positionIndex, widget.size, widget.tileSize,
+              cornerSizeMultiplier: isCorner ? _cornerSizeMultiplier : 1.0)
           : SquarePositionUtils.calculateSquarePosition(
-              positionIndex, widget.size, widget.tileSize);
+              positionIndex, widget.size, widget.tileSize,
+              cornerSizeMultiplier: isCorner ? _cornerSizeMultiplier : 1.0);
+
+      // Calculate the actual size of this tile
+      final actualTileSize = isCorner ? widget.tileSize * _cornerSizeMultiplier : widget.tileSize;
 
       // Check if the touch is within this tile
       final tileRect = Rect.fromLTWH(
-          tilePosition.dx, tilePosition.dy, widget.tileSize, widget.tileSize);
+          tilePosition.dx, tilePosition.dy, actualTileSize, actualTileSize);
 
       if (tileRect.contains(touchPosition)) {
         return true;
@@ -407,7 +428,7 @@ class _SimpleRingState extends State<SimpleRing>
     return 'center';
   }
 
-  // Updated _buildTiles method to include animations
+  // Updated _buildTiles method for proper corner tile positioning
   List<Widget> _buildTiles() {
     final itemCount = widget.ringModel.numbers.length;
     List<Widget> tiles = [];
@@ -425,6 +446,9 @@ class _SimpleRingState extends State<SimpleRing>
 
       // Get the number to display
       int numberToDisplay = widget.ringModel.getNumberAtPosition(i);
+
+      // Calculate the size multiplier for this tile
+      final sizeMultiplier = isCorner ? _cornerSizeMultiplier : 1.0;
 
       // Calculate current position for animation
       Offset startPosition = _currentPositions[i] ?? _targetPositions[i]!;
@@ -457,7 +481,9 @@ class _SimpleRingState extends State<SimpleRing>
                       ? widget.ringModel.color
                       : widget.ringModel.color.withOpacity(0.7),
                   isLocked: isLocked,
+                  isCorner: isCorner,
                   size: widget.tileSize,
+                  sizeMultiplier: sizeMultiplier,
                 ),
               ),
             );
@@ -476,7 +502,9 @@ class _SimpleRingState extends State<SimpleRing>
                   ? widget.ringModel.color
                   : widget.ringModel.color.withOpacity(0.7),
               isLocked: isLocked,
+              isCorner: isCorner,
               size: widget.tileSize,
+              sizeMultiplier: sizeMultiplier,
             ),
           ),
         );

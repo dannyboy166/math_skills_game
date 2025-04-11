@@ -6,16 +6,20 @@ class NumberTile extends StatefulWidget {
   final int number;
   final Color color;
   final bool isLocked;
+  final bool isCorner; // New parameter to indicate if it's a corner position
   final VoidCallback? onTap;
   final double size;
+  final double sizeMultiplier; // New parameter for size adjustment
 
   const NumberTile({
     Key? key,
     required this.number,
     required this.color,
     this.isLocked = false,
+    this.isCorner = false, // Default value
     this.onTap,
     this.size = 45,
+    this.sizeMultiplier = 1.0, // Default value (no size change)
   }) : super(key: key);
 
   @override
@@ -91,6 +95,9 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
     final Color lightColor = _getLighterColor(baseColor);
     final Color darkColor = _getDarkerColor(baseColor);
     
+    // Calculate the adjusted size, applying the multiplier
+    final adjustedSize = widget.size * widget.sizeMultiplier;
+    
     return Semantics(
       button: true,
       enabled: !widget.isLocked,
@@ -104,9 +111,10 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
               onTapDown: _handleTapDown,
               onTapUp: _handleTapUp,
               onTapCancel: _handleTapCancel,
-              child: Container(
-                width: widget.size,
-                height: widget.size,
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                width: adjustedSize,
+                height: adjustedSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -125,22 +133,22 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
                         // Outer shadow
                         BoxShadow(
                           color: Colors.black.withOpacity(0.2),
-                          blurRadius: widget.size * 0.1,
-                          spreadRadius: widget.size * 0.02,
-                          offset: Offset(widget.size * 0.04, widget.size * 0.04),
+                          blurRadius: adjustedSize * 0.1,
+                          spreadRadius: adjustedSize * 0.02,
+                          offset: Offset(adjustedSize * 0.04, adjustedSize * 0.04),
                         ),
                         // Inner highlight
                         BoxShadow(
                           color: Colors.white.withOpacity(0.3),
-                          blurRadius: widget.size * 0.1,
-                          spreadRadius: widget.size * 0.01,
-                          offset: Offset(-widget.size * 0.02, -widget.size * 0.02),
+                          blurRadius: adjustedSize * 0.1,
+                          spreadRadius: adjustedSize * 0.01,
+                          offset: Offset(-adjustedSize * 0.02, -adjustedSize * 0.02),
                         ),
                       ],
                 ),
                 child: _isPressed
-                  ? _buildPressedContent()
-                  : _buildNormalContent(),
+                  ? _buildPressedContent(adjustedSize)
+                  : _buildNormalContent(adjustedSize),
               ),
             ),
           );
@@ -149,7 +157,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildNormalContent() {
+  Widget _buildNormalContent(double size) {
     // Adjust the text color based on locked state
     final textColor = widget.isLocked ? Colors.white.withOpacity(0.7) : Colors.white;
     
@@ -158,14 +166,14 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
       children: [
         // Inner circle for depth
         Container(
-          width: widget.size * 0.85,
-          height: widget.size * 0.85,
+          width: size * 0.85,
+          height: size * 0.85,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.transparent,
             border: Border.all(
               color: Colors.white.withOpacity(widget.isLocked ? 0.1 : 0.15),
-              width: widget.size * 0.03,
+              width: size * 0.03,
             ),
           ),
         ),
@@ -175,12 +183,12 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Padding(
-              padding: EdgeInsets.all(widget.size * 0.12),
+              padding: EdgeInsets.all(size * 0.12),
               child: Text(
                 '${widget.number}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: widget.size * 0.45,
+                  fontSize: size * 0.45,
                   fontWeight: FontWeight.bold,
                   color: textColor,
                   shadows: [
@@ -199,24 +207,22 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
         // Shine effect (subtle arc at top-left) - only if not locked
         if (!widget.isLocked)
           Positioned(
-            top: widget.size * 0.15,
-            left: widget.size * 0.15,
+            top: size * 0.15,
+            left: size * 0.15,
             child: Container(
-              width: widget.size * 0.2,
-              height: widget.size * 0.1,
+              width: size * 0.2,
+              height: size * 0.1,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(widget.size * 0.1),
+                borderRadius: BorderRadius.circular(size * 0.1),
               ),
             ),
           ),
-          
-        // Removed lock icon from number tiles
       ],
     );
   }
 
-  Widget _buildPressedContent() {
+  Widget _buildPressedContent(double size) {
     final textColor = widget.isLocked ? Colors.white.withOpacity(0.6) : Colors.white.withOpacity(0.9);
     
     return Stack(
@@ -224,14 +230,14 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
       children: [
         // Inner circle for depth
         Container(
-          width: widget.size * 0.85,
-          height: widget.size * 0.85,
+          width: size * 0.85,
+          height: size * 0.85,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.transparent,
             border: Border.all(
               color: Colors.white.withOpacity(0.1),
-              width: widget.size * 0.02,
+              width: size * 0.02,
             ),
           ),
         ),
@@ -241,12 +247,12 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Padding(
-              padding: EdgeInsets.all(widget.size * 0.12),
+              padding: EdgeInsets.all(size * 0.12),
               child: Text(
                 '${widget.number}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: widget.size * 0.45,
+                  fontSize: size * 0.45,
                   fontWeight: FontWeight.bold,
                   color: textColor,
                   shadows: [
@@ -261,8 +267,6 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             ),
           ),
         ),
-        
-        // Removed lock icon from number tiles
       ],
     );
   }
