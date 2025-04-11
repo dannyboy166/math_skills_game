@@ -9,62 +9,51 @@ class SquarePositionUtils {
     double cornerSizeMultiplier = 1.0,
     double margin = 0.0,
   }) {
-    final availableSpace = squareSize - itemSize - margin * 2;
-    final cornerSize = itemSize * cornerSizeMultiplier;
-    final insetAmount = cornerSize - itemSize;
+    final isCorner = index == 0 || index == 4 || index == 8 || index == 12;
+    final tileSize = isCorner ? itemSize * cornerSizeMultiplier : itemSize;
+    final availableSpace = squareSize - tileSize - margin * 2;
 
-    double x, y;
+    // This value shifts the tile outward slightly to visually center it
+    final visualAdjust =
+        isCorner ? (itemSize * (cornerSizeMultiplier - 1)) / 2 : 0.0;
+
+    double x = 0, y = 0;
 
     if (index < 5) {
       if (index == 0) {
-        x = margin;
-        y = margin;
+        x = margin - visualAdjust;
+        y = margin - visualAdjust;
       } else if (index == 4) {
-        x = margin + availableSpace - insetAmount;
-        y = margin;
+        x = margin + availableSpace + visualAdjust;
+        y = margin - visualAdjust;
       } else {
         x = margin + (index / 4) * availableSpace;
         y = margin;
       }
     } else if (index < 9) {
-      if (index == 4) {
-        x = margin + availableSpace - insetAmount;
-        y = margin;
-      } else if (index == 8) {
-        x = margin + availableSpace - insetAmount;
-        y = margin + availableSpace - insetAmount;
+      if (index == 8) {
+        x = margin + availableSpace + visualAdjust;
+        y = margin + availableSpace + visualAdjust;
       } else {
         x = margin + availableSpace;
         y = margin + ((index - 4) / 4) * availableSpace;
       }
     } else if (index < 13) {
-      if (index == 8) {
-        x = margin + availableSpace - insetAmount;
-        y = margin + availableSpace - insetAmount;
-      } else if (index == 12) {
-        x = margin;
-        y = margin + availableSpace - insetAmount;
+      if (index == 12) {
+        x = margin - visualAdjust;
+        y = margin + availableSpace + visualAdjust;
       } else {
         x = margin + availableSpace - ((index - 8) / 4) * availableSpace;
         y = margin + availableSpace;
       }
     } else {
-      if (index == 12) {
-        x = margin;
-        y = margin + availableSpace - insetAmount;
-      } else if (index == 0) {
-        x = margin;
-        y = margin;
-      } else {
-        x = margin;
-        y = margin + availableSpace - ((index - 12) / 4) * availableSpace;
-      }
+      x = margin;
+      y = margin + availableSpace - ((index - 12) / 4) * availableSpace;
     }
 
     return Offset(x, y);
   }
 
-  // Calculate position for an item on inner square (12 tiles)
   static Offset calculateInnerSquarePosition(
     int index,
     double squareSize,
@@ -72,53 +61,46 @@ class SquarePositionUtils {
     double cornerSizeMultiplier = 1.0,
     double margin = 0.0,
   }) {
-    final availableSpace = squareSize - itemSize - margin * 2;
-    final cornerSize = itemSize * cornerSizeMultiplier;
-    final insetAmount = cornerSize - itemSize;
+    final isCorner = index == 0 || index == 3 || index == 6 || index == 9;
+    final tileSize = isCorner ? itemSize * cornerSizeMultiplier : itemSize;
+    final availableSpace = squareSize - tileSize - margin * 2;
 
-    double x, y;
+    // Adjust corner tile position outward to center it visually
+    final visualAdjust =
+        isCorner ? (itemSize * (cornerSizeMultiplier - 1)) / 2 : 0.0;
+
+    double x = 0, y = 0;
 
     if (index < 4) {
       if (index == 0) {
-        x = margin;
-        y = margin;
+        x = margin - visualAdjust;
+        y = margin - visualAdjust;
       } else if (index == 3) {
-        x = margin + availableSpace - insetAmount;
-        y = margin;
+        x = margin + availableSpace + visualAdjust;
+        y = margin - visualAdjust;
       } else {
         x = margin + (index / 3) * availableSpace;
         y = margin;
       }
     } else if (index < 7) {
-      if (index == 3) {
-        x = margin + availableSpace - insetAmount;
-        y = margin;
-      } else if (index == 6) {
-        x = margin + availableSpace - insetAmount;
-        y = margin + availableSpace - insetAmount;
+      if (index == 6) {
+        x = margin + availableSpace + visualAdjust;
+        y = margin + availableSpace + visualAdjust;
       } else {
         x = margin + availableSpace;
         y = margin + ((index - 3) / 3) * availableSpace;
       }
     } else if (index < 10) {
-      if (index == 6) {
-        x = margin + availableSpace - insetAmount;
-        y = margin + availableSpace - insetAmount;
-      } else if (index == 9) {
-        x = margin;
-        y = margin + availableSpace - insetAmount;
+      if (index == 9) {
+        x = margin - visualAdjust;
+        y = margin + availableSpace + visualAdjust;
       } else {
         x = margin + availableSpace - ((index - 6) / 3) * availableSpace;
         y = margin + availableSpace;
       }
     } else {
-      if (index == 9) {
-        x = margin;
-        y = margin + availableSpace - insetAmount;
-      } else {
-        x = margin;
-        y = margin + availableSpace - ((index - 9) / 3) * availableSpace;
-      }
+      x = margin;
+      y = margin + availableSpace - ((index - 9) / 3) * availableSpace;
     }
 
     return Offset(x, y);

@@ -55,7 +55,7 @@ class GameScreenUI extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final boardSize = screenWidth * 0.95;
     final margin = boardSize * 0.02;
-    final innerRingSize = boardSize * 0.65;
+    final innerRingSize = boardSize * 0.62;
 
     final outerTileSize = boardSize * 0.12;
     final innerTileSize = innerRingSize * 0.16;

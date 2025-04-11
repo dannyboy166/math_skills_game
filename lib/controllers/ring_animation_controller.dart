@@ -28,7 +28,7 @@ class RingAnimationController {
   Map<int, double> _targetOpacities = {};
 
   // Corner size multiplier (25% larger for corners)
-  final double _cornerSize = 1.20;
+  final double _cornerSize = 1.3;
   final double _regularSize = 1.0;
 
   // Corner and regular opacity
