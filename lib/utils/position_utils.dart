@@ -7,10 +7,9 @@ class SquarePositionUtils {
     double squareSize,
     double itemSize, {
     double cornerSizeMultiplier = 1.0,
-    double margin = 10.0,
+    double margin = 0.0,
   }) {
     final availableSpace = squareSize - itemSize - margin * 2;
-
     final cornerSize = itemSize * cornerSizeMultiplier;
     final insetAmount = cornerSize - itemSize;
 
@@ -53,6 +52,9 @@ class SquarePositionUtils {
       if (index == 12) {
         x = margin;
         y = margin + availableSpace - insetAmount;
+      } else if (index == 0) {
+        x = margin;
+        y = margin;
       } else {
         x = margin;
         y = margin + availableSpace - ((index - 12) / 4) * availableSpace;
@@ -62,12 +64,13 @@ class SquarePositionUtils {
     return Offset(x, y);
   }
 
+  // Calculate position for an item on inner square (12 tiles)
   static Offset calculateInnerSquarePosition(
     int index,
     double squareSize,
     double itemSize, {
     double cornerSizeMultiplier = 1.0,
-    double margin = 10.0,
+    double margin = 0.0,
   }) {
     final availableSpace = squareSize - itemSize - margin * 2;
     final cornerSize = itemSize * cornerSizeMultiplier;

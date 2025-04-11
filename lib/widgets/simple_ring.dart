@@ -16,6 +16,7 @@ class SimpleRing extends StatefulWidget {
   final List<LockedEquation> lockedEquations;
   final Function(int, int) onTileTap; // (cornerIndex, position)
   final double transitionRate; // Control how quickly transitions happen
+  final double margin;
 
   const SimpleRing({
     Key? key,
@@ -27,6 +28,7 @@ class SimpleRing extends StatefulWidget {
     required this.lockedEquations,
     required this.onTileTap,
     this.transitionRate = 1.0, // Default to 1.0 (normal speed)
+    required this.margin,
   }) : super(key: key);
 
   @override
@@ -37,20 +39,18 @@ class _SimpleRingState extends State<SimpleRing>
     with SingleTickerProviderStateMixin {
   // Store initial touch position
   Offset? _startPosition;
-  
+
   // Animation controller
   late RingAnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize animation controller
-    _animationController = RingAnimationController(
-      this,
-      transitionRate: widget.transitionRate
-    );
-    
+    _animationController =
+        RingAnimationController(this, transitionRate: widget.transitionRate);
+
     // Set callback for when animation completes
     _animationController.setOnAnimationComplete(() {
       setState(() {});
@@ -65,14 +65,15 @@ class _SimpleRingState extends State<SimpleRing>
       ringModel: widget.ringModel,
       size: widget.size,
       tileSize: widget.tileSize,
-      isInner: widget.isInner
+      isInner: widget.isInner,
+      margin: widget.margin, // 👈 Add this
     );
   }
 
   @override
   void didUpdateWidget(SimpleRing oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Update transition rate if it changed
     if (widget.transitionRate != oldWidget.transitionRate) {
       _animationController.updateTransitionRate(widget.transitionRate);
@@ -93,9 +94,10 @@ class _SimpleRingState extends State<SimpleRing>
       ringModel: widget.ringModel,
       size: widget.size,
       tileSize: widget.tileSize,
-      isInner: widget.isInner
+      isInner: widget.isInner,
+      margin: widget.margin, // 👈 Add this
     );
-    
+
     // Start the animation
     setState(() {
       _animationController.startAnimation();
@@ -113,7 +115,8 @@ class _SimpleRingState extends State<SimpleRing>
     return GestureDetector(
       onPanStart: (details) {
         // Don't start a pan if we tapped on a locked corner
-        if (_isPositionOnLockedCorner(details.localPosition) || _animationController.isAnimating) {
+        if (_isPositionOnLockedCorner(details.localPosition) ||
+            _animationController.isAnimating) {
           return;
         }
 
@@ -168,10 +171,10 @@ class _SimpleRingState extends State<SimpleRing>
     for (int positionIndex in lockedPositions) {
       // Is this a corner?
       final isCorner = widget.ringModel.cornerIndices.contains(positionIndex);
-      
+
       // Get the size multiplier for this position
       final sizeMultiplier = isCorner ? 1.20 : 1.0;
-      
+
       // Get the position of this tile
       final tilePosition = widget.isInner
           ? SquarePositionUtils.calculateInnerSquarePosition(
@@ -392,26 +395,24 @@ class _SimpleRingState extends State<SimpleRing>
 
       if (_animationController.shouldAnimate() && !isLocked) {
         // Get animation info for this tile
-        final animInfo = _animationController.getAnimatedTileInfo(i, isCorner, isLocked);
-        
+        final animInfo =
+            _animationController.getAnimatedTileInfo(i, isCorner, isLocked);
+
         // Animated position and size for unlocked tiles
         tileWidget = AnimatedBuilder(
           animation: animInfo.animationController,
           builder: (context, child) {
             // Get the current position based on animation progress
-            final currentPosition = animInfo.calculateCurrentPosition(
-              animInfo.animationController.value
-            );
-            
+            final currentPosition = animInfo
+                .calculateCurrentPosition(animInfo.animationController.value);
+
             // Get the current size
-            final currentSize = animInfo.calculateCurrentSize(
-              animInfo.animationController.value
-            );
-            
+            final currentSize = animInfo
+                .calculateCurrentSize(animInfo.animationController.value);
+
             // Get the current opacity
-            final currentOpacity = animInfo.calculateCurrentOpacity(
-              animInfo.animationController.value
-            );
+            final currentOpacity = animInfo
+                .calculateCurrentOpacity(animInfo.animationController.value);
 
             return Positioned(
               left: currentPosition.dx,
@@ -432,8 +433,9 @@ class _SimpleRingState extends State<SimpleRing>
         );
       } else {
         // Get static position and appearance for this tile
-        final animInfo = _animationController.getAnimatedTileInfo(i, isCorner, isLocked);
-        
+        final animInfo =
+            _animationController.getAnimatedTileInfo(i, isCorner, isLocked);
+
         // Static position for locked tiles or when not animating
         tileWidget = Positioned(
           left: animInfo.endPosition.dx,

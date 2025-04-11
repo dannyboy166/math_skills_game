@@ -53,8 +53,9 @@ class GameScreenUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final boardSize = screenWidth * 0.9;
-    final innerRingSize = boardSize * 0.6;
+    final boardSize = screenWidth * 0.95;
+    final margin = boardSize * 0.02;
+    final innerRingSize = boardSize * 0.65;
 
     final outerTileSize = boardSize * 0.12;
     final innerTileSize = innerRingSize * 0.16;
@@ -166,6 +167,8 @@ class GameScreenUI extends StatelessWidget {
                               onRotateSteps: onUpdateOuterRing,
                               lockedEquations: lockedEquations,
                               onTileTap: onTileTap,
+                              transitionRate: 1.0,
+                              margin: margin, // 👈 Add this
                             ),
 
                             // Inner ring
@@ -177,6 +180,8 @@ class GameScreenUI extends StatelessWidget {
                               onRotateSteps: onUpdateInnerRing,
                               lockedEquations: lockedEquations,
                               onTileTap: onTileTap,
+                              transitionRate: 1.0,
+                              margin: margin, // 👈 Add this too
                             ),
 
                             // Center target number with enhanced styling
