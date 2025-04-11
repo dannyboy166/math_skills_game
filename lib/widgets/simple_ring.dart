@@ -25,7 +25,7 @@ class SimpleRing extends StatefulWidget {
     required this.onRotateSteps,
     required this.lockedEquations,
     required this.onTileTap,
-    this.sizeTransitionRate = 1.5, // Default to 1.0 (normal speed)
+    this.sizeTransitionRate = 2, // Default to 1.0 (normal speed)
   }) : super(key: key);
 
   @override
