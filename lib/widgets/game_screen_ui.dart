@@ -53,7 +53,6 @@ class GameScreenUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     final boardSize = screenWidth * 0.9;
     final innerRingSize = boardSize * 0.6;
 
@@ -316,9 +315,8 @@ class GameScreenUI extends StatelessWidget {
                           margin: EdgeInsets.symmetric(vertical: 5),
                           child: Row(
                             children: [
-                              Icon(Icons.check_circle, 
-                                  size: 20, 
-                                  color: Colors.green),
+                              Icon(Icons.check_circle,
+                                  size: 20, color: Colors.green),
                               SizedBox(width: 8),
                               Text(
                                 eq.equationString,
