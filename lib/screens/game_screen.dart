@@ -1,18 +1,19 @@
 // lib/screens/game_screen.dart
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
+import 'package:math_skills_game/widgets/game_screen_ui.dart';
 import 'dart:math';
 import '../models/ring_model.dart';
 import '../models/operation_config.dart';
 import '../models/locked_equation.dart';
-import '../widgets/simple_ring.dart';
-import '../widgets/equation_layout.dart';
+import '../widgets/progress_stars.dart';
+import '../utils/game_utils.dart';
 
 class GameScreen extends StatefulWidget {
   final String operationName;
   final DifficultyLevel difficultyLevel;
-  final int?
-      targetNumber; // Optional - if not provided, will be randomly generated
+  final int? targetNumber;
 
   const GameScreen({
     Key? key,
@@ -34,8 +35,14 @@ class _GameScreenState extends State<GameScreen> {
   // Track locked equations
   List<LockedEquation> lockedEquations = [];
 
+  // List to keep track of active star animations
+  List<Widget> starAnimations = [];
+
   // Track if the game is complete
   bool isGameComplete = false;
+
+  // Background gradient colors based on operation
+  late List<Color> backgroundGradient;
 
   @override
   void initState() {
@@ -43,6 +50,9 @@ class _GameScreenState extends State<GameScreen> {
 
     // Initialize the operation configuration
     operation = OperationConfig.forOperation(widget.operationName);
+
+    // Set the background gradient based on operation
+    _setBackgroundGradient();
 
     // Set target number based on difficulty level
     if (widget.targetNumber != null) {
@@ -56,6 +66,41 @@ class _GameScreenState extends State<GameScreen> {
     _generateGameNumbers();
   }
 
+  void _setBackgroundGradient() {
+    switch (widget.operationName) {
+      case 'addition':
+        backgroundGradient = [
+          Colors.green.shade100,
+          Colors.green.shade50,
+        ];
+        break;
+      case 'subtraction':
+        backgroundGradient = [
+          Colors.purple.shade100,
+          Colors.purple.shade50,
+        ];
+        break;
+      case 'multiplication':
+        backgroundGradient = [
+          Colors.blue.shade100,
+          Colors.blue.shade50,
+        ];
+        break;
+      case 'division':
+        backgroundGradient = [
+          Colors.orange.shade100,
+          Colors.orange.shade50,
+        ];
+        break;
+      default:
+        backgroundGradient = [
+          Colors.blue.shade100,
+          Colors.blue.shade50,
+        ];
+    }
+  }
+
+  // Generate numbers for game
   void _generateGameNumbers() {
     final random = Random();
 
@@ -65,23 +110,28 @@ class _GameScreenState extends State<GameScreen> {
     // Special handling for multiplication and division
     if (widget.operationName == 'multiplication') {
       innerNumbers = List.generate(12, (index) => index + 1); // 1-12
-      outerNumbers = _generateMultiplicationNumbers(random);
+      outerNumbers = GameGenerator.generateMultiplicationNumbers(
+          targetNumber, widget.difficultyLevel.maxOuterNumber, random);
     } else if (widget.operationName == 'division') {
       innerNumbers = List.generate(12, (index) => index + 1); // 1-12
-      outerNumbers = _generateDivisionNumbers(random);
+      outerNumbers = GameGenerator.generateDivisionNumbers(
+          targetNumber, widget.difficultyLevel.maxOuterNumber, random);
     } else {
       // Original logic for other operations
       innerNumbers = widget.difficultyLevel.innerRingNumbers;
 
       switch (widget.operationName) {
         case 'addition':
-          outerNumbers = _generateAdditionNumbers(innerNumbers, random);
+          outerNumbers = GameGenerator.generateAdditionNumbers(innerNumbers,
+              targetNumber, widget.difficultyLevel.maxOuterNumber, random);
           break;
         case 'subtraction':
-          outerNumbers = _generateSubtractionNumbers(innerNumbers, random);
+          outerNumbers = GameGenerator.generateSubtractionNumbers(innerNumbers,
+              targetNumber, widget.difficultyLevel.maxOuterNumber, random);
           break;
         default:
-          outerNumbers = _generateAdditionNumbers(innerNumbers, random);
+          outerNumbers = GameGenerator.generateAdditionNumbers(innerNumbers,
+              targetNumber, widget.difficultyLevel.maxOuterNumber, random);
           break;
       }
     }
@@ -89,301 +139,47 @@ class _GameScreenState extends State<GameScreen> {
     // Initialize ring models
     innerRingModel = RingModel(
       numbers: innerNumbers,
-      color: Colors.blue,
+      color: _getInnerRingColor(),
       cornerIndices: [0, 3, 6, 9], // Inner ring corners
     );
 
     outerRingModel = RingModel(
       numbers: outerNumbers,
-      color: Colors.teal,
+      color: _getOuterRingColor(),
       cornerIndices: [0, 4, 8, 12], // Outer ring corners
     );
   }
 
-  // Generate numbers for addition operation
-  List<int> _generateAdditionNumbers(List<int> innerNumbers, Random random) {
-    final maxOuterNumber = widget.difficultyLevel.maxOuterNumber;
-
-    // Initialize outer numbers list with placeholders
-    final outerNumbers = List.filled(16, 0);
-
-    // 1. First, ensure we have exactly 4 valid equations
-    List<int> validInnerNumbers = [];
-    List<int> validOuterNumbers = [];
-    Set<int> usedOuterNumbers = {};
-
-    // Shuffle inner numbers to pick 4 random ones
-    final shuffledInner = List<int>.from(innerNumbers);
-    shuffledInner.shuffle(random);
-
-    // Take 4 numbers from the shuffled list for our valid equations
-    for (int i = 0; i < 4; i++) {
-      final innerNum = shuffledInner[i];
-      validInnerNumbers.add(innerNum);
-
-      // For addition: inner + target = outer
-      final outerNum = innerNum + targetNumber;
-
-      // Make sure we don't exceed max range and don't have duplicates
-      if (outerNum <= maxOuterNumber && !usedOuterNumbers.contains(outerNum)) {
-        validOuterNumbers.add(outerNum);
-        usedOuterNumbers.add(outerNum);
-      } else {
-        // If we can't use this number, try another until we find a valid one
-        int attempts = 0;
-        bool found = false;
-        while (attempts < 20 && !found) {
-          final newInnerNum = innerNumbers[random.nextInt(innerNumbers.length)];
-          final newOuterNum = newInnerNum + targetNumber;
-
-          if (newOuterNum <= maxOuterNumber &&
-              !usedOuterNumbers.contains(newOuterNum)) {
-            validInnerNumbers[i] = newInnerNum;
-            validOuterNumbers.add(newOuterNum);
-            usedOuterNumbers.add(newOuterNum);
-            found = true;
-          }
-          attempts++;
-        }
-
-        // If we still couldn't find a valid number, create one by decrementing
-        if (!found) {
-          int newOuterNum = maxOuterNumber;
-          while (usedOuterNumbers.contains(newOuterNum) &&
-              newOuterNum > targetNumber) {
-            newOuterNum--;
-          }
-
-          if (!usedOuterNumbers.contains(newOuterNum)) {
-            validOuterNumbers.add(newOuterNum);
-            usedOuterNumbers.add(newOuterNum);
-            // Recalculate corresponding inner number
-            validInnerNumbers[i] = newOuterNum - targetNumber;
-          } else {
-            // Extreme fallback - just use a number and accept the duplicate
-            final fallbackOuter = innerNum + targetNumber;
-            validOuterNumbers.add(fallbackOuter);
-            usedOuterNumbers.add(fallbackOuter);
-          }
-        }
-      }
+  // Get more vibrant inner ring color
+  Color _getInnerRingColor() {
+    switch (widget.operationName) {
+      case 'addition':
+        return Colors.green.shade400;
+      case 'subtraction':
+        return Colors.purple.shade400;
+      case 'multiplication':
+        return Colors.blue.shade400;
+      case 'division':
+        return Colors.orange.shade400;
+      default:
+        return Colors.blue.shade400;
     }
-
-    // 2. Place valid outer numbers at corners
-    List<int> cornerPositions = [0, 4, 8, 12]; // Corner positions
-    cornerPositions.shuffle(random);
-
-    for (int i = 0; i < 4; i++) {
-      outerNumbers[cornerPositions[i]] = validOuterNumbers[i];
-    }
-
-    // 3. Fill remaining positions with random numbers within range
-    for (int i = 0; i < 16; i++) {
-      if (outerNumbers[i] == 0) {
-        // Generate a random number that's not already used
-        int randomNum;
-        do {
-          randomNum = random.nextInt(maxOuterNumber) + 1;
-        } while (usedOuterNumbers.contains(randomNum));
-
-        outerNumbers[i] = randomNum;
-        usedOuterNumbers.add(randomNum);
-      }
-    }
-
-    return outerNumbers;
   }
 
-  // Generate numbers for subtraction operation
-  List<int> _generateSubtractionNumbers(List<int> innerNumbers, Random random) {
-    final maxOuterNumber = widget.difficultyLevel.maxOuterNumber;
-
-    // Initialize outer numbers list with placeholders
-    final outerNumbers = List.filled(16, 0);
-
-    // For subtraction: outer - inner = target
-    // This means: outer = inner + target
-    // So we can reuse the addition logic but be clearer about what we're doing
-
-    // 1. First, ensure we have exactly 4 valid equations
-    List<int> validInnerNumbers = [];
-    List<int> validOuterNumbers = [];
-    Set<int> usedOuterNumbers = {};
-
-    // Shuffle inner numbers to pick 4 random ones
-    final shuffledInner = List<int>.from(innerNumbers);
-    shuffledInner.shuffle(random);
-
-    // Take 4 numbers from the shuffled list for our valid equations
-    for (int i = 0; i < 4; i++) {
-      final innerNum = shuffledInner[i];
-      validInnerNumbers.add(innerNum);
-
-      // For subtraction: outer = inner + target
-      final outerNum = innerNum + targetNumber;
-
-      // Make sure we don't exceed max range and don't have duplicates
-      if (outerNum <= maxOuterNumber && !usedOuterNumbers.contains(outerNum)) {
-        validOuterNumbers.add(outerNum);
-        usedOuterNumbers.add(outerNum);
-      } else {
-        // If we can't use this number, try another until we find a valid one
-        int attempts = 0;
-        bool found = false;
-        while (attempts < 20 && !found) {
-          final newInnerNum = innerNumbers[random.nextInt(innerNumbers.length)];
-          final newOuterNum = newInnerNum + targetNumber;
-
-          if (newOuterNum <= maxOuterNumber &&
-              !usedOuterNumbers.contains(newOuterNum)) {
-            validInnerNumbers[i] = newInnerNum;
-            validOuterNumbers.add(newOuterNum);
-            usedOuterNumbers.add(newOuterNum);
-            found = true;
-          }
-          attempts++;
-        }
-
-        // If we still couldn't find a valid number, create one by decrementing
-        if (!found) {
-          int newOuterNum = maxOuterNumber;
-          while (usedOuterNumbers.contains(newOuterNum) &&
-              newOuterNum > targetNumber) {
-            newOuterNum--;
-          }
-
-          if (!usedOuterNumbers.contains(newOuterNum)) {
-            validOuterNumbers.add(newOuterNum);
-            usedOuterNumbers.add(newOuterNum);
-            // Recalculate corresponding inner number
-            validInnerNumbers[i] = newOuterNum - targetNumber;
-          } else {
-            // Extreme fallback - just use a number and accept the duplicate
-            final fallbackOuter = innerNum + targetNumber;
-            validOuterNumbers.add(fallbackOuter);
-            usedOuterNumbers.add(fallbackOuter);
-          }
-        }
-      }
+  // Get more vibrant outer ring color
+  Color _getOuterRingColor() {
+    switch (widget.operationName) {
+      case 'addition':
+        return Colors.teal.shade400;
+      case 'subtraction':
+        return Colors.deepPurple.shade400;
+      case 'multiplication':
+        return Colors.cyan.shade400;
+      case 'division':
+        return Colors.amber.shade400;
+      default:
+        return Colors.teal.shade400;
     }
-
-    // 2. Place valid outer numbers at corners
-    List<int> cornerPositions = [0, 4, 8, 12]; // Corner positions
-    cornerPositions.shuffle(random);
-
-    for (int i = 0; i < 4; i++) {
-      outerNumbers[cornerPositions[i]] = validOuterNumbers[i];
-    }
-
-    // 3. Fill remaining positions with random numbers within range
-    for (int i = 0; i < 16; i++) {
-      if (outerNumbers[i] == 0) {
-        // Generate a random number that's not already used
-        int randomNum;
-        do {
-          randomNum = random.nextInt(maxOuterNumber) + 1;
-        } while (usedOuterNumbers.contains(randomNum));
-
-        outerNumbers[i] = randomNum;
-        usedOuterNumbers.add(randomNum);
-      }
-    }
-
-    return outerNumbers;
-  }
-
-// Updated method to generate numbers for multiplication
-  List<int> _generateMultiplicationNumbers(Random random) {
-    final maxOuterNumber = targetNumber * 12; // Maximum product possible
-
-    // Initialize outer numbers list
-    final outerNumbers = List.filled(16, 0);
-
-    // 1. Choose 4 random numbers from 1-12 (not visible to player, just for calculation)
-    Set<int> selectedInnerNumbers = {};
-    while (selectedInnerNumbers.length < 4) {
-      selectedInnerNumbers.add(random.nextInt(12) + 1);
-    }
-
-    // 2. Calculate the 4 products with the center number
-    List<int> productNumbers =
-        selectedInnerNumbers.map((n) => n * targetNumber).toList();
-
-    // 3. Randomly place the 4 product numbers anywhere in the outer ring
-    List<int> outerPositions = List.generate(16, (index) => index);
-    outerPositions.shuffle(random);
-
-    for (int i = 0; i < 4; i++) {
-      outerNumbers[outerPositions[i]] = productNumbers[i];
-    }
-
-    // 4. Fill remaining positions with numbers that:
-    //    - Are not duplicates of our chosen products
-    //    - Are not duplicates of any previously generated number
-    //    - Are within range 1 to maxOuterNumber
-    Set<int> usedOuterNumbers = Set.from(productNumbers);
-
-    for (int i = 0; i < 16; i++) {
-      if (outerNumbers[i] == 0) {
-        // Generate a random number that's not already used
-        int randomNum;
-        do {
-          randomNum = random.nextInt(maxOuterNumber) + 1;
-        } while (usedOuterNumbers.contains(randomNum));
-
-        outerNumbers[i] = randomNum;
-        usedOuterNumbers.add(randomNum);
-      }
-    }
-
-    return outerNumbers;
-  }
-
-  List<int> _generateDivisionNumbers(Random random) {
-    final maxOuterNumber = targetNumber * 12; // Maximum possible dividend
-
-    // Initialize outer numbers list
-    final outerNumbers = List.filled(16, 0);
-
-    // 1. Choose 4 random numbers from 1-12 as divisors
-    Set<int> selectedInnerNumbers = {};
-    while (selectedInnerNumbers.length < 4) {
-      selectedInnerNumbers.add(random.nextInt(12) + 1);
-    }
-
-    // 2. Calculate the 4 dividends (outer = inner × target)
-    // This ensures outer ÷ inner = target
-    List<int> dividendNumbers =
-        selectedInnerNumbers.map((n) => n * targetNumber).toList();
-
-    // 3. Randomly place the 4 dividend numbers anywhere in the outer ring
-    List<int> outerPositions = List.generate(16, (index) => index);
-    outerPositions.shuffle(random);
-
-    for (int i = 0; i < 4; i++) {
-      outerNumbers[outerPositions[i]] = dividendNumbers[i];
-    }
-
-    // 4. Fill remaining positions with numbers that:
-    //    - Are not duplicates of our chosen dividends
-    //    - Are not duplicates of any previously generated number
-    //    - Are within range 1 to maxOuterNumber
-    Set<int> usedOuterNumbers = Set.from(dividendNumbers);
-
-    for (int i = 0; i < 16; i++) {
-      if (outerNumbers[i] == 0) {
-        // Generate a random number that's not already used
-        int randomNum;
-        do {
-          randomNum = random.nextInt(maxOuterNumber) + 1;
-        } while (usedOuterNumbers.contains(randomNum));
-
-        outerNumbers[i] = randomNum;
-        usedOuterNumbers.add(randomNum);
-      }
-    }
-
-    return outerNumbers;
   }
 
   // Check if equation is correct at the given corner
@@ -419,30 +215,7 @@ class _GameScreenState extends State<GameScreen> {
     _checkAllEquations();
   }
 
-  // Handle tapping on an equation element (corner tiles or equals sign)
-  void _handleEquationTap(int cornerIndex) {
-    // Check if this equation is correct
-    if (_checkEquation(cornerIndex)) {
-      // If it's correct, lock it
-      _lockEquation(cornerIndex);
-    } else {
-      // If it's not correct, show a message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'This equation is not correct. Rotate the rings to make it match.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  // Handle tapping on a ring tile
-  void _handleTileTap(int cornerIndex, int position) {
-    // Same behavior as tapping on an equation element
-    _handleEquationTap(cornerIndex);
-  }
-
+  // Lock an equation when it's correct
   void _lockEquation(int cornerIndex) {
     // If already locked, do nothing
     if (lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
@@ -481,64 +254,130 @@ class _GameScreenState extends State<GameScreen> {
       outerRingModel =
           outerRingModel.copyWithLockedPosition(outerCornerPos, outerNumber);
 
+      // Add star animation
+      _showStarAnimation(cornerIndex);
+
       // Check if all four corners are locked (win condition)
       if (lockedEquations.length == 4) {
         isGameComplete = true;
-        _showWinDialog();
+        Future.delayed(Duration(milliseconds: 1000), () {
+          _showWinDialog();
+        });
       }
     });
 
-    // Provide visual feedback
+    // Provide visual feedback with a colorful message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content:
-            Text('Equation locked! ${lockedEquations.length}/4 completed.'),
+        content: Row(
+          children: [
+            Icon(Icons.star, color: Colors.amber),
+            SizedBox(width: 10),
+            Text(
+              'Great job! ${lockedEquations.length}/4 equations complete!',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
         duration: Duration(seconds: 1),
-        backgroundColor: Colors.green,
+        backgroundColor: operation.color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
   }
 
-  // Show win dialog when all equations are locked
-  void _showWinDialog() {
-    Future.delayed(Duration(milliseconds: 500), () {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: Text('Congratulations!'),
-          content: Text('You have successfully completed all equations!'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(); // Return to home screen
-              },
-              child: Text('Return to Menu'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                // Reset the game with our new API
-                setState(() {
-                  lockedEquations = [];
-                  isGameComplete = false;
+  // Show star animation when an equation is locked
+  void _showStarAnimation(int cornerIndex) {
+    // Calculate the start position (from the corner)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final boardSize = screenWidth * 0.9;
 
-                  // Generate a new target number
-                  final random = Random();
-                  targetNumber =
-                      widget.difficultyLevel.getRandomCenterNumber(random);
+    Offset startPosition;
+    switch (cornerIndex) {
+      case 0: // Top
+        startPosition = Offset(boardSize / 2, 0);
+        break;
+      case 1: // Right
+        startPosition = Offset(boardSize, boardSize / 2);
+        break;
+      case 2: // Bottom
+        startPosition = Offset(boardSize / 2, boardSize);
+        break;
+      case 3: // Left
+        startPosition = Offset(0, boardSize / 2);
+        break;
+      default:
+        startPosition = Offset(boardSize / 2, boardSize / 2);
+    }
 
-                  // Recreate the ring models from scratch
-                  _generateGameNumbers();
-                });
-              },
-              child: Text('Play Again'),
-            ),
-          ],
+    // End position should be at the top progress bar
+    // We'll position it based on the locked equation count
+    final endPosition = Offset(
+      (screenWidth / 5) * lockedEquations.length,
+      60, // Approximate y-position of the progress stars
+    );
+
+    // Add the star animation to the list
+    setState(() {
+      starAnimations.add(
+        StarAnimation(
+          startPosition: startPosition,
+          endPosition: endPosition,
+          onComplete: () {
+            // Remove this animation when it's complete
+            setState(() {
+              starAnimations.removeWhere((element) {
+                if (element is StarAnimation) {
+                  return element.startPosition == startPosition &&
+                      element.endPosition == endPosition;
+                }
+                return false;
+              });
+            });
+          },
         ),
       );
     });
+  }
+
+  // Handle tapping on an equation element (corner tiles or equals sign)
+  void _handleEquationTap(int cornerIndex) {
+    // Check if this equation is correct
+    if (_checkEquation(cornerIndex)) {
+      // If it's correct, lock it
+      _lockEquation(cornerIndex);
+    } else {
+      // If it's not correct, show a message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              SizedBox(width: 10),
+              Text(
+                'Not quite right! Rotate the rings to make a correct equation.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.red.shade400,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
+  // Handle tapping on a ring tile
+  void _handleTileTap(int cornerIndex, int position) {
+    // Same behavior as tapping on an equation element
+    _handleEquationTap(cornerIndex);
   }
 
   // Check all equations and show debug information
@@ -560,6 +399,195 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  // Show hint button functionality
+  void _showHint() {
+    // Find an unlocked corner that could be locked with the current position
+    bool foundHint = false;
+    for (int i = 0; i < 4; i++) {
+      if (!lockedEquations.any((eq) => eq.cornerIndex == i) &&
+          _checkEquation(i)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.lightbulb, color: Colors.yellow),
+                SizedBox(width: 10),
+                Text(
+                  'There\'s a correct equation at corner ${i + 1}. Tap to lock it!',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            duration: Duration(seconds: 3),
+            backgroundColor: operation.color,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+        foundHint = true;
+        break;
+      }
+    }
+
+    if (!foundHint) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.touch_app, color: Colors.white),
+              SizedBox(width: 10),
+              Text(
+                'Keep rotating the rings until the equations match!',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.orange.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GameScreenUI(
+      operationName: widget.operationName,
+      difficultyLevel: widget.difficultyLevel,
+      targetNumber: targetNumber,
+      operation: operation,
+      backgroundGradient: backgroundGradient,
+      innerRingModel: innerRingModel,
+      outerRingModel: outerRingModel,
+      lockedEquations: lockedEquations,
+      starAnimations: starAnimations,
+      isGameComplete: isGameComplete,
+      onUpdateInnerRing: _updateInnerRing,
+      onUpdateOuterRing: _updateOuterRing,
+      onTileTap: _handleTileTap,
+      onEquationTap: _handleEquationTap,
+      onShowHint: _showHint,
+      onShowHelp: _showHelpDialog,
+    );
+  }
+
+  // Win dialog shown when all four corners are completed
+  void _showWinDialog() {
+    // Show a celebratory dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        backgroundColor: Colors.white.withOpacity(0.9),
+        title: Column(
+          children: [
+            Text(
+              '🎉 Congratulations! 🎉',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: operation.color,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                4,
+                (index) => Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 5),
+                  child: StarWidget(
+                    size: 30,
+                    color: Color(0xFFFFD700),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'You solved all four equations!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Score: 4/4 Stars',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange.shade800,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(context).pop(); // Return to home screen
+            },
+            child: Text(
+              'Return to Menu',
+              style: TextStyle(
+                color: Colors.grey.shade800,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              // Reset the game with our new API
+              setState(() {
+                lockedEquations = [];
+                isGameComplete = false;
+                starAnimations = [];
+
+                // Generate a new target number
+                final random = Random();
+                targetNumber =
+                    widget.difficultyLevel.getRandomCenterNumber(random);
+
+                // Recreate the ring models from scratch
+                _generateGameNumbers();
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: operation.color,
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+            ),
+            child: Text(
+              'Play Again! 🎮',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Help dialog with game instructions
   void _showHelpDialog() {
     String equationFormat;
     String additionalInfo = '';
@@ -589,28 +617,51 @@ class _GameScreenState extends State<GameScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('How to Play'),
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: operation.color),
+            SizedBox(width: 10),
+            Text('How to Play'),
+          ],
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-                '1. Rotate the rings to form correct equations at the four corners.'),
-            Text('2. Each corner should satisfy: $equationFormat'),
-            Text(
-                '3. When a corner has a correct equation, tap any part of it to lock it.'),
-            Text(
-                '4. Locked equations stay in place while you continue rotating to solve the remaining corners.'),
-            Text('5. Complete all four corners to win!'),
+            _buildHelpItem('1',
+                'Rotate the rings to form correct equations at the four corners.'),
+            _buildHelpItem('2', 'Each corner should satisfy: $equationFormat'),
+            _buildHelpItem('3',
+                'When a corner has a correct equation, tap any part of it to lock it.'),
+            _buildHelpItem('4',
+                'Locked equations stay in place while you continue rotating to solve the remaining corners.'),
+            _buildHelpItem('5', 'Complete all four corners to win!'),
             if (additionalInfo.isNotEmpty) ...[
               SizedBox(height: 10),
-              Text(additionalInfo),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: operation.color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(additionalInfo),
+              ),
             ],
             SizedBox(height: 16),
             Text('Note:', style: TextStyle(fontWeight: FontWeight.bold)),
-            Text('• For addition and multiplication: inner → outer'),
-            Text('• For subtraction and division: outer → inner'),
-            Text('This reflects how these operations relate to each other!'),
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• For addition and multiplication: inner → outer'),
+                  Text('• For subtraction and division: outer → inner'),
+                ],
+              ),
+            ),
             SizedBox(height: 10),
             (widget.operationName == 'multiplication' ||
                         widget.operationName == 'division') &&
@@ -623,253 +674,56 @@ class _GameScreenState extends State<GameScreen> {
           ],
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text('Got it!'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: operation.color,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final boardSize = screenWidth * 0.9;
-    final innerRingSize = boardSize * 0.6;
-
-    final outerTileSize = boardSize * 0.12;
-    final innerTileSize = innerRingSize * 0.16;
-
-    // Determine the appropriate title based on operation
-    String title;
-    switch (widget.operationName) {
-      case 'addition':
-        title = 'Addition - Target: $targetNumber';
-        break;
-      case 'subtraction':
-        title = 'Subtraction - Target: $targetNumber';
-        break;
-      case 'division':
-        title = 'Division - Target: $targetNumber';
-        break;
-      case 'multiplication':
-      default:
-        title = 'Multiplication - Target: $targetNumber';
-        break;
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: operation.color,
-        actions: [
-          // Help button
-          IconButton(
-            icon: Icon(Icons.help_outline),
-            onPressed: _showHelpDialog,
+  Widget _buildHelpItem(String number, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 25,
+            height: 25,
+            decoration: BoxDecoration(
+              color: operation.color,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(text),
           ),
         ],
-      ),
-      body: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '${widget.difficultyLevel.displayName} Mode',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: operation.color,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Rotate the rings to make equations',
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 16),
-
-            // Progress indicator
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Progress: '),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: lockedEquations.length / 4,
-                        minHeight: 10,
-                        backgroundColor: Colors.grey.shade200,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(operation.color),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Text('${lockedEquations.length}/4'),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 20),
-
-            // Game board
-            Container(
-              width: boardSize,
-              height: boardSize,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Outer ring
-                  SimpleRing(
-                    ringModel: outerRingModel,
-                    size: boardSize,
-                    tileSize: outerTileSize,
-                    isInner: false,
-                    onRotateSteps: _updateOuterRing,
-                    lockedEquations: lockedEquations,
-                    onTileTap: _handleTileTap,
-                  ),
-
-                  // Inner ring
-                  SimpleRing(
-                    ringModel: innerRingModel,
-                    size: innerRingSize,
-                    tileSize: innerTileSize,
-                    isInner: true,
-                    onRotateSteps: _updateInnerRing,
-                    lockedEquations: lockedEquations,
-                    onTileTap: _handleTileTap,
-                  ),
-
-                  // Center target number
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      color: operation.color,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(2, 2),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$targetNumber',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Equation symbols (properly positioned)
-                  EquationLayout(
-                    boardSize: boardSize,
-                    innerRingSize: innerRingSize,
-                    outerRingSize: boardSize,
-                    operation: operation,
-                    lockedEquations: lockedEquations,
-                    onEquationTap: _handleEquationTap,
-                  ),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 20),
-
-            // Locked equations display
-            if (lockedEquations.isNotEmpty)
-              Container(
-                padding: EdgeInsets.all(10),
-                margin: EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Locked Equations:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 5),
-                    ...lockedEquations
-                        .map((eq) => Row(
-                              children: [
-                                Icon(Icons.lock,
-                                    size: 16, color: operation.color),
-                                SizedBox(width: 5),
-                                Text(eq.equationString),
-                              ],
-                            ))
-                        .toList(),
-                  ],
-                ),
-              ),
-
-            Spacer(),
-
-            // Hint button
-            if (!isGameComplete)
-              TextButton.icon(
-                onPressed: () {
-                  // Find an unlocked corner that could be locked with the current position
-                  bool foundHint = false;
-                  for (int i = 0; i < 4; i++) {
-                    if (!lockedEquations.any((eq) => eq.cornerIndex == i) &&
-                        _checkEquation(i)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              'There\'s a correct equation at corner ${i + 1}. Tap to lock it!'),
-                          duration: Duration(seconds: 3),
-                          backgroundColor: operation.color,
-                        ),
-                      );
-                      foundHint = true;
-                      break;
-                    }
-                  }
-
-                  if (!foundHint) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Keep rotating the rings until the equations match!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-                icon: Icon(Icons.lightbulb_outline),
-                label: Text('Hint'),
-              ),
-
-            SizedBox(height: 10),
-          ],
-        ),
       ),
     );
   }
 }
 
-// Add this extension method somewhere in your file or in a utilities file
+// Add this extension method
 extension StringExtension on String {
   String capitalize() {
     return "${this[0].toUpperCase()}${this.substring(1)}";
