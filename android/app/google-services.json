@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "595215428527",
+    "project_id": "math-skills-game",
+    "storage_bucket": "math-skills-game.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:595215428527:android:afd8122286647a4b569d5a",
+        "android_client_info": {
+          "package_name": "com.sasco.mathskills"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdYhufVmmCrl0i6LHgW9CGwkrab5Ru5UY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
