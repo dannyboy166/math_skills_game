@@ -4,14 +4,14 @@ class ClickableEquals extends StatefulWidget {
   final VoidCallback onTap;
   final bool isLocked;
   final double size;
-  final Color? color;  // Added color parameter
+  final Color? color;
 
   const ClickableEquals({
     Key? key,
     required this.onTap,
     this.isLocked = false,
     this.size = 30.0,
-    this.color,  // Default to null, will use red if not specified
+    this.color,
   }) : super(key: key);
 
   @override
@@ -83,7 +83,6 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
               height: widget.size,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                // Add a subtle background to make the equals sign more visible
                 color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
@@ -102,19 +101,19 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
                         children: [
                           Container(
                             width: widget.size * 0.6,
-                            height: widget.size * 0.15,
+                            height: widget.size * 0.115, // Reduced from 0.15 to 0.1
                             decoration: BoxDecoration(
                               color: textColor.withOpacity(textOpacity),
-                              borderRadius: BorderRadius.circular(2),
+                              borderRadius: BorderRadius.circular(1), // Smaller radius for sharper edges
                             ),
                           ),
-                          SizedBox(height: widget.size * 0.15),
+                          SizedBox(height: widget.size * 0.15), // Kept the same spacing
                           Container(
                             width: widget.size * 0.6,
-                            height: widget.size * 0.15,
+                            height: widget.size * 0.115, // Reduced from 0.15 to 0.1
                             decoration: BoxDecoration(
                               color: textColor.withOpacity(textOpacity),
-                              borderRadius: BorderRadius.circular(2),
+                              borderRadius: BorderRadius.circular(1), // Smaller radius for sharper edges
                             ),
                           ),
                         ],
