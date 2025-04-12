@@ -4,12 +4,14 @@ class ClickableEquals extends StatefulWidget {
   final VoidCallback onTap;
   final bool isLocked;
   final double size;
+  final Color? color;  // Added color parameter
 
   const ClickableEquals({
     Key? key,
     required this.onTap,
     this.isLocked = false,
     this.size = 30.0,
+    this.color,  // Default to null, will use red if not specified
   }) : super(key: key);
 
   @override
@@ -63,8 +65,8 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
   Widget build(BuildContext context) {
     // Adjust opacity based on locked state
     final textOpacity = widget.isLocked ? 0.7 : 1.0;
-    // Use a softer shade of red when locked
-    final textColor = widget.isLocked ? Colors.grey : Colors.red;
+    // Use a specified color or default to red
+    final textColor = widget.isLocked ? Colors.grey : (widget.color ?? Colors.red);
 
     return AnimatedBuilder(
       animation: _scaleAnimation,
@@ -80,6 +82,11 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
               width: widget.size,
               height: widget.size,
               alignment: Alignment.center,
+              decoration: BoxDecoration(
+                // Add a subtle background to make the equals sign more visible
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -87,16 +94,30 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
                   widget.isLocked
                     ? Icon(
                         Icons.lock,
-                        size: 24,
+                        size: widget.size * 0.8,
                         color: Colors.grey.shade600,
                       )
-                    : Text(
-                        "=",
-                        style: TextStyle(
-                          fontSize: 30,
-                          color: textColor.withOpacity(textOpacity),
-                          fontWeight: FontWeight.bold,
-                        ),
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: widget.size * 0.6,
+                            height: widget.size * 0.15,
+                            decoration: BoxDecoration(
+                              color: textColor.withOpacity(textOpacity),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          SizedBox(height: widget.size * 0.15),
+                          Container(
+                            width: widget.size * 0.6,
+                            height: widget.size * 0.15,
+                            decoration: BoxDecoration(
+                              color: textColor.withOpacity(textOpacity),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ],
                       ),
                 ],
               ),

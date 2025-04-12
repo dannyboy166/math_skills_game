@@ -168,7 +168,7 @@ class GameScreenUI extends StatelessWidget {
                               lockedEquations: lockedEquations,
                               onTileTap: onTileTap,
                               transitionRate: 1.0,
-                              margin: margin, // 👈 Add this
+                              margin: margin,
                             ),
 
                             // Inner ring
@@ -181,7 +181,7 @@ class GameScreenUI extends StatelessWidget {
                               lockedEquations: lockedEquations,
                               onTileTap: onTileTap,
                               transitionRate: 1.0,
-                              margin: margin, // 👈 Add this too
+                              margin: margin,
                             ),
 
                             // Center target number with enhanced styling
@@ -191,8 +191,7 @@ class GameScreenUI extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: operation.color,
                                 shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 4),
+                                border: Border.all(color: Colors.white, width: 4),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black26,
@@ -229,7 +228,7 @@ class GameScreenUI extends StatelessWidget {
                               ),
                             ),
 
-                            // Equation symbols
+                            // Equation symbols - using improved layout
                             EquationLayout(
                               boardSize: boardSize,
                               innerRingSize: innerRingSize,
