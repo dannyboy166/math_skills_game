@@ -3,9 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
+import 'package:math_skills_game/models/level_completion_model.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
 import 'dart:math';
+import 'dart:async'; // Add Timer import
 import '../models/ring_model.dart';
 import '../models/operation_config.dart';
 import '../models/locked_equation.dart';
@@ -46,6 +48,13 @@ class _GameScreenState extends State<GameScreen> {
   // Background gradient colors based on operation
   late List<Color> backgroundGradient;
 
+  // Game timer variables
+  DateTime? _startTime;
+  DateTime? _endTime;
+  Timer? _gameTimer;
+  int _elapsedTimeMs = 0;
+  bool _isTimerRunning = false;
+
   @override
   void initState() {
     super.initState();
@@ -66,6 +75,30 @@ class _GameScreenState extends State<GameScreen> {
 
     // Generate game numbers
     _generateGameNumbers();
+
+    // Start game timer
+    _startGameTimer();
+  }
+
+  void _startGameTimer() {
+    _startTime = DateTime.now();
+    _isTimerRunning = true;
+
+    // Update timer every 100ms
+    _gameTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+      if (_isTimerRunning) {
+        setState(() {
+          _elapsedTimeMs =
+              DateTime.now().difference(_startTime!).inMilliseconds;
+        });
+      }
+    });
+  }
+
+  void _stopGameTimer() {
+    _isTimerRunning = false;
+    _endTime = DateTime.now();
+    _gameTimer?.cancel();
   }
 
   void _setBackgroundGradient() {
@@ -262,6 +295,7 @@ class _GameScreenState extends State<GameScreen> {
       // Check if all four corners are locked (win condition)
       if (lockedEquations.length == 4) {
         isGameComplete = true;
+        _stopGameTimer(); // Stop timer when game is complete
         Future.delayed(Duration(milliseconds: 1000), () {
           _showWinDialog();
         });
@@ -473,6 +507,12 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   @override
+  void dispose() {
+    _gameTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GameScreenUI(
       operationName: widget.operationName,
@@ -485,6 +525,7 @@ class _GameScreenState extends State<GameScreen> {
       lockedEquations: lockedEquations,
       starAnimations: starAnimations,
       isGameComplete: isGameComplete,
+      elapsedTimeMs: _elapsedTimeMs,
       onUpdateInnerRing: _updateInnerRing,
       onUpdateOuterRing: _updateOuterRing,
       onTileTap: _handleTileTap,
@@ -495,18 +536,32 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _showWinDialog() {
-    // Add this code here, at the beginning of the method
+    // Calculate star rating based on completion time
+    final completionTimeMs = _endTime!.difference(_startTime!).inMilliseconds;
+    final starRating = StarRatingCalculator.calculateStars(widget.operationName,
+        widget.difficultyLevel.displayName, completionTimeMs);
+
+    // Format time for display
+    final formattedTime = StarRatingCalculator.formatTime(completionTimeMs);
+
     // Update game statistics in user profile
     if (FirebaseAuth.instance.currentUser != null) {
       try {
         final UserService userService = UserService();
-        userService.updateGameStats(
+
+        // Save level completion with star rating
+        final completion = LevelCompletionModel(
+          operationName: widget.operationName,
+          difficultyName: widget.difficultyLevel.displayName,
+          targetNumber: targetNumber,
+          stars: starRating,
+          completionTimeMs: completionTimeMs,
+          completedAt: DateTime.now(),
+        );
+
+        userService.saveLevelCompletion(
           FirebaseAuth.instance.currentUser!.uid,
-          widget.operationName,
-          widget.difficultyLevel.displayName,
-          targetNumber,
-          lockedEquations
-              .length, // Number of stars (assuming each equation = 1 star)
+          completion,
         );
       } catch (e) {
         print("Error updating game stats: $e");
@@ -522,7 +577,7 @@ class _GameScreenState extends State<GameScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        backgroundColor: Colors.white.withOpacity(0.9),
+        backgroundColor: Colors.white.withOpacity(0.95),
         title: Column(
           children: [
             Text(
@@ -535,18 +590,21 @@ class _GameScreenState extends State<GameScreen> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 10),
-            // Fixed: Wrap in a flexible container and reduce padding or star size
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 5, // horizontal space between stars
-              runSpacing: 5, // vertical space between lines
-              children: List.generate(
-                4,
-                (index) => StarWidget(
-                  size: 25, // Reduced from 30
-                  color: Color(0xFFFFD700),
-                ),
-              ),
+            // Star rating display
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (index) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  child: StarWidget(
+                    size: 30,
+                    color: index < starRating
+                        ? Color(0xFFFFD700) // Gold for earned stars
+                        : Colors.grey
+                            .withOpacity(0.3), // Gray for unearned stars
+                  ),
+                );
+              }),
             ),
           ],
         ),
@@ -558,13 +616,68 @@ class _GameScreenState extends State<GameScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 18),
             ),
+            SizedBox(height: 15),
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: operation.color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.timer, color: operation.color),
+                  SizedBox(width: 8),
+                  Text(
+                    'Your Time: $formattedTime',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: operation.color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             SizedBox(height: 20),
-            Text(
-              'Score: 4/4 Stars',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.orange.shade800,
+            // Star rating explanation
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    starRating == 3
+                        ? 'Amazing Speed!'
+                        : (starRating == 2
+                            ? 'Great Job!'
+                            : (starRating == 1
+                                ? 'Well Done!'
+                                : 'Keep Practicing!')),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.amber.shade800,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    starRating == 3
+                        ? 'You completed the level super fast! Can you do it again?'
+                        : (starRating == 2
+                            ? 'You completed the level quickly! Try again to get 3 stars!'
+                            : (starRating == 1
+                                ? 'You completed the level! Try again to solve it faster!'
+                                : 'Try again to improve your speed!')),
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: 15),
@@ -652,6 +765,10 @@ class _GameScreenState extends State<GameScreen> {
 
                 // Recreate the ring models from scratch
                 _generateGameNumbers();
+
+                // Reset and restart timer
+                _elapsedTimeMs = 0;
+                _startGameTimer();
               });
             },
             style: ElevatedButton.styleFrom(
@@ -728,6 +845,7 @@ class _GameScreenState extends State<GameScreen> {
             _buildHelpItem('4',
                 'Locked equations stay in place while you continue rotating to solve the remaining corners.'),
             _buildHelpItem('5', 'Complete all four corners to win!'),
+            _buildHelpItem('6', 'Complete levels faster to earn more stars!'),
             if (additionalInfo.isNotEmpty) ...[
               SizedBox(height: 10),
               Container(
@@ -748,6 +866,7 @@ class _GameScreenState extends State<GameScreen> {
                 children: [
                   Text('• For addition and multiplication: inner → outer'),
                   Text('• For subtraction and division: outer → inner'),
+                  Text('• Faster completion times earn more stars!'),
                 ],
               ),
             ),

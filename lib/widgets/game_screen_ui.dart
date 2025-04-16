@@ -1,5 +1,6 @@
 // lib/widgets/game_screen_ui.dart
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/models/level_completion_model.dart';
 import 'package:math_skills_game/widgets/progress_stars.dart';
 import '../models/difficulty_level.dart';
 import '../models/operation_config.dart';
@@ -21,6 +22,7 @@ class GameScreenUI extends StatelessWidget {
   final List<LockedEquation> lockedEquations;
   final List<Widget> starAnimations;
   final bool isGameComplete;
+  final int elapsedTimeMs; // Added for timer display
 
   // Callback functions for interactions
   final Function(int) onUpdateInnerRing;
@@ -42,6 +44,7 @@ class GameScreenUI extends StatelessWidget {
     required this.lockedEquations,
     required this.starAnimations,
     required this.isGameComplete,
+    required this.elapsedTimeMs, // Added
     required this.onUpdateInnerRing,
     required this.onUpdateOuterRing,
     required this.onTileTap,
@@ -78,6 +81,9 @@ class GameScreenUI extends StatelessWidget {
         break;
     }
 
+    // Format time display
+    final formattedTime = StarRatingCalculator.formatTime(elapsedTimeMs);
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -96,6 +102,30 @@ class GameScreenUI extends StatelessWidget {
           ),
         ),
         actions: [
+          // Timer display in app bar
+          Center(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              margin: EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.timer, size: 18, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text(
+                    formattedTime,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           // Help button
           IconButton(
             icon: Icon(Icons.help_outline),
@@ -119,12 +149,10 @@ class GameScreenUI extends StatelessWidget {
               // Main content column with better space management
               Column(
                 children: [
-                  // Top section: title and instructions
+                  // Top section: title, timer and instructions
                   Column(
                     children: [
-                      SizedBox(
-                        height: 20,
-                      ),
+                      SizedBox(height: 20),
                       Text(
                         '${difficultyLevel.displayName} Mode',
                         style: TextStyle(
@@ -134,10 +162,24 @@ class GameScreenUI extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 8),
-                      Text(
-                        'Rotate the rings to make equations',
-                        style: TextStyle(fontSize: 16),
+                      
+                      // Star rating guide
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.timer, size: 16, color: Colors.amber.shade800),
+                          SizedBox(width: 4),
+                          Text(
+                            'Complete faster to earn more stars!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.amber.shade800,
+                            ),
+                          ),
+                        ],
                       ),
+                      
                       SizedBox(height: 16),
                       // Progress stars at the top
                       ProgressStars(
@@ -319,7 +361,7 @@ class GameScreenUI extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           Text(
-            '${lockedEquations.length}/4 equations solved',
+            '${lockedEquations.length}/4 equations solved in ${StarRatingCalculator.formatTime(elapsedTimeMs)}',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,

@@ -1,6 +1,7 @@
 // lib/services/user_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../models/level_completion_model.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -39,7 +40,8 @@ class UserService {
     String operation, 
     String difficulty, 
     int targetNumber, 
-    int stars
+    int stars,
+    {int completionTimeMs = 0}
   ) async {
     final userRef = _firestore.collection('users').doc(userId);
     
@@ -55,6 +57,7 @@ class UserService {
           'targetNumber': targetNumber,
           'completedAt': FieldValue.serverTimestamp(),
           'stars': stars,
+          'completionTimeMs': completionTimeMs,
         }
       ]),
     });
@@ -71,5 +74,83 @@ class UserService {
     if (newLevel != userData.data()?['level']) {
       await userRef.update({'level': newLevel});
     }
+  }
+
+  // Save level completion data with star rating
+  Future<void> saveLevelCompletion(
+    String userId,
+    LevelCompletionModel completion
+  ) async {
+    final userRef = _firestore.collection('users').doc(userId);
+    
+    // Create a level ID for tracking best scores
+    final levelId = '${completion.operationName}_${completion.difficultyName}_${completion.targetNumber}';
+    
+    // First check if this level has been completed before and with what score
+    final levelRef = userRef.collection('levelCompletions').doc(levelId);
+    final levelDoc = await levelRef.get();
+    
+    if (levelDoc.exists) {
+      final existingData = levelDoc.data() as Map<String, dynamic>;
+      final existingStars = existingData['stars'] ?? 0;
+      final existingTime = existingData['completionTimeMs'] ?? 0;
+      
+      // Only update if the new star rating is higher OR
+      // if the star rating is the same but completion time is faster
+      if (completion.stars > existingStars || 
+         (completion.stars == existingStars && completion.completionTimeMs < existingTime)) {
+        
+        await levelRef.set(completion.toMap());
+      }
+    } else {
+      // First time completing this level
+      await levelRef.set(completion.toMap());
+    }
+    
+    // Also update the total stars
+    await updateGameStats(
+      userId, 
+      completion.operationName, 
+      completion.difficultyName, 
+      completion.targetNumber, 
+      completion.stars,
+      completionTimeMs: completion.completionTimeMs
+    );
+  }
+
+  // Get all level completions for a user
+  Future<List<LevelCompletionModel>> getLevelCompletions(String userId) async {
+    final querySnapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('levelCompletions')
+        .get();
+    
+    return querySnapshot.docs
+        .map((doc) => LevelCompletionModel.fromDocument(doc))
+        .toList();
+  }
+  
+  // Get best completion for a specific level
+  Future<LevelCompletionModel?> getBestLevelCompletion(
+    String userId, 
+    String operation,
+    String difficulty,
+    int targetNumber
+  ) async {
+    final levelId = '${operation}_${difficulty}_${targetNumber}';
+    
+    final docSnapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('levelCompletions')
+        .doc(levelId)
+        .get();
+    
+    if (docSnapshot.exists) {
+      return LevelCompletionModel.fromDocument(docSnapshot);
+    }
+    
+    return null;
   }
 }
