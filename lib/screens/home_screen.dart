@@ -1,8 +1,8 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'dart:math';
 import 'game_screen.dart';
-import '../models/difficulty_level.dart'; // Import from models instead of defining locally
+import '../models/difficulty_level.dart';
+import '../services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -15,12 +15,22 @@ class _HomeScreenState extends State<HomeScreen> {
   String selectedOperation = 'addition';
   DifficultyLevel selectedLevel = DifficultyLevel.standard;
   int? selectedMultiplicationTable;
+  final AuthService _authService = AuthService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Math Skills Game'),
+        actions: [
+          // Add settings button to the app bar
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              _showSettingsDialog(context);
+            },
+          ),
+        ],
       ),
       body: Container(
         padding: EdgeInsets.all(20),
@@ -498,5 +508,49 @@ class _HomeScreenState extends State<HomeScreen> {
     if ([3, 4, 6, 11].contains(tableNumber)) return Colors.blue.shade600;
     if ([7, 8, 9, 12].contains(tableNumber)) return Colors.orange.shade600;
     return Colors.red.shade600;
+  }
+
+  void _showSettingsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Settings'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // User info
+              if (_authService.currentUser != null) ...[
+                Text(
+                  'Signed in as: ${_authService.currentUser?.displayName ?? 'User'}',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 20),
+              ],
+
+              // Logout button
+              ListTile(
+                leading: Icon(Icons.logout, color: Colors.red),
+                title: Text('Logout'),
+                onTap: () async {
+                  await _authService.signOut();
+                  Navigator.pop(context); // Close the dialog
+                },
+              ),
+
+              // You can add more settings options here later
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
