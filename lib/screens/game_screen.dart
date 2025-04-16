@@ -1,7 +1,9 @@
 // lib/screens/game_screen.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
+import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
 import 'dart:math';
 import '../models/ring_model.dart';
@@ -492,9 +494,27 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-// Win dialog shown when all four corners are completed
   void _showWinDialog() {
-    // Show a celebratory dialog
+    // Add this code here, at the beginning of the method
+    // Update game statistics in user profile
+    if (FirebaseAuth.instance.currentUser != null) {
+      try {
+        final UserService userService = UserService();
+        userService.updateGameStats(
+          FirebaseAuth.instance.currentUser!.uid,
+          widget.operationName,
+          widget.difficultyLevel.displayName,
+          targetNumber,
+          lockedEquations
+              .length, // Number of stars (assuming each equation = 1 star)
+        );
+      } catch (e) {
+        print("Error updating game stats: $e");
+        // Don't show error to user to avoid disrupting win experience
+      }
+    }
+
+    // Show a celebratory dialog (this part already exists in your code)
     showDialog(
       context: context,
       barrierDismissible: false,

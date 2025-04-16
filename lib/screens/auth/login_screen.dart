@@ -96,6 +96,119 @@ class _LoginScreenState extends State<LoginScreen> {
     return 'An error occurred. Please try again.';
   }
 
+  void _showForgotPasswordDialog(BuildContext context) {
+    final TextEditingController resetEmailController = TextEditingController();
+    resetEmailController.text = _emailController.text;
+    bool isLoading = false;
+    String errorMessage = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Reset Password'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Enter your email address and we will send you a password reset link.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: resetEmailController,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  if (errorMessage.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        errorMessage,
+                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Cancel'),
+                ),
+                isLoading
+                    ? Container(
+                        width: 20,
+                        height: 20,
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : ElevatedButton(
+                        onPressed: () async {
+                          if (resetEmailController.text.trim().isEmpty) {
+                            setState(() {
+                              errorMessage = 'Please enter your email address';
+                            });
+                            return;
+                          }
+
+                          setState(() {
+                            isLoading = true;
+                            errorMessage = '';
+                          });
+
+                          try {
+                            await _authService.resetPassword(
+                              resetEmailController.text.trim(),
+                            );
+
+                            Navigator.of(dialogContext).pop();
+
+                            // Show success message
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Password reset email sent. Please check your inbox.',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } catch (e) {
+                            setState(() {
+                              isLoading = false;
+                              if (e is FirebaseAuthException) {
+                                if (e.code == 'user-not-found') {
+                                  errorMessage =
+                                      'No user found with this email';
+                                } else if (e.code == 'invalid-email') {
+                                  errorMessage = 'Invalid email address';
+                                } else {
+                                  errorMessage =
+                                      'An error occurred: ${e.message}';
+                                }
+                              } else {
+                                errorMessage = 'Failed to send reset email';
+                              }
+                            });
+                          }
+                        },
+                        child: Text('Send Reset Link'),
+                      ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -178,8 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        // Navigate to forgot password screen
-                        // You can implement this later
+                        _showForgotPasswordDialog(context);
                       },
                       child: Text('Forgot Password?'),
                     ),

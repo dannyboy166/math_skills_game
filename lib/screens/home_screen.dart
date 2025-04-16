@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/screens/profile_screen.dart';
 import 'dart:math';
 import 'game_screen.dart';
 import '../models/difficulty_level.dart';
@@ -23,9 +24,23 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text('Math Skills Game'),
         actions: [
-          // Add settings button to the app bar
+          // Add profile button
+          IconButton(
+            icon: Icon(Icons.person),
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfileScreen(),
+                ),
+              );
+            },
+          ),
+          // Settings button
           IconButton(
             icon: Icon(Icons.settings),
+            tooltip: 'Settings',
             onPressed: () {
               _showSettingsDialog(context);
             },
@@ -528,6 +543,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(height: 20),
               ],
 
+              // Profile button
+              ListTile(
+                leading: Icon(Icons.person, color: Colors.blue),
+                title: Text('View Profile'),
+                onTap: () {
+                  Navigator.pop(context); // Close the dialog
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(),
+                    ),
+                  );
+                },
+              ),
+
               // Logout button
               ListTile(
                 leading: Icon(Icons.logout, color: Colors.red),
@@ -537,8 +567,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(context); // Close the dialog
                 },
               ),
-
-              // You can add more settings options here later
             ],
           ),
           actions: [
