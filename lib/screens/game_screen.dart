@@ -1,8 +1,10 @@
 // lib/screens/game_screen.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
+import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
 import 'dart:math';
 import 'dart:async'; // Add Timer import
@@ -427,19 +429,14 @@ class _GameScreenState extends State<GameScreen> {
   // Check all equations and show debug information
   void _checkAllEquations() {
     for (int i = 0; i < 4; i++) {
-      final isCorrect = _checkEquation(i);
-      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == i);
-      print(
-          'Corner $i equation: ${isCorrect ? "CORRECT" : "INCORRECT"} ${isLocked ? "LOCKED" : ""}');
+      _checkEquation(i);
+      lockedEquations.any((eq) => eq.cornerIndex == i);
 
       // Print the equation details
       final outerCornerPos = outerRingModel.cornerIndices[i];
       final innerCornerPos = innerRingModel.cornerIndices[i];
-      final outerNumber = outerRingModel.getNumberAtPosition(outerCornerPos);
-      final innerNumber = innerRingModel.getNumberAtPosition(innerCornerPos);
-
-      print(
-          operation.getEquationString(innerNumber, targetNumber, outerNumber));
+      outerRingModel.getNumberAtPosition(outerCornerPos);
+      innerRingModel.getNumberAtPosition(innerCornerPos);
     }
   }
 
@@ -535,103 +532,125 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _showWinDialog() {
-    // Calculate completion time
-    final completionTimeMs = _endTime!.difference(_startTime!).inMilliseconds;
-    final starRating = StarRatingCalculator.calculateStars(widget.operationName,
-        widget.difficultyLevel.displayName, completionTimeMs);
+  Future<void> _showWinDialog() async {
+    try {
+      print("Starting _showWinDialog");
 
-    // Show dialog without any Firebase operations
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            'Success!',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: operation.color,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Icon(
-                      Icons.star,
-                      size: 30,
-                      color: index < starRating
-                          ? Colors.amber
-                          : Colors.grey.withOpacity(0.3),
-                    ),
-                  );
-                }),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds',
+      if (_startTime == null || _endTime == null) {
+        print("Start or End time is null");
+        return;
+      }
+
+      final completionTimeMs = _endTime!.difference(_startTime!).inMilliseconds;
+      print("Completion time calculated: $completionTimeMs ms");
+
+      final starRating = StarRatingCalculator.calculateStars(
+        widget.operationName,
+        widget.difficultyLevel.displayName,
+        completionTimeMs,
+      );
+      print("Star rating calculated: $starRating");
+
+      // ✅ Show dialog first (non-blocking)
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: Text(
+                'Success!',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: operation.color,
+                ),
                 textAlign: TextAlign.center,
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                Navigator.of(context).pop();
-              },
-              child: Text('Return to Menu'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                setState(() {
-                  // Reset game
-                  lockedEquations = [];
-                  isGameComplete = false;
-                  starAnimations = [];
-
-                  // Generate a new target number
-                  final random = Random();
-                  targetNumber =
-                      widget.difficultyLevel.getRandomCenterNumber(random);
-
-                  // Recreate the ring models
-                  _generateGameNumbers();
-
-                  // Reset and restart timer
-                  _elapsedTimeMs = 0;
-                  _startGameTimer();
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: operation.color,
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(3, (index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          Icons.star,
+                          size: 30,
+                          color: index < starRating
+                              ? Colors.amber
+                              : Colors.grey.withOpacity(0.3),
+                        ),
+                      );
+                    }),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              child: Text('Play Again!'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Return to Menu'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    setState(() {
+                      lockedEquations = [];
+                      isGameComplete = false;
+                      starAnimations = [];
+
+                      final random = Random();
+                      targetNumber =
+                          widget.difficultyLevel.getRandomCenterNumber(random);
+
+                      _generateGameNumbers();
+                      _elapsedTimeMs = 0;
+                      _startGameTimer();
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: operation.color,
+                  ),
+                  child: Text('Play Again!'),
+                ),
+              ],
+            );
+          },
         );
-      },
-    );
+      }
 
-    // Very simple Firebase stats update
-    try {
-      // Only log the attempt, don't actually do it
-      print("Would have tried to update Firebase stats here");
+      // ✅ Firebase save in the background (doesn't block UI)
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        final userService = UserService();
+        final levelCompletion = LevelCompletionModel(
+          operationName: widget.operationName,
+          difficultyName: widget.difficultyLevel.displayName,
+          targetNumber: targetNumber,
+          stars: starRating,
+          completionTimeMs: completionTimeMs,
+          completedAt: DateTime.now(),
+        );
 
-      // Optional: Add a way to track whether Firebase is enabled in your app
-      // You could add a boolean flag like this:
-      // bool _enableFirebaseStats = false;
-      // Then only try to update stats if this is true
-    } catch (e) {
-      print("Error logging Firebase stats intention: $e");
+        // Use Timestamp.fromDate instead of serverTimestamp
+        await userService.saveLevelCompletion(userId, levelCompletion);
+        print("Level completion saved successfully");
+      } else {
+        print("User not signed in");
+      }
+    } catch (e, stack) {
+      print("🔥 Crash caught in _showWinDialog");
+      print("Error: $e");
+      print("Stack trace:\n$stack");
     }
   }
 
