@@ -25,6 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -37,7 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .doc(userId)
             .get();
 
-        if (docSnapshot.exists) {
+        if (docSnapshot.exists && mounted) {
           setState(() {
             _userData = docSnapshot.data();
             _displayNameController.text = _userData?['displayName'] ?? '';
@@ -45,33 +46,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     } catch (e) {
-      print('Error loading user data: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load profile data')),
-      );
+      if (mounted) {
+        print('Error loading user data: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile data')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _updateDisplayName() async {
     if (_displayNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Display name cannot be empty')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Display name cannot be empty')),
+        );
+      }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       final userId = _authService.currentUser?.uid;
       if (userId != null) {
-        // Update in Firestore
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
@@ -79,28 +87,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'displayName': _displayNameController.text.trim(),
         });
 
-        // Update Firebase Auth display name
         await _authService.currentUser?.updateDisplayName(
           _displayNameController.text.trim(),
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Profile updated successfully')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Profile updated successfully')),
+          );
+        }
 
-        // Reload user data
         await _loadUserData();
       }
     } catch (e) {
-      print('Error updating profile: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update profile')),
-      );
+      if (mounted) {
+        print('Error updating profile: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update profile')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-        _isEditing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isEditing = false;
+        });
+      }
     }
   }
 
