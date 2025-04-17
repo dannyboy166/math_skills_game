@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/screens/levels_screen.dart';
 import 'package:math_skills_game/screens/profile_screen.dart';
 import 'dart:math';
 import 'game_screen.dart';
@@ -105,39 +106,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
             ElevatedButton(
               onPressed: () {
-                // Don't allow starting multiplication/division game without selecting a table
+                // For multiplication/division with specific table, go directly to game
                 if ((selectedOperation == 'multiplication' ||
                         selectedOperation == 'division') &&
-                    selectedMultiplicationTable == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Please select a table first'),
-                      duration: Duration(seconds: 2),
+                    selectedMultiplicationTable != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GameScreen(
+                        operationName: selectedOperation,
+                        difficultyLevel: selectedLevel,
+                        targetNumber: selectedMultiplicationTable,
+                      ),
                     ),
                   );
-                  return;
-                }
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => GameScreen(
-                      operationName: selectedOperation,
-                      difficultyLevel: selectedLevel,
-                      // Pass the selected table if applicable
-                      targetNumber: (selectedOperation == 'multiplication' ||
-                                  selectedOperation == 'division') &&
-                              selectedMultiplicationTable != null
-                          ? selectedMultiplicationTable
-                          : null,
+                } else {
+                  // For other operations, go to the levels screen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LevelsScreen(
+                        operationName: selectedOperation,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                }
               },
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  'Start Game',
+                  'Select Level',
                   style: TextStyle(fontSize: 20),
                 ),
               ),
