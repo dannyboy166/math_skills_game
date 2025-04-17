@@ -1,4 +1,6 @@
 // lib/screens/home_screen.dart (Redesigned)
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:math_skills_game/widgets/custom_bottom_nav_bar.dart';
@@ -28,14 +30,73 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Weekly streak data
   WeeklyStreak _weeklyStreak = WeeklyStreak.currentWeek();
-  bool _isLoadingStreak = true;
+  bool _isLoadingStreak = true; // Add this if not already defined
   int _currentStreak = 0;
   int _longestStreak = 0;
+
+  // Stream subscriptions
+  StreamSubscription? _weeklyStreakSubscription;
+  StreamSubscription? _streakStatsSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadStreakData();
+    // Initialize with empty data
+    _weeklyStreak = WeeklyStreak.currentWeek();
+
+    // Start listening to streams when signed in
+    _listenToStreakData();
+  }
+
+  @override
+  void dispose() {
+    // Cancel stream subscriptions
+    _weeklyStreakSubscription?.cancel();
+    _streakStatsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToStreakData() {
+    if (_authService.currentUser == null) return;
+
+    setState(() {
+      _isLoadingStreak = true;
+    });
+
+    // Listen to weekly streak
+    _weeklyStreakSubscription?.cancel();
+    _weeklyStreakSubscription = _userService
+        .weeklyStreakStream(_authService.currentUser!.uid)
+        .listen((weeklyStreak) {
+      if (mounted) {
+        setState(() {
+          _weeklyStreak = weeklyStreak;
+          _isLoadingStreak = false;
+        });
+      }
+    }, onError: (e) {
+      print('Error in weekly streak stream: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingStreak = false;
+        });
+      }
+    });
+
+    // Listen to streak stats
+    _streakStatsSubscription?.cancel();
+    _streakStatsSubscription = _userService
+        .streakStatsStream(_authService.currentUser!.uid)
+        .listen((stats) {
+      if (mounted) {
+        setState(() {
+          _currentStreak = stats['currentStreak'] ?? 0;
+          _longestStreak = stats['longestStreak'] ?? 0;
+        });
+      }
+    }, onError: (e) {
+      print('Error in streak stats stream: $e');
+    });
   }
 
   Future<void> _loadStreakData() async {
@@ -874,16 +935,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             : null,
                       ),
                     ),
-                  ).then((refreshRequired) {
-                    // Refresh streak data when returning from game if true was passed
-                    if (refreshRequired == true) {
-                      setState(() {
-                        _isLoadingStreak =
-                            true; // Show loading indicator immediately
-                      });
-                      _loadStreakData(); // This will fetch fresh data
-                    }
-                  });
+                  );
                 }
               : null,
           style: ElevatedButton.styleFrom(

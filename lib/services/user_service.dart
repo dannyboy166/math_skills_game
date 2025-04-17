@@ -344,4 +344,78 @@ class UserService {
         int.parse('${date.difference(DateTime(date.year, 1, 1)).inDays + 1}');
     return ((dayOfYear - date.weekday + 10) / 7).floor();
   }
+
+  // Add this to UserService class
+  Stream<WeeklyStreak> weeklyStreakStream(String userId) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final startOfWeek = today.subtract(Duration(days: today.weekday % 7));
+
+    // Create the week ID
+    final weekId =
+        '${startOfWeek.year}_${startOfWeek.month}_${startOfWeek.day}';
+
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('weeklyStreaks')
+        .doc(weekId)
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) {
+        return WeeklyStreak.currentWeek();
+      }
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      final daysData = data['days'] as Map<String, dynamic>;
+
+      // Initialize an empty week
+      final weeklyStreak = WeeklyStreak.currentWeek();
+
+      // Populate with data from Firestore
+      for (int i = 0; i < 7; i++) {
+        final dayData = daysData['$i'];
+        if (dayData != null) {
+          final completed = dayData['completed'] ?? false;
+          if (completed) {
+            weeklyStreak.days[i] =
+                weeklyStreak.days[i].copyWith(completed: true);
+          }
+        }
+      }
+
+      return weeklyStreak;
+    });
+  }
+
+// Also add a stream for streak stats
+  Stream<Map<String, dynamic>> streakStatsStream(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) {
+        return {
+          'currentStreak': 0,
+          'longestStreak': 0,
+        };
+      }
+
+      final data = snapshot.data();
+      final streakData = data?['streakData'] as Map<String, dynamic>?;
+
+      if (streakData != null) {
+        return {
+          'currentStreak': streakData['currentStreak'] ?? 0,
+          'longestStreak': streakData['longestStreak'] ?? 0,
+        };
+      }
+
+      return {
+        'currentStreak': 0,
+        'longestStreak': 0,
+      };
+    });
+  }
 }
