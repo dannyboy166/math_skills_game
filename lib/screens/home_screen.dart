@@ -1,9 +1,10 @@
-// lib/screens/home_screen.dart (Updated with Levels navigation)
+// lib/screens/home_screen.dart (Redesigned)
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/screens/levels_screen.dart';
-import 'package:math_skills_game/screens/profile_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 import 'game_screen.dart';
+import 'levels_screen.dart';
+import 'profile_screen.dart';
 import '../models/difficulty_level.dart';
 import '../services/auth_service.dart';
 
@@ -15,138 +16,305 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String selectedOperation = 'addition';
+  String? selectedOperation;
   DifficultyLevel selectedLevel = DifficultyLevel.standard;
   int? selectedMultiplicationTable;
+  int _currentIndex = 0;
   final AuthService _authService = AuthService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Math Skills Game'),
-        actions: [
-          // Add profile button
-          IconButton(
-            icon: Icon(Icons.person),
-            tooltip: 'Profile',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProfileScreen(),
-                ),
-              );
-            },
+      body: _buildCurrentScreen(),
+      bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+
+  Widget _buildCurrentScreen() {
+    switch (_currentIndex) {
+      case 0:
+        return _buildHomeScreen();
+      case 1:
+        return LevelsScreen(
+          operationName: selectedOperation ?? 'addition',
+        );
+      case 2:
+        return _buildLeaderboardScreen();
+      case 3:
+        return ProfileScreen();
+      default:
+        return _buildHomeScreen();
+    }
+  }
+
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
           ),
-          // Settings button
-          IconButton(
-            icon: Icon(Icons.settings),
-            tooltip: 'Settings',
-            onPressed: () {
-              _showSettingsDialog(context);
-            },
+        ],
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.blue,
+          unselectedItemColor: Colors.grey.shade400,
+          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_rounded),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.star_rounded),
+              label: 'Levels',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.leaderboard_rounded),
+              label: 'Scores',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_rounded),
+              label: 'Profile',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeScreen() {
+    return SafeArea(
+      child: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.blue.shade50, Colors.white],
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildWelcomeCard(),
+                      SizedBox(height: 24),
+                      
+                      // Operation selection
+                      Text(
+                        'Choose Operation',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      
+                      _buildOperationGrid(),
+                      
+                      // Show difficulty selection only if an operation is selected
+                      if (selectedOperation != null) ...[
+                        SizedBox(height: 30),
+                        
+                        selectedOperation == 'multiplication' || selectedOperation == 'division'
+                          ? _buildMultiplicationTablesUI()
+                          : _buildDifficultySelection(),
+                          
+                        SizedBox(height: 30),
+                        
+                        _buildStartGameButton(),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
-      body: Container(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Choose operation:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: Colors.blue.shade100,
+            radius: 22,
+            child: Icon(
+              Icons.calculate_rounded,
+              color: Colors.blue,
+              size: 24,
             ),
-            SizedBox(height: 20),
-
-            // Operation buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildOperationButton('+', 'addition'),
-                SizedBox(width: 10),
-                _buildOperationButton('-', 'subtraction'),
-                SizedBox(width: 10),
-                _buildOperationButton('×', 'multiplication'),
-                SizedBox(width: 10),
-                _buildOperationButton('÷', 'division'),
-              ],
+          ),
+          SizedBox(width: 12),
+          Text(
+            'Math Skills Game',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
             ),
-
-            SizedBox(height: 20),
-
-            // Levels button - NEW ADDITION
-            _buildLevelsButton(),
-
-            SizedBox(height: 20),
-
-            if (selectedOperation == 'multiplication' ||
-                selectedOperation == 'division')
-              _buildMultiplicationTablesUI()
-            else
-              Column(
-                children: [
-                  Text(
-                    'Choose difficulty:',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 20),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: [
-                      for (final level in DifficultyLevel.values)
-                        _buildLevelButton(level),
-                    ],
-                  ),
-                  SizedBox(height: 20),
-                  _buildDifficultyInfo(),
-                ],
-              ),
-
-            Spacer(),
-
-            ElevatedButton(
-              onPressed: () {
-                // Don't allow starting multiplication/division game without selecting a table
-                if ((selectedOperation == 'multiplication' ||
-                        selectedOperation == 'division') &&
-                    selectedMultiplicationTable == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Please select a table first'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                  return;
-                }
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => GameScreen(
-                      operationName: selectedOperation,
-                      difficultyLevel: selectedLevel,
-                      // Pass the selected table if applicable
-                      targetNumber: (selectedOperation == 'multiplication' ||
-                                  selectedOperation == 'division') &&
-                              selectedMultiplicationTable != null
-                          ? selectedMultiplicationTable
-                          : null,
-                    ),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  'Start Game',
-                  style: TextStyle(fontSize: 20),
+          ),
+          Spacer(),
+          StreamBuilder<User?>(
+            stream: _authService.authStateChanges,
+            builder: (context, snapshot) {
+              return CircleAvatar(
+                backgroundColor: Colors.grey.shade100,
+                radius: 18,
+                child: Icon(
+                  Icons.person_rounded,
+                  color: Colors.blue,
+                  size: 22,
                 ),
+              );
+            }
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade400, Colors.blue.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.emoji_events_rounded,
+                color: Colors.white,
+                size: 40,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Let's Practice Math!",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Text(
+            "Choose an operation below to start playing and improve your math skills!",
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              _buildStreakCircle('M', true),
+              _buildStreakCircle('T', false),
+              _buildStreakCircle('W', true),
+              _buildStreakCircle('T', true),
+              _buildStreakCircle('F', false),
+              _buildStreakCircle('S', false),
+              _buildStreakCircle('S', false),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreakCircle(String day, bool completed) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Column(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: completed
+                    ? Colors.amber
+                    : Colors.white.withOpacity(0.2),
+                border: Border.all(
+                  color: completed
+                      ? Colors.amber.shade600
+                      : Colors.white.withOpacity(0.5),
+                  width: 2,
+                ),
+              ),
+              child: completed
+                  ? Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    )
+                  : null,
+            ),
+            SizedBox(height: 4),
+            Text(
+              day,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -155,487 +323,568 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // NEW WIDGET: Levels Button
-  Widget _buildLevelsButton() {
-    Color getOperationColor() {
-      switch (selectedOperation) {
-        case 'addition':
-          return Colors.green;
-        case 'subtraction':
-          return Colors.purple;
-        case 'multiplication':
-          return Colors.blue;
-        case 'division':
-          return Colors.orange;
-        default:
-          return Colors.grey;
-      }
-    }
-
-    return ElevatedButton.icon(
-      icon: Icon(Icons.star),
-      label: Text(
-          'View ${StringExtension(selectedOperation).capitalize()} Levels'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: getOperationColor(),
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+  Widget _buildOperationGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      childAspectRatio: 1.3,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      children: [
+        _buildOperationCard(
+          'Addition', 
+          '+', 
+          Colors.green,
+          'addition',
+          Icons.add_circle_rounded,
         ),
-      ),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LevelsScreen(
-              operationName: selectedOperation,
-            ),
-          ),
-        );
-      },
+        _buildOperationCard(
+          'Subtraction', 
+          '-', 
+          Colors.purple,
+          'subtraction',
+          Icons.remove_circle_rounded,
+        ),
+        _buildOperationCard(
+          'Multiplication', 
+          '×', 
+          Colors.blue,
+          'multiplication',
+          Icons.close_rounded,
+        ),
+        _buildOperationCard(
+          'Division', 
+          '÷', 
+          Colors.orange,
+          'division',
+          Icons.pie_chart_rounded,
+        ),
+      ],
     );
   }
 
-  Widget _buildOperationButton(String symbol, String operation,
-      {bool enabled = true}) {
-    final isSelected = selectedOperation == operation;
-
-    Color getColor() {
-      if (!enabled) return Colors.grey.shade400;
-
-      switch (operation) {
-        case 'addition':
-          return Colors.green;
-        case 'subtraction':
-          return Colors.purple;
-        case 'multiplication':
-          return Colors.blue;
-        case 'division':
-          return Colors.orange;
-        default:
-          return Colors.grey;
-      }
-    }
-
-    return InkWell(
-      onTap: enabled
-          ? () {
-              setState(() {
-                selectedOperation = operation;
-                // Reset multiplication table if changing operations
-                if (operation != 'multiplication') {
-                  selectedMultiplicationTable = null;
-                }
-              });
-            }
-          : null,
-      child: Container(
-        width: 60,
-        height: 60,
+  Widget _buildOperationCard(String title, String symbol, Color color, String operation, IconData icon) {
+    final bool isSelected = selectedOperation == operation;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedOperation = operation;
+          selectedMultiplicationTable = null; // Reset when changing operation
+        });
+      },
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 300),
         decoration: BoxDecoration(
-          color: isSelected && enabled ? getColor() : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isSelected && enabled
-              ? [BoxShadow(color: getColor().withOpacity(0.5), blurRadius: 5)]
-              : null,
+          color: isSelected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected 
+                ? color.withOpacity(0.5) 
+                : Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade200,
+            width: 2,
+          ),
         ),
-        child: Stack(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Center(
+            Icon(
+              icon, 
+              size: 40, 
+              color: isSelected ? Colors.white : color,
+            ),
+            SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+            ),
+            SizedBox(height: 4),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: isSelected 
+                  ? Colors.white.withOpacity(0.3) 
+                  : color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Text(
                 symbol,
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: isSelected && enabled ? Colors.white : Colors.black87,
+                  color: isSelected ? Colors.white : color,
                 ),
               ),
             ),
-            if (!enabled)
-              Positioned(
-                right: 5,
-                bottom: 5,
-                child: Icon(
-                  Icons.lock_outline,
-                  size: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLevelButton(DifficultyLevel level) {
-    final isSelected = selectedLevel == level;
+  Widget _buildDifficultySelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose Difficulty',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 16),
+        GridView.count(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          childAspectRatio: 1.5,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          children: [
+            _buildDifficultyCard(DifficultyLevel.standard, 'Standard', Colors.green, 'Center number: 1-5'),
+            _buildDifficultyCard(DifficultyLevel.challenging, 'Challenging', Colors.blue, 'Center number: 6-10'),
+            _buildDifficultyCard(DifficultyLevel.Expert, 'Expert', Colors.orange, 'Center number: 11-20'),
+            _buildDifficultyCard(DifficultyLevel.Impossible, 'Impossible', Colors.red, 'Center number: 21-50'),
+          ],
+        ),
+      ],
+    );
+  }
 
-    Color getColor() {
-      switch (level) {
-        case DifficultyLevel.standard:
-          return Colors.green.shade600;
-        case DifficultyLevel.challenging:
-          return Colors.blue.shade600;
-        case DifficultyLevel.Expert:
-          return Colors.orange.shade600;
-        case DifficultyLevel.Impossible:
-          return Colors.red.shade600;
-      }
-    }
-
-    return InkWell(
+  Widget _buildDifficultyCard(DifficultyLevel level, String title, Color color, String description) {
+    final bool isSelected = selectedLevel == level;
+    
+    return GestureDetector(
       onTap: () {
         setState(() {
           selectedLevel = level;
         });
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? getColor() : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isSelected
-              ? [BoxShadow(color: getColor().withOpacity(0.5), blurRadius: 3)]
-              : null,
-        ),
-        child: Text(
-          level.displayName,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : Colors.black87,
+          color: isSelected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected 
+                ? color.withOpacity(0.5) 
+                : Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade200,
+            width: 2,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildDifficultyInfo() {
-    String centerRange;
-    String innerRange;
-    String outerRange;
-
-    switch (selectedLevel) {
-      case DifficultyLevel.standard:
-        centerRange = '1-5';
-        innerRange = '1-12';
-        outerRange = '1-18';
-        break;
-      case DifficultyLevel.challenging:
-        centerRange = '6-10';
-        innerRange = '1-12';
-        outerRange = '1-24';
-        break;
-      case DifficultyLevel.Expert:
-        centerRange = '11-20';
-        innerRange = '1-12';
-        outerRange = '1-36';
-        break;
-      case DifficultyLevel.Impossible:
-        centerRange = '21-50';
-        innerRange = '13-24';
-        outerRange = '1-100';
-        break;
-    }
-
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Difficulty: ${selectedLevel.displayName}',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
-          Text('• Center number: $centerRange'),
-          Text('• Inner ring: $innerRange'),
-          Text('• Outer ring: $outerRange'),
-        ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              size: 32,
+              color: isSelected ? Colors.white : color,
+            ),
+            SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected ? Colors.white.withOpacity(0.9) : Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMultiplicationTablesUI() {
-    String operation =
-        selectedOperation == 'multiplication' ? 'times' : 'division';
-    String symbol = selectedOperation == 'multiplication' ? '×' : '÷';
-
+    final String operation = selectedOperation == 'multiplication' ? 'Multiplication' : 'Division';
+    final String symbol = selectedOperation == 'multiplication' ? '×' : '÷';
+    final Color color = selectedOperation == 'multiplication' ? Colors.blue : Colors.orange;
+    
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Choose $operation table:',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
+          'Choose $operation Table',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
-        SizedBox(height: 20),
-
-        // Random selection based on difficulty
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 8.0,
-          runSpacing: 8.0,
+        SizedBox(height: 16),
+        
+        // Categories grid
+        GridView.count(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          childAspectRatio: 1.5,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
           children: [
-            _buildCategoryButton('Standard', [1, 2, 5, 10]),
-            _buildCategoryButton('Challenging', [3, 4, 6, 11]),
-            _buildCategoryButton('Expert', [7, 8, 9, 12]),
-            _buildCategoryButton('Impossible', [13, 14, 15]),
+            _buildTableCategoryCard('Standard', [1, 2, 5, 10], Colors.green),
+            _buildTableCategoryCard('Challenging', [3, 4, 6, 11], Colors.blue),
+            _buildTableCategoryCard('Expert', [7, 8, 9, 12], Colors.orange),
+            _buildTableCategoryCard('Impossible', [13, 14, 15], Colors.red),
           ],
         ),
-
-        SizedBox(height: 15),
+        
+        SizedBox(height: 20),
+        
         Text(
-          'Or select specific times table:',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
+          'Or Select Specific Table',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
-        SizedBox(height: 10),
-
-        // Specific table selection
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: [
-            for (int i = 1; i <= 15; i++) _buildTableButton(i),
-          ],
+        SizedBox(height: 16),
+        
+        // Tables grid
+        GridView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 5,
+            childAspectRatio: 1.0,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: 15,
+          itemBuilder: (context, index) {
+            final number = index + 1;
+            return _buildTableNumberCard(number);
+          },
         ),
-
+        
         SizedBox(height: 20),
-
+        
         // Selected table info
         if (selectedMultiplicationTable != null)
           Container(
-            margin: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-            padding: EdgeInsets.all(12),
+            padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(0.3)),
             ),
-            child: Column(
+            child: Row(
               children: [
-                Text(
-                  '$selectedMultiplicationTable$symbol Table',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: _getTableColor(selectedMultiplicationTable!)),
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$selectedMultiplicationTable$symbol',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
                 ),
-                SizedBox(height: 10),
-                if (selectedOperation == 'multiplication')
-                  Text(
-                      'Find products of $selectedMultiplicationTable in the outer ring')
-                else
-                  Text(
-                      'Find numbers that, when divided by inner ring numbers, equal $selectedMultiplicationTable'),
-                SizedBox(height: 5),
-                Text('Inner ring will contain numbers 1-12'),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$operation Table of $selectedMultiplicationTable',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        selectedOperation == 'multiplication'
+                          ? 'Find products of $selectedMultiplicationTable in the outer ring'
+                          : 'Find numbers that, when divided, equal $selectedMultiplicationTable',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
       ],
     );
   }
-
-// Helper method to build category button
-  Widget _buildCategoryButton(String categoryName, List<int> tables) {
-    final bool isSelected = selectedMultiplicationTable != null &&
-        tables.contains(selectedMultiplicationTable);
-
-    Color getColor() {
-      switch (categoryName) {
-        case 'Standard':
-          return Colors.green.shade600;
-        case 'Challenging':
-          return Colors.blue.shade600;
-        case 'Expert':
-          return Colors.orange.shade600;
-        case 'Impossible':
-          return Colors.red.shade600;
-        default:
-          return Colors.blue;
-      }
-    }
-
-    return InkWell(
+  
+  Widget _buildTableCategoryCard(String category, List<int> tables, Color color) {
+    final bool hasSelectedTable = selectedMultiplicationTable != null && 
+                                 tables.contains(selectedMultiplicationTable);
+    
+    return GestureDetector(
       onTap: () {
         setState(() {
-          // Select a random table from this category
-          final Random random = Random();
+          final random = Random();
           selectedMultiplicationTable = tables[random.nextInt(tables.length)];
         });
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? getColor() : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isSelected
-              ? [BoxShadow(color: getColor().withOpacity(0.5), blurRadius: 3)]
-              : null,
-        ),
-        child: Text(
-          categoryName,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : Colors.black87,
+          color: hasSelectedTable ? color : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: hasSelectedTable 
+                ? color.withOpacity(0.5) 
+                : Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: hasSelectedTable ? color : Colors.grey.shade200,
+            width: 2,
           ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              hasSelectedTable ? Icons.check_circle_rounded : Icons.star_rounded,
+              size: 32,
+              color: hasSelectedTable ? Colors.white : color,
+            ),
+            SizedBox(height: 8),
+            Text(
+              category,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: hasSelectedTable ? Colors.white : Colors.black87,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Tables: ${tables.join(", ")}',
+              style: TextStyle(
+                fontSize: 12,
+                color: hasSelectedTable ? Colors.white.withOpacity(0.9) : Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
   }
-
-// Helper method to build individual table button
-  Widget _buildTableButton(int tableNumber) {
-    final bool isSelected = selectedMultiplicationTable == tableNumber;
-
-    // Get difficulty category of this table
-    String getCategory() {
-      if ([1, 2, 5, 10].contains(tableNumber)) return 'Standard';
-      if ([3, 4, 6, 11].contains(tableNumber)) return 'Challenging';
-      if ([7, 8, 9, 12].contains(tableNumber)) return 'Expert';
-      return 'Impossible';
+  
+  Widget _buildTableNumberCard(int number) {
+    // Determine category and color
+    Color color;
+    if ([1, 2, 5, 10].contains(number)) {
+      color = Colors.green;
+    } else if ([3, 4, 6, 11].contains(number)) {
+      color = Colors.blue;
+    } else if ([7, 8, 9, 12].contains(number)) {
+      color = Colors.orange;
+    } else {
+      color = Colors.red;
     }
-
-    Color getColor() {
-      final category = getCategory();
-      switch (category) {
-        case 'Standard':
-          return Colors.green.shade600;
-        case 'Challenging':
-          return Colors.blue.shade600;
-        case 'Expert':
-          return Colors.orange.shade600;
-        case 'Impossible':
-          return Colors.red.shade600;
-        default:
-          return Colors.blue;
-      }
-    }
-
-    return InkWell(
+    
+    final bool isSelected = selectedMultiplicationTable == number;
+    
+    return GestureDetector(
       onTap: () {
         setState(() {
-          selectedMultiplicationTable = tableNumber;
+          selectedMultiplicationTable = number;
         });
       },
       child: Container(
-        width: 45,
-        height: 45,
         decoration: BoxDecoration(
-          color: isSelected ? getColor() : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isSelected
-              ? [BoxShadow(color: getColor().withOpacity(0.5), blurRadius: 3)]
-              : null,
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Text(
-                '$tableNumber×',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : Colors.black87,
-                ),
-              ),
+          color: isSelected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected 
+                ? color.withOpacity(0.5) 
+                : Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: Offset(0, 2),
             ),
-            if (getCategory() == 'Impossible')
-              Positioned(
-                right: 3,
-                bottom: 3,
-                child: Icon(
-                  Icons.star,
-                  size: 10,
-                  color: isSelected ? Colors.white70 : Colors.red,
-                ),
-              ),
           ],
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade200,
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            '$number',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: isSelected ? Colors.white : color,
+            ),
+          ),
         ),
       ),
     );
   }
 
-// Helper method to get color for a specific table
-  Color _getTableColor(int tableNumber) {
-    if ([1, 2, 5, 10].contains(tableNumber)) return Colors.green.shade600;
-    if ([3, 4, 6, 11].contains(tableNumber)) return Colors.blue.shade600;
-    if ([7, 8, 9, 12].contains(tableNumber)) return Colors.orange.shade600;
-    return Colors.red.shade600;
-  }
-
-  void _showSettingsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Settings'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // User info
-              if (_authService.currentUser != null) ...[
-                Text(
-                  'Signed in as: ${_authService.currentUser?.displayName ?? 'User'}',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+  Widget _buildStartGameButton() {
+    // Determine button color based on operation
+    Color buttonColor;
+    if (selectedOperation == 'addition') {
+      buttonColor = Colors.green;
+    } else if (selectedOperation == 'subtraction') {
+      buttonColor = Colors.purple;
+    } else if (selectedOperation == 'multiplication') {
+      buttonColor = Colors.blue;
+    } else {
+      buttonColor = Colors.orange;
+    }
+    
+    bool canStartGame = true;
+    String? errorMessage;
+    
+    // Check if all required selections have been made
+    if (selectedOperation == null) {
+      canStartGame = false;
+    } else if ((selectedOperation == 'multiplication' || selectedOperation == 'division') && 
+              selectedMultiplicationTable == null) {
+      canStartGame = false;
+      errorMessage = 'Please select a table first';
+    }
+    
+    return Column(
+      children: [
+        if (errorMessage != null) ...[
+          Text(
+            errorMessage,
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+        ],
+        
+        ElevatedButton(
+          onPressed: canStartGame ? () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GameScreen(
+                  operationName: selectedOperation!,
+                  difficultyLevel: selectedLevel,
+                  targetNumber: (selectedOperation == 'multiplication' ||
+                              selectedOperation == 'division') &&
+                          selectedMultiplicationTable != null
+                      ? selectedMultiplicationTable
+                      : null,
                 ),
-                SizedBox(height: 20),
-              ],
-
-              // Profile button
-              ListTile(
-                leading: Icon(Icons.person, color: Colors.blue),
-                title: Text('View Profile'),
-                onTap: () {
-                  Navigator.pop(context); // Close the dialog
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileScreen(),
-                    ),
-                  );
-                },
               ),
-
-              // Logout button
-              ListTile(
-                leading: Icon(Icons.logout, color: Colors.red),
-                title: Text('Logout'),
-                onTap: () async {
-                  await _authService.signOut();
-                  Navigator.pop(context); // Close the dialog
-                },
+            );
+          } : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: buttonColor,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 4,
+            shadowColor: buttonColor.withOpacity(0.5),
+            disabledBackgroundColor: Colors.grey.shade300,
+            disabledForegroundColor: Colors.grey.shade600,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.play_circle_fill_rounded, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Start Game',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Close'),
-            ),
-          ],
-        );
-      },
+        ),
+      ],
     );
   }
-}
 
-// Extension method for string capitalization
-extension StringExtension on String {
-  String capitalize() {
-    if (this.isEmpty) return this;
-    return this[0].toUpperCase() + this.substring(1);
+  // Placeholder for Leaderboard screen (to be implemented)
+  Widget _buildLeaderboardScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.leaderboard_rounded,
+            size: 80,
+            color: Colors.blue.shade200,
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Leaderboard Coming Soon!',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue,
+            ),
+          ),
+          SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Challenge your friends and see who can get the highest score!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
