@@ -98,6 +98,48 @@ class _LevelsScreenState extends State<LevelsScreen> {
            widget.operationName.substring(1);
   }
 
+  // Find stars for a specific level
+  int _getStarsForLevel(String difficulty, int targetNumber) {
+    final completion = _completedLevels.firstWhere(
+      (level) => 
+          level.difficultyName == difficulty && 
+          level.targetNumber == targetNumber,
+      orElse: () => LevelCompletionModel(
+        operationName: widget.operationName,
+        difficultyName: difficulty,
+        targetNumber: targetNumber,
+        stars: 0,
+        completionTimeMs: 0,
+        completedAt: DateTime.now(),
+      ),
+    );
+    
+    return completion.stars;
+  }
+
+  // Get best time for a specific level
+  String _getBestTimeForLevel(String difficulty, int targetNumber) {
+    final completion = _completedLevels.firstWhere(
+      (level) => 
+          level.difficultyName == difficulty && 
+          level.targetNumber == targetNumber,
+      orElse: () => LevelCompletionModel(
+        operationName: widget.operationName,
+        difficultyName: difficulty,
+        targetNumber: targetNumber,
+        stars: 0,
+        completionTimeMs: 0,
+        completedAt: DateTime.now(),
+      ),
+    );
+    
+    if (completion.completionTimeMs == 0) {
+      return '--:--';
+    }
+    
+    return StarRatingCalculator.formatTime(completion.completionTimeMs);
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color operationColor = _getOperationColor();
@@ -129,256 +171,229 @@ class _LevelsScreenState extends State<LevelsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildOperationHeader(operationColor),
-                    SizedBox(height: 20),
+                    SizedBox(height: 24),
                     
-                    // Standard Difficulty Section
-                    _buildDifficultySection('Standard', operationColor, DifficultyLevel.standard),
+                    // Standard difficulty
+                    _buildDifficultySection(
+                      'Standard', 
+                      operationColor,
+                      [1, 2, 3, 4, 5],
+                    ),
+                    SizedBox(height: 24),
                     
-                    // Challenging Difficulty Section
-                    _buildDifficultySection('Challenging', operationColor, DifficultyLevel.challenging),
+                    // Challenging difficulty
+                    _buildDifficultySection(
+                      'Challenging', 
+                      operationColor,
+                      [6, 7, 8, 9, 10],
+                    ),
+                    SizedBox(height: 24),
                     
-                    // Expert Difficulty Section
-                    _buildDifficultySection('Expert', operationColor, DifficultyLevel.Expert),
+                    // Expert difficulty
+                    _buildDifficultySection(
+                      'Expert', 
+                      operationColor,
+                      [11, 12, 13, 14, 15],
+                    ),
+                    SizedBox(height: 24),
                     
-                    // Impossible Difficulty Section 
-                    _buildDifficultySection('Impossible', operationColor, DifficultyLevel.Impossible),
-                    
-                    SizedBox(height: 20),
-                    
-                    // Times Tables Section - Only for multiplication and division
-                    if (widget.operationName == 'multiplication' || widget.operationName == 'division')
-                      _buildTimesTablesSection(operationColor),
+                    // Impossible difficulty
+                    _buildDifficultySection(
+                      'Impossible', 
+                      operationColor,
+                      [20, 25, 30, 40, 50],
+                    ),
                   ],
                 ),
               ),
             ),
     );
   }
-  
-  // Operation header with symbol and description
+
   Widget _buildOperationHeader(Color operationColor) {
-    String description;
-    switch (widget.operationName) {
-      case 'addition':
-        description = 'Form equations like: inner + target = outer';
-        break;
-      case 'subtraction':
-        description = 'Form equations like: outer - inner = target';
-        break;
-      case 'multiplication':
-        description = 'Form equations like: inner × target = outer';
-        break;
-      case 'division':
-        description = 'Form equations like: outer ÷ inner = target';
-        break;
-      default:
-        description = 'Form equations at the corners';
-        break;
-    }
-    
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: operationColor.withOpacity(0.5), width: 2),
+    return Container(
+      margin: EdgeInsets.only(top: 8),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: operationColor.withOpacity(0.2),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Operation symbol circle
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: operationColor.withOpacity(0.2),
-                border: Border.all(color: operationColor, width: 2),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: operationColor.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                _getOperationSymbol(),
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: operationColor,
+                ),
               ),
-              child: Center(
-                child: Text(
-                  _getOperationSymbol(),
+            ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _formatOperationName(),
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: operationColor,
                   ),
                 ),
-              ),
-            ),
-            SizedBox(width: 16),
-            // Description
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${_formatOperationName()} Levels',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.star, size: 16, color: Colors.amber),
-                      SizedBox(width: 4),
-                      Text(
-                        'Complete levels faster to earn more stars!',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.amber[800],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  // Build a section for each difficulty level
-  Widget _buildDifficultySection(String title, Color operationColor, DifficultyLevel difficultyLevel) {
-    // Get numbers that correspond to this difficulty
-    List<int> levelNumbers = [];
-    
-    switch (difficultyLevel) {
-      case DifficultyLevel.standard:
-        levelNumbers = List.generate(5, (index) => index + 1); // 1-5
-        break;
-      case DifficultyLevel.challenging:
-        levelNumbers = List.generate(5, (index) => index + 6); // 6-10
-        break;
-      case DifficultyLevel.Expert:
-        levelNumbers = List.generate(10, (index) => index + 11); // 11-20
-        break;
-      case DifficultyLevel.Impossible:
-        levelNumbers = List.generate(10, (index) => index + 21); // 21-30 (showing 10 levels only)
-        break;
-    }
-    
-    // Get section color based on difficulty
-    Color sectionColor;
-    switch (difficultyLevel) {
-      case DifficultyLevel.standard:
-        sectionColor = Colors.green.shade600;
-        break;
-      case DifficultyLevel.challenging:
-        sectionColor = Colors.blue.shade600;
-        break;
-      case DifficultyLevel.Expert:
-        sectionColor = Colors.orange.shade600;
-        break;
-      case DifficultyLevel.Impossible:
-        sectionColor = Colors.red.shade600;
-        break;
-      default:
-        sectionColor = operationColor;
-    }
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section header
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: sectionColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  title,
+                SizedBox(height: 4),
+                Text(
+                  _getOperationDescription(),
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 14,
+                    color: Colors.grey[600],
                   ),
                 ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Divider(color: sectionColor.withOpacity(0.5), thickness: 2),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          
-          // Level grid
-          GridView.builder(
-            physics: NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              childAspectRatio: 1.0,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
+              ],
             ),
-            itemCount: levelNumbers.length,
-            itemBuilder: (context, index) {
-              final targetNumber = levelNumbers[index];
-              
-              // Find completion data for this level if it exists
-              final completionData = _completedLevels.firstWhere(
-                (level) => 
-                    level.operationName == widget.operationName && 
-                    level.difficultyName == title &&
-                    level.targetNumber == targetNumber,
-                orElse: () => LevelCompletionModel(
-                  operationName: '',
-                  difficultyName: '',
-                  targetNumber: 0,
-                  stars: 0,
-                  completionTimeMs: 0,
-                  completedAt: DateTime.now(),
-                ),
-              );
-              
-              // Number of stars earned
-              final stars = completionData.operationName.isEmpty ? 0 : completionData.stars;
-              
-              return _buildLevelTile(
-                targetNumber: targetNumber,
-                stars: stars,
-                color: sectionColor,
-                difficultyLevel: difficultyLevel,
-              );
-            },
           ),
         ],
       ),
     );
   }
-  
-  // Build a level selection tile with star rating
-  Widget _buildLevelTile({
-    required int targetNumber,
-    required int stars,
-    required Color color,
-    required DifficultyLevel difficultyLevel,
-  }) {
-    final bool isCompleted = stars > 0;
+
+  String _getOperationDescription() {
+    switch (widget.operationName) {
+      case 'addition':
+        return 'Practice addition skills with various difficulty levels';
+      case 'subtraction':
+        return 'Master subtraction with increasingly challenging problems';
+      case 'multiplication':
+        return 'Learn multiplication tables in a fun and interactive way';
+      case 'division':
+        return 'Practice division with different difficulty levels';
+      default:
+        return 'Practice your math skills';
+    }
+  }
+
+  Widget _buildDifficultySection(
+    String difficultyName, 
+    Color operationColor,
+    List<int> targetNumbers,
+  ) {
+    Color difficultyColor;
+    switch (difficultyName) {
+      case 'Standard':
+        difficultyColor = Colors.green;
+        break;
+      case 'Challenging':
+        difficultyColor = Colors.blue;
+        break;
+      case 'Expert':
+        difficultyColor = Colors.orange;
+        break;
+      case 'Impossible':
+        difficultyColor = Colors.red;
+        break;
+      default:
+        difficultyColor = Colors.green;
+    }
     
-    return InkWell(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: difficultyColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            difficultyName,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: difficultyColor,
+            ),
+          ),
+        ),
+        SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 1.5,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: targetNumbers.length,
+          itemBuilder: (context, index) {
+            final targetNumber = targetNumbers[index];
+            final stars = _getStarsForLevel(difficultyName, targetNumber);
+            final bestTime = _getBestTimeForLevel(difficultyName, targetNumber);
+            
+            return _buildLevelCard(
+              operationColor,
+              difficultyName,
+              targetNumber,
+              stars,
+              bestTime,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLevelCard(
+    Color operationColor,
+    String difficultyName,
+    int targetNumber,
+    int stars,
+    String bestTime,
+  ) {
+    final bool isLocked = widget.operationName == 'multiplication' || 
+                          widget.operationName == 'division';
+    final String levelTitle = isLocked 
+        ? '$targetNumber${_getOperationSymbol()} Table' 
+        : 'Target: $targetNumber';
+        
+    return GestureDetector(
       onTap: () {
-        // Navigate to game screen with this level configuration
+        // Get the difficulty level enum value
+        DifficultyLevel difficultyLevel;
+        switch (difficultyName) {
+          case 'Standard':
+            difficultyLevel = DifficultyLevel.standard;
+            break;
+          case 'Challenging':
+            difficultyLevel = DifficultyLevel.challenging;
+            break;
+          case 'Expert':
+            difficultyLevel = DifficultyLevel.Expert;
+            break;
+          case 'Impossible':
+            difficultyLevel = DifficultyLevel.Impossible;
+            break;
+          default:
+            difficultyLevel = DifficultyLevel.standard;
+        }
+        
+        // Navigate to the game screen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -389,234 +404,66 @@ class _LevelsScreenState extends State<LevelsScreen> {
             ),
           ),
         ).then((_) {
-          // Refresh data when returning from game screen
+          // Reload data when returning from game screen
           _loadLevelData();
         });
       },
-      borderRadius: BorderRadius.circular(10),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 3,
+              color: Colors.grey.withOpacity(0.2),
+              blurRadius: 6,
               offset: Offset(0, 2),
             ),
           ],
-          border: Border.all(
-            color: isCompleted ? color : Colors.grey.shade300,
-            width: 2,
-          ),
         ),
+        padding: EdgeInsets.all(12),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Target number
-            Text(
-              '$targetNumber',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: isCompleted ? color : Colors.grey.shade700,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (index) {
+                return Icon(
+                  Icons.star,
+                  size: 22,
+                  color: index < stars 
+                      ? Colors.amber 
+                      : Colors.grey.withOpacity(0.3),
+                );
+              }),
             ),
             SizedBox(height: 8),
-            // Star rating
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
-                return Icon(
-                  index < stars ? Icons.star : Icons.star_border,
-                  color: index < stars ? Colors.amber : Colors.grey.shade400,
-                  size: 16,
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  // Build times tables section for multiplication and division
-  Widget _buildTimesTablesSection(Color operationColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Row(
-          children: [
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: operationColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'Times Tables',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Divider(color: operationColor.withOpacity(0.5), thickness: 2),
-            ),
-          ],
-        ),
-        SizedBox(height: 16),
-        
-        // Times tables description
-        Container(
-          margin: EdgeInsets.only(bottom: 16),
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Text(
-            widget.operationName == 'multiplication'
-                ? 'Practice specific multiplication tables. Find products of the selected number.'
-                : 'Practice specific division tables. Find numbers that divide evenly by the selected number.',
-            style: TextStyle(fontSize: 14),
-          ),
-        ),
-        
-        // Times tables grid
-        GridView.builder(
-          physics: NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 5,
-            childAspectRatio: 1.0,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemCount: 15, // Tables 1-15
-          itemBuilder: (context, index) {
-            final tableNumber = index + 1;
-            
-            // Find completion data for this table if it exists
-            final completionData = _completedLevels.firstWhere(
-              (level) => 
-                  level.operationName == widget.operationName && 
-                  level.targetNumber == tableNumber,
-              orElse: () => LevelCompletionModel(
-                operationName: '',
-                difficultyName: '',
-                targetNumber: 0,
-                stars: 0,
-                completionTimeMs: 0,
-                completedAt: DateTime.now(),
-              ),
-            );
-            
-            // Number of stars earned
-            final stars = completionData.operationName.isEmpty ? 0 : completionData.stars;
-            
-            // Determine color based on difficulty category
-            Color tableColor;
-            DifficultyLevel tableDifficulty;
-            
-            if ([1, 2, 5, 10].contains(tableNumber)) {
-              tableColor = Colors.green.shade600;
-              tableDifficulty = DifficultyLevel.standard;
-            } else if ([3, 4, 6, 11].contains(tableNumber)) {
-              tableColor = Colors.blue.shade600;
-              tableDifficulty = DifficultyLevel.challenging;
-            } else if ([7, 8, 9, 12].contains(tableNumber)) {
-              tableColor = Colors.orange.shade600;
-              tableDifficulty = DifficultyLevel.Expert;
-            } else {
-              tableColor = Colors.red.shade600;
-              tableDifficulty = DifficultyLevel.Impossible;
-            }
-            
-            return _buildTimesTableTile(
-              tableNumber: tableNumber,
-              stars: stars,
-              color: tableColor,
-              difficultyLevel: tableDifficulty,
-            );
-          },
-        ),
-      ],
-    );
-  }
-  
-  // Build a times table selection tile with star rating
-  Widget _buildTimesTableTile({
-    required int tableNumber,
-    required int stars,
-    required Color color,
-    required DifficultyLevel difficultyLevel,
-  }) {
-    final bool isCompleted = stars > 0;
-    final String symbol = widget.operationName == 'multiplication' ? '×' : '÷';
-    
-    return InkWell(
-      onTap: () {
-        // Navigate to game screen with this table
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => GameScreen(
-              operationName: widget.operationName,
-              difficultyLevel: difficultyLevel,
-              targetNumber: tableNumber,
-            ),
-          ),
-        ).then((_) {
-          // Refresh data when returning from game screen
-          _loadLevelData();
-        });
-      },
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 3,
-              offset: Offset(0, 2),
-            ),
-          ],
-          border: Border.all(
-            color: isCompleted ? color : Colors.grey.shade300,
-            width: 2,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Table number with symbol
             Text(
-              '$tableNumber$symbol',
+              levelTitle,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isCompleted ? color : Colors.grey.shade700,
+                color: operationColor,
               ),
+              textAlign: TextAlign.center,
             ),
-            SizedBox(height: 5),
-            // Star rating
+            SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
-                return Icon(
-                  index < stars ? Icons.star : Icons.star_border,
-                  color: index < stars ? Colors.amber : Colors.grey.shade400,
-                  size: 12,
-                );
-              }),
+              children: [
+                Icon(
+                  Icons.timer_outlined,
+                  size: 16,
+                  color: Colors.grey[600],
+                ),
+                SizedBox(width: 4),
+                Text(
+                  bestTime,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
           ],
         ),

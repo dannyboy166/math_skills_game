@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
-import '../services/user_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -13,7 +12,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
-  final UserService _userService = UserService();
   final TextEditingController _displayNameController = TextEditingController();
 
   bool _isEditing = false;
@@ -173,7 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     onPressed: () {
                                       setState(() {
                                         _isEditing = false;
-                                        _displayNameController.text = 
+                                        _displayNameController.text =
                                             _userData?['displayName'] ?? '';
                                       });
                                     },
@@ -285,7 +283,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: Text('Logout'),
                         onTap: () async {
                           await _authService.signOut();
-                          Navigator.of(context).pop(); // Return to previous screen
+                          Navigator.of(context)
+                              .pop(); // Return to previous screen
                         },
                       ),
                     ],
@@ -334,7 +333,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Sending reset email...')),
                 );
-                
+
                 try {
                   await _authService.resetPassword(emailController.text.trim());
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -368,7 +367,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
       margin: EdgeInsets.only(bottom: 16),
@@ -410,7 +410,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildOperationCard(String title, String count, String symbol, Color color) {
+  Widget _buildOperationCard(
+      String title, String count, String symbol, Color color) {
     return Card(
       elevation: 2,
       child: Container(

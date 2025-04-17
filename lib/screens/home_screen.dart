@@ -1,3 +1,4 @@
+// lib/screens/home_screen.dart (Updated with Levels navigation)
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/screens/levels_screen.dart';
 import 'package:math_skills_game/screens/profile_screen.dart';
@@ -74,7 +75,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
 
-            SizedBox(height: 30),
+            SizedBox(height: 20),
+
+            // Levels button - NEW ADDITION
+            _buildLevelsButton(),
+
+            SizedBox(height: 20),
 
             if (selectedOperation == 'multiplication' ||
                 selectedOperation == 'division')
@@ -106,36 +112,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
             ElevatedButton(
               onPressed: () {
-                // For multiplication/division with specific table, go directly to game
+                // Don't allow starting multiplication/division game without selecting a table
                 if ((selectedOperation == 'multiplication' ||
                         selectedOperation == 'division') &&
-                    selectedMultiplicationTable != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GameScreen(
-                        operationName: selectedOperation,
-                        difficultyLevel: selectedLevel,
-                        targetNumber: selectedMultiplicationTable,
-                      ),
+                    selectedMultiplicationTable == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Please select a table first'),
+                      duration: Duration(seconds: 2),
                     ),
                   );
-                } else {
-                  // For other operations, go to the levels screen
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => LevelsScreen(
-                        operationName: selectedOperation,
-                      ),
-                    ),
-                  );
+                  return;
                 }
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GameScreen(
+                      operationName: selectedOperation,
+                      difficultyLevel: selectedLevel,
+                      // Pass the selected table if applicable
+                      targetNumber: (selectedOperation == 'multiplication' ||
+                                  selectedOperation == 'division') &&
+                              selectedMultiplicationTable != null
+                          ? selectedMultiplicationTable
+                          : null,
+                    ),
+                  ),
+                );
               },
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  'Select Level',
+                  'Start Game',
                   style: TextStyle(fontSize: 20),
                 ),
               ),
@@ -143,6 +152,48 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // NEW WIDGET: Levels Button
+  Widget _buildLevelsButton() {
+    Color getOperationColor() {
+      switch (selectedOperation) {
+        case 'addition':
+          return Colors.green;
+        case 'subtraction':
+          return Colors.purple;
+        case 'multiplication':
+          return Colors.blue;
+        case 'division':
+          return Colors.orange;
+        default:
+          return Colors.grey;
+      }
+    }
+
+    return ElevatedButton.icon(
+      icon: Icon(Icons.star),
+      label: Text(
+          'View ${StringExtension(selectedOperation).capitalize()} Levels'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: getOperationColor(),
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LevelsScreen(
+              operationName: selectedOperation,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -578,5 +629,13 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+}
+
+// Extension method for string capitalization
+extension StringExtension on String {
+  String capitalize() {
+    if (this.isEmpty) return this;
+    return this[0].toUpperCase() + this.substring(1);
   }
 }

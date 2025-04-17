@@ -1,17 +1,14 @@
 // lib/screens/game_screen.dart
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
-import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
 import 'dart:math';
 import 'dart:async'; // Add Timer import
 import '../models/ring_model.dart';
 import '../models/operation_config.dart';
 import '../models/locked_equation.dart';
-import '../widgets/progress_stars.dart';
 import '../utils/game_utils.dart';
 
 class GameScreen extends StatefulWidget {
@@ -78,6 +75,15 @@ class _GameScreenState extends State<GameScreen> {
 
     // Start game timer
     _startGameTimer();
+  }
+
+  @override
+  void dispose() {
+    // Cancel any pending operations
+    _gameTimer?.cancel();
+    // Clean up animations
+    starAnimations.clear();
+    super.dispose();
   }
 
   void _startGameTimer() {
@@ -507,12 +513,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   @override
-  void dispose() {
-    _gameTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return GameScreenUI(
       operationName: widget.operationName,
@@ -536,260 +536,103 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _showWinDialog() {
-    // Calculate star rating based on completion time
+    // Calculate completion time
     final completionTimeMs = _endTime!.difference(_startTime!).inMilliseconds;
     final starRating = StarRatingCalculator.calculateStars(widget.operationName,
         widget.difficultyLevel.displayName, completionTimeMs);
 
-    // Format time for display
-    final formattedTime = StarRatingCalculator.formatTime(completionTimeMs);
-
-    // Update game statistics in user profile
-    if (FirebaseAuth.instance.currentUser != null) {
-      try {
-        final UserService userService = UserService();
-
-        // Save level completion with star rating
-        final completion = LevelCompletionModel(
-          operationName: widget.operationName,
-          difficultyName: widget.difficultyLevel.displayName,
-          targetNumber: targetNumber,
-          stars: starRating,
-          completionTimeMs: completionTimeMs,
-          completedAt: DateTime.now(),
-        );
-
-        userService.saveLevelCompletion(
-          FirebaseAuth.instance.currentUser!.uid,
-          completion,
-        );
-      } catch (e) {
-        print("Error updating game stats: $e");
-        // Don't show error to user to avoid disrupting win experience
-      }
-    }
-
-    // Show a celebratory dialog (this part already exists in your code)
+    // Show dialog without any Firebase operations
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        backgroundColor: Colors.white.withOpacity(0.95),
-        title: Column(
-          children: [
-            Text(
-              '🎉 Congratulations! 🎉',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: operation.color,
-              ),
-              textAlign: TextAlign.center,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            'Success!',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: operation.color,
             ),
-            SizedBox(height: 10),
-            // Star rating display
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: StarWidget(
-                    size: 30,
-                    color: index < starRating
-                        ? Color(0xFFFFD700) // Gold for earned stars
-                        : Colors.grey
-                            .withOpacity(0.3), // Gray for unearned stars
-                  ),
-                );
-              }),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (index) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      Icons.star,
+                      size: 30,
+                      color: index < starRating
+                          ? Colors.amber
+                          : Colors.grey.withOpacity(0.3),
+                    ),
+                  );
+                }),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pop();
+              },
+              child: Text('Return to Menu'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                setState(() {
+                  // Reset game
+                  lockedEquations = [];
+                  isGameComplete = false;
+                  starAnimations = [];
+
+                  // Generate a new target number
+                  final random = Random();
+                  targetNumber =
+                      widget.difficultyLevel.getRandomCenterNumber(random);
+
+                  // Recreate the ring models
+                  _generateGameNumbers();
+
+                  // Reset and restart timer
+                  _elapsedTimeMs = 0;
+                  _startGameTimer();
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: operation.color,
+              ),
+              child: Text('Play Again!'),
             ),
           ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'You solved all four equations!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18),
-            ),
-            SizedBox(height: 15),
-            Container(
-              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              decoration: BoxDecoration(
-                color: operation.color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.timer, color: operation.color),
-                  SizedBox(width: 8),
-                  Text(
-                    'Your Time: $formattedTime',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: operation.color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 20),
-            // Star rating explanation
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.amber.withOpacity(0.5)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    starRating == 3
-                        ? 'Amazing Speed!'
-                        : (starRating == 2
-                            ? 'Great Job!'
-                            : (starRating == 1
-                                ? 'Well Done!'
-                                : 'Keep Practicing!')),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.amber.shade800,
-                    ),
-                  ),
-                  SizedBox(height: 5),
-                  Text(
-                    starRating == 3
-                        ? 'You completed the level super fast! Can you do it again?'
-                        : (starRating == 2
-                            ? 'You completed the level quickly! Try again to get 3 stars!'
-                            : (starRating == 1
-                                ? 'You completed the level! Try again to solve it faster!'
-                                : 'Try again to improve your speed!')),
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 15),
-            // Add completed equations to the dialog content
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                    color: operation.color.withOpacity(0.3), width: 2),
-              ),
-              padding: EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Completed Equations:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: operation.color,
-                    ),
-                  ),
-                  SizedBox(height: 5),
-                  Container(
-                    constraints: BoxConstraints(maxHeight: 120),
-                    width: double.infinity,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: lockedEquations
-                            .map((eq) => Container(
-                                  margin: EdgeInsets.symmetric(vertical: 5),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.check_circle,
-                                          size: 20, color: Colors.green),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        eq.equationString,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ))
-                            .toList(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Return to home screen
-            },
-            child: Text(
-              'Return to Menu',
-              style: TextStyle(
-                color: Colors.grey.shade800,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              // Reset the game with our new API
-              setState(() {
-                lockedEquations = [];
-                isGameComplete = false;
-                starAnimations = [];
-
-                // Generate a new target number
-                final random = Random();
-                targetNumber =
-                    widget.difficultyLevel.getRandomCenterNumber(random);
-
-                // Recreate the ring models from scratch
-                _generateGameNumbers();
-
-                // Reset and restart timer
-                _elapsedTimeMs = 0;
-                _startGameTimer();
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: operation.color,
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-            child: Text(
-              'Play Again! 🎮',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
+
+    // Very simple Firebase stats update
+    try {
+      // Only log the attempt, don't actually do it
+      print("Would have tried to update Firebase stats here");
+
+      // Optional: Add a way to track whether Firebase is enabled in your app
+      // You could add a boolean flag like this:
+      // bool _enableFirebaseStats = false;
+      // Then only try to update stats if this is true
+    } catch (e) {
+      print("Error logging Firebase stats intention: $e");
+    }
   }
 
   // Help dialog with game instructions
