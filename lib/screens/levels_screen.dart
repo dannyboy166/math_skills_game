@@ -39,7 +39,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
     if (user != null) {
       try {
         final allCompletions = await _userService.getLevelCompletions(user.uid);
-        
+
         // Filter completions for this operation
         _completedLevels = allCompletions
             .where((level) => level.operationName == widget.operationName)
@@ -99,41 +99,50 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
   // Format operation name for display
   String _formatOperationName() {
-    return widget.operationName.substring(0, 1).toUpperCase() + 
-           widget.operationName.substring(1);
+    return widget.operationName.substring(0, 1).toUpperCase() +
+        widget.operationName.substring(1);
   }
 
   // Get levels for multiplication and division
-  List<Map<String, dynamic>> _getMultiplicationDivisionLevels(String difficulty) {
+  List<Map<String, dynamic>> _getMultiplicationDivisionLevels(
+      String difficulty) {
     switch (difficulty) {
       case 'Standard':
-        return [1, 2, 5, 10].map((number) => {
-          'title': '$number${_getOperationSymbol()} Table',
-          'targetNumber': number,
-          'rangeStart': number,
-          'rangeEnd': number,
-        }).toList();
+        return [1, 2, 5, 10]
+            .map((number) => {
+                  'title': '$number${_getOperationSymbol()} Table',
+                  'targetNumber': number,
+                  'rangeStart': number,
+                  'rangeEnd': number,
+                })
+            .toList();
       case 'Challenging':
-        return [3, 4, 6, 11].map((number) => {
-          'title': '$number${_getOperationSymbol()} Table',
-          'targetNumber': number,
-          'rangeStart': number,
-          'rangeEnd': number,
-        }).toList();
+        return [3, 4, 6, 11]
+            .map((number) => {
+                  'title': '$number${_getOperationSymbol()} Table',
+                  'targetNumber': number,
+                  'rangeStart': number,
+                  'rangeEnd': number,
+                })
+            .toList();
       case 'Expert':
-        return [7, 8, 9, 12].map((number) => {
-          'title': '$number${_getOperationSymbol()} Table',
-          'targetNumber': number,
-          'rangeStart': number,
-          'rangeEnd': number,
-        }).toList();
+        return [7, 8, 9, 12]
+            .map((number) => {
+                  'title': '$number${_getOperationSymbol()} Table',
+                  'targetNumber': number,
+                  'rangeStart': number,
+                  'rangeEnd': number,
+                })
+            .toList();
       case 'Impossible':
-        return [13, 14, 15].map((number) => {
-          'title': '$number${_getOperationSymbol()} Table',
-          'targetNumber': number,
-          'rangeStart': number,
-          'rangeEnd': number,
-        }).toList();
+        return [13, 14, 15]
+            .map((number) => {
+                  'title': '$number${_getOperationSymbol()} Table',
+                  'targetNumber': number,
+                  'rangeStart': number,
+                  'rangeEnd': number,
+                })
+            .toList();
       default:
         return [];
     }
@@ -144,22 +153,26 @@ class _LevelsScreenState extends State<LevelsScreen> {
     switch (difficulty) {
       case 'Standard':
         // Individual levels for 1, 2, 3, 4, 5
-        return [1, 2, 3, 4, 5].map((number) => {
-          'title': 'Target: $number',
-          'targetNumber': number,
-          'rangeStart': number,
-          'rangeEnd': number,
-        }).toList();
-      
+        return [1, 2, 3, 4, 5]
+            .map((number) => {
+                  'title': 'Level: $number',
+                  'targetNumber': number,
+                  'rangeStart': number,
+                  'rangeEnd': number,
+                })
+            .toList();
+
       case 'Challenging':
         // Individual levels for 6, 7, 8, 9, 10
-        return [6, 7, 8, 9, 10].map((number) => {
-          'title': 'Target: $number',
-          'targetNumber': number,
-          'rangeStart': number,
-          'rangeEnd': number,
-        }).toList();
-      
+        return [6, 7, 8, 9, 10]
+            .map((number) => {
+                  'title': 'Level: $number',
+                  'targetNumber': number,
+                  'rangeStart': number,
+                  'rangeEnd': number,
+                })
+            .toList();
+
       case 'Expert':
         // Range-based levels for Expert
         return [
@@ -194,7 +207,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
             'rangeEnd': 20,
           },
         ];
-      
+
       case 'Impossible':
         // Range-based levels for Impossible
         return [
@@ -229,7 +242,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
             'rangeEnd': 50,
           },
         ];
-      
+
       default:
         return [];
     }
@@ -237,7 +250,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
   // Get all levels for a specific difficulty
   List<Map<String, dynamic>> _getLevelsForDifficulty(String difficulty) {
-    if (widget.operationName == 'multiplication' || widget.operationName == 'division') {
+    if (widget.operationName == 'multiplication' ||
+        widget.operationName == 'division') {
       return _getMultiplicationDivisionLevels(difficulty);
     } else {
       return _getAdditionSubtractionLevels(difficulty);
@@ -248,17 +262,18 @@ class _LevelsScreenState extends State<LevelsScreen> {
   int _getBestStarsForLevel(Map<String, dynamic> level) {
     final rangeStart = level['rangeStart'];
     final rangeEnd = level['rangeEnd'];
-    
+
     // Filter completions that fall within this range and for this difficulty
-    final matchingCompletions = _completedLevels.where((completion) =>
-      completion.targetNumber >= rangeStart && 
-      completion.targetNumber <= rangeEnd
-    ).toList();
-    
+    final matchingCompletions = _completedLevels
+        .where((completion) =>
+            completion.targetNumber >= rangeStart &&
+            completion.targetNumber <= rangeEnd)
+        .toList();
+
     if (matchingCompletions.isEmpty) {
       return 0; // No completions yet
     }
-    
+
     // Find the maximum stars achieved
     return matchingCompletions
         .map((completion) => completion.stars)
@@ -269,23 +284,23 @@ class _LevelsScreenState extends State<LevelsScreen> {
   String _getBestTimeForLevel(Map<String, dynamic> level) {
     final rangeStart = level['rangeStart'];
     final rangeEnd = level['rangeEnd'];
-    
+
     // Filter completions that fall within this range and have a valid time
-    final matchingCompletions = _completedLevels.where((completion) =>
-      completion.targetNumber >= rangeStart && 
-      completion.targetNumber <= rangeEnd &&
-      completion.completionTimeMs > 0
-    ).toList();
-    
+    final matchingCompletions = _completedLevels
+        .where((completion) =>
+            completion.targetNumber >= rangeStart &&
+            completion.targetNumber <= rangeEnd &&
+            completion.completionTimeMs > 0)
+        .toList();
+
     if (matchingCompletions.isEmpty) {
       return '--:--'; // No valid completions yet
     }
-    
+
     // Find the minimum time (best time) achieved
-    final bestCompletion = matchingCompletions.reduce((a, b) => 
-      a.completionTimeMs < b.completionTimeMs ? a : b
-    );
-    
+    final bestCompletion = matchingCompletions
+        .reduce((a, b) => a.completionTimeMs < b.completionTimeMs ? a : b);
+
     return StarRatingCalculator.formatTime(bestCompletion.completionTimeMs);
   }
 
@@ -309,20 +324,21 @@ class _LevelsScreenState extends State<LevelsScreen> {
       default:
         difficultyEnum = DifficultyLevel.standard;
     }
-    
+
     // For tables (multiplication/division), use exact target number
     // For addition/subtraction with exact targets, use that exact number
     // For range-based levels (Expert/Impossible addition/subtraction), pick random number in range
     int targetToUse = level['targetNumber'];
-    
+
     // Generate a random number within the range for Expert and Impossible ranges
-    if ((widget.operationName == 'addition' || widget.operationName == 'subtraction') && 
+    if ((widget.operationName == 'addition' ||
+            widget.operationName == 'subtraction') &&
         level['rangeStart'] != level['rangeEnd']) {
       final random = Random();
-      targetToUse = level['rangeStart'] + 
+      targetToUse = level['rangeStart'] +
           random.nextInt(level['rangeEnd'] - level['rangeStart'] + 1);
     }
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -341,7 +357,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
   @override
   Widget build(BuildContext context) {
     final Color operationColor = _getOperationColor();
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -371,11 +387,16 @@ class _LevelsScreenState extends State<LevelsScreen> {
                   children: [
                     _buildOperationHeader(operationColor),
                     SizedBox(height: 24),
-                    
+
                     // Build each difficulty section
-                    for (String difficulty in ['Standard', 'Challenging', 'Expert', 'Impossible']) ...[
+                    for (String difficulty in [
+                      'Standard',
+                      'Challenging',
+                      'Expert',
+                      'Impossible'
+                    ]) ...[
                       _buildDifficultySection(
-                        difficulty, 
+                        difficulty,
                         operationColor,
                         _getLevelsForDifficulty(difficulty),
                       ),
@@ -464,12 +485,12 @@ class _LevelsScreenState extends State<LevelsScreen> {
   }
 
   Widget _buildDifficultySection(
-    String difficultyName, 
+    String difficultyName,
     Color operationColor,
     List<Map<String, dynamic>> levels,
   ) {
     if (levels.isEmpty) return SizedBox.shrink();
-    
+
     // Determine color for this difficulty
     Color difficultyColor;
     switch (difficultyName) {
@@ -488,10 +509,10 @@ class _LevelsScreenState extends State<LevelsScreen> {
       default:
         difficultyColor = Colors.green;
     }
-    
+
     // Get description text for this difficulty
     String description = _getDifficultyDescription(difficultyName);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -512,7 +533,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
           ),
         ),
         SizedBox(height: 8),
-        
+
         // Difficulty description
         Padding(
           padding: const EdgeInsets.only(left: 12.0),
@@ -526,16 +547,20 @@ class _LevelsScreenState extends State<LevelsScreen> {
           ),
         ),
         SizedBox(height: 12),
-        
+
         // Level cards grid
         GridView.builder(
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: widget.operationName == 'addition' || widget.operationName == 'subtraction' 
-                ? 3 // 3 columns for addition/subtraction to fit 5 levels better
-                : 2, // 2 columns for multiplication/division
-            childAspectRatio: 1.3,
+            crossAxisCount: widget.operationName == 'addition' ||
+                    widget.operationName == 'subtraction'
+                ? 3
+                : 2,
+            childAspectRatio:
+                difficultyName == 'Expert' || difficultyName == 'Impossible'
+                    ? 1.1
+                    : 1.3,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
@@ -544,7 +569,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
             final level = levels[index];
             final stars = _getBestStarsForLevel(level);
             final bestTime = _getBestTimeForLevel(level);
-            
+
             return _buildLevelCard(
               operationColor,
               difficultyName,
@@ -559,10 +584,11 @@ class _LevelsScreenState extends State<LevelsScreen> {
   }
 
   String _getDifficultyDescription(String difficultyName) {
-    if (widget.operationName == 'multiplication' || widget.operationName == 'division') {
+    if (widget.operationName == 'multiplication' ||
+        widget.operationName == 'division') {
       switch (difficultyName) {
         case 'Standard':
-          return 'Basic tables: 1, 2, 5, and 10';
+          return 'Standard tables: 1, 2, 5, and 10';
         case 'Challenging':
           return 'Intermediate tables: 3, 4, 6, and 11';
         case 'Expert':
@@ -575,19 +601,19 @@ class _LevelsScreenState extends State<LevelsScreen> {
     } else {
       switch (difficultyName) {
         case 'Standard':
-          return 'Easy: Individual center numbers 1-5';
+          return 'Individual center numbers 1-5';
         case 'Challenging':
-          return 'Moderate: Individual center numbers 6-10';
+          return 'Individual center numbers 6-10';
         case 'Expert':
-          return 'Advanced: Center number ranges from 11 to 20';
+          return 'Center number ranges from 11 to 20';
         case 'Impossible':
-          return 'Master: Center number ranges from 21 to 50';
+          return 'Center number ranges from 21 to 50';
         default:
           return '';
       }
     }
   }
-  
+
   Widget _buildLevelCard(
     Color operationColor,
     String difficultyName,
@@ -597,7 +623,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
   ) {
     final String title = level['title'];
     final bool isRange = level['rangeStart'] != level['rangeEnd'];
-    
+
     return GestureDetector(
       onTap: () => _navigateToGame(difficultyName, level),
       child: Container(
@@ -614,6 +640,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
         ),
         padding: EdgeInsets.all(12),
         child: Column(
+          mainAxisSize: MainAxisSize.min, // Use minimum space needed
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Star rating row
@@ -623,14 +650,14 @@ class _LevelsScreenState extends State<LevelsScreen> {
                 return Icon(
                   Icons.star,
                   size: 20,
-                  color: index < stars 
-                      ? Colors.amber 
+                  color: index < stars
+                      ? Colors.amber
                       : Colors.grey.withOpacity(0.3),
                 );
               }),
             ),
             SizedBox(height: 6),
-            
+
             // Level title
             Text(
               title,
@@ -641,22 +668,24 @@ class _LevelsScreenState extends State<LevelsScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            
-            // For range-based levels, add a subtitle
-            if (isRange && (widget.operationName == 'addition' || widget.operationName == 'subtraction')) ...[
-              SizedBox(height: 2),
+
+            // For range-based levels, add a subtitle with less height
+            if (isRange &&
+                (widget.operationName == 'addition' ||
+                    widget.operationName == 'subtraction')) ...[
+              SizedBox(height: 1), // Reduce spacing
               Text(
                 'Target Range',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10, // Smaller font size
                   color: Colors.grey[600],
                 ),
                 textAlign: TextAlign.center,
               ),
             ],
-            
+
             SizedBox(height: 4),
-            
+
             // Best time
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
