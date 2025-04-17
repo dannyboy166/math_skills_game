@@ -559,8 +559,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
                 : 2,
             childAspectRatio:
                 difficultyName == 'Expert' || difficultyName == 'Impossible'
-                    ? 1.1
-                    : 1.3,
+                    ? 0.95 // Decreased from 1.1 (more height)
+                    : 1.1, // Decreased from 1.3 (more height)
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
@@ -656,24 +656,25 @@ class _LevelsScreenState extends State<LevelsScreen> {
                 );
               }),
             ),
-            SizedBox(height: 6),
+            SizedBox(height: 4), // Reduced from 6
 
             // Level title
             Text(
               title,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14, // Reduced from 15
                 fontWeight: FontWeight.bold,
                 color: operationColor,
               ),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
 
             // For range-based levels, add a subtitle with less height
             if (isRange &&
                 (widget.operationName == 'addition' ||
-                    widget.operationName == 'subtraction')) ...[
-              SizedBox(height: 1), // Reduce spacing
+                    widget.operationName == 'subtraction'))
               Text(
                 'Target Range',
                 style: TextStyle(
@@ -682,28 +683,29 @@ class _LevelsScreenState extends State<LevelsScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-            ],
-
-            SizedBox(height: 4),
 
             // Best time
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.timer_outlined,
-                  size: 14,
-                  color: Colors.grey[600],
-                ),
-                SizedBox(width: 4),
-                Text(
-                  bestTime,
-                  style: TextStyle(
-                    fontSize: 12,
+            Flexible(
+              fit: FlexFit.loose,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 12, // Reduced from 14
                     color: Colors.grey[600],
                   ),
-                ),
-              ],
+                  SizedBox(width: 2), // Reduced from 4
+                  Text(
+                    bestTime,
+                    style: TextStyle(
+                      fontSize: 11, // Reduced from 12
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

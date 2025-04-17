@@ -180,35 +180,35 @@ class UserService {
     int longestStreak = userDataMap['streakData']?['longestStreak'] ?? 0;
 
     // Check if this is first time playing today
-    // if (lastPlayedDate == null || lastPlayedDate.isBefore(today)) {
-    // Check if continuing streak (yesterday) or breaking streak
-    if (lastPlayedDate != null &&
-        lastPlayedDate.difference(today).inDays == -1) {
-      // Continuing streak from yesterday
-      currentStreak += 1;
-    } else if (lastPlayedDate == null ||
-        lastPlayedDate.difference(today).inDays < -1) {
-      // New streak (either first time or broke streak)
-      currentStreak = 1;
-    }
-
-    // Update longest streak if needed
-    if (currentStreak > longestStreak) {
-      longestStreak = currentStreak;
-    }
-
-    // Store new streak data
-    await userRef.update({
-      'streakData': {
-        'lastPlayedDate': Timestamp.fromDate(today),
-        'currentStreak': currentStreak,
-        'longestStreak': longestStreak,
+    if (lastPlayedDate == null || lastPlayedDate.isBefore(today)) {
+      // Check if continuing streak (yesterday) or breaking streak
+      if (lastPlayedDate != null &&
+          lastPlayedDate.difference(today).inDays == -1) {
+        // Continuing streak from yesterday
+        currentStreak += 1;
+      } else if (lastPlayedDate == null ||
+          lastPlayedDate.difference(today).inDays < -1) {
+        // New streak (either first time or broke streak)
+        currentStreak = 1;
       }
-    });
 
-    // Also update weekly streak collection
-    await _updateWeeklyStreak(userId, today);
-    //}
+      // Update longest streak if needed
+      if (currentStreak > longestStreak) {
+        longestStreak = currentStreak;
+      }
+
+      // Store new streak data
+      await userRef.update({
+        'streakData': {
+          'lastPlayedDate': Timestamp.fromDate(today),
+          'currentStreak': currentStreak,
+          'longestStreak': longestStreak,
+        }
+      });
+
+      // Also update weekly streak collection
+      await _updateWeeklyStreak(userId, today);
+    }
   }
 
   // Update weekly streak data
