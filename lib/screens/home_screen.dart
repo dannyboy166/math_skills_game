@@ -1,9 +1,8 @@
 // lib/screens/home_screen.dart (Redesigned)
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:math_skills_game/widgets/custom_bottom_nav_bar.dart';
+import 'package:math_skills_game/widgets/streak_flame_widget.dart';
 import 'dart:math';
 import 'game_screen.dart';
 import 'levels_screen.dart';
@@ -227,6 +226,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+// In your home_screen.dart file, update the _buildHeader method
+// Make sure to import the StreakFlameWidget at the top of the file:
+// import 'package:math_skills_game/widgets/streak_flame_widget.dart';
+
   Widget _buildHeader() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -260,19 +263,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Spacer(),
-          StreamBuilder<User?>(
-              stream: _authService.authStateChanges,
-              builder: (context, snapshot) {
-                return CircleAvatar(
-                  backgroundColor: Colors.grey.shade100,
-                  radius: 18,
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: Colors.blue,
-                    size: 22,
-                  ),
-                );
-              }),
+          // Replace the profile avatar with StreakFlameWidget
+          const StreakFlameWidget(),
         ],
       ),
     );
