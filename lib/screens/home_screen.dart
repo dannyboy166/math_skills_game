@@ -1,12 +1,15 @@
 // lib/screens/home_screen.dart (Redesigned)
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:math_skills_game/widgets/custom_bottom_nav_bar.dart';
 import 'dart:math';
 import 'game_screen.dart';
 import 'levels_screen.dart';
 import 'profile_screen.dart';
 import '../models/difficulty_level.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
+import '../models/daily_streak.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -21,12 +24,71 @@ class _HomeScreenState extends State<HomeScreen> {
   int? selectedMultiplicationTable;
   int _currentIndex = 0;
   final AuthService _authService = AuthService();
+  final UserService _userService = UserService();
+
+  // Weekly streak data
+  WeeklyStreak _weeklyStreak = WeeklyStreak.currentWeek();
+  bool _isLoadingStreak = true;
+  int _currentStreak = 0;
+  int _longestStreak = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStreakData();
+  }
+
+  Future<void> _loadStreakData() async {
+    if (_authService.currentUser == null) return;
+
+    setState(() {
+      _isLoadingStreak = true;
+    });
+
+    try {
+      // Load weekly streak
+      final weeklyStreak = await _userService
+          .getCurrentWeekStreak(_authService.currentUser!.uid);
+
+      // Load streak stats
+      final streakStats =
+          await _userService.getStreakStats(_authService.currentUser!.uid);
+
+      if (mounted) {
+        setState(() {
+          _weeklyStreak = weeklyStreak;
+          _currentStreak = streakStats['currentStreak'] ?? 0;
+          _longestStreak = streakStats['longestStreak'] ?? 0;
+          _isLoadingStreak = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading streak data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingStreak = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _buildCurrentScreen(),
-      bottomNavigationBar: _buildBottomNavBar(),
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+
+            // Reload streak data when navigating to home tab
+            if (index == 0) {
+              _loadStreakData();
+            }
+          });
+        },
+      ),
     );
   }
 
@@ -45,61 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
       default:
         return _buildHomeScreen();
     }
-  }
-
-  Widget _buildBottomNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-          ),
-        ],
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey.shade400,
-          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
-          items: [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.star_rounded),
-              label: 'Levels',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.leaderboard_rounded),
-              label: 'Scores',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_rounded),
-              label: 'Profile',
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildHomeScreen() {
@@ -124,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       _buildWelcomeCard(),
                       SizedBox(height: 24),
-                      
+
                       // Operation selection
                       Text(
                         'Choose Operation',
@@ -135,19 +142,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       SizedBox(height: 16),
-                      
+
                       _buildOperationGrid(),
-                      
+
                       // Show difficulty selection only if an operation is selected
                       if (selectedOperation != null) ...[
                         SizedBox(height: 30),
-                        
-                        selectedOperation == 'multiplication' || selectedOperation == 'division'
-                          ? _buildMultiplicationTablesUI()
-                          : _buildDifficultySelection(),
-                          
+                        selectedOperation == 'multiplication' ||
+                                selectedOperation == 'division'
+                            ? _buildMultiplicationTablesUI()
+                            : _buildDifficultySelection(),
                         SizedBox(height: 30),
-                        
                         _buildStartGameButton(),
                       ],
                     ],
@@ -195,19 +200,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           Spacer(),
           StreamBuilder<User?>(
-            stream: _authService.authStateChanges,
-            builder: (context, snapshot) {
-              return CircleAvatar(
-                backgroundColor: Colors.grey.shade100,
-                radius: 18,
-                child: Icon(
-                  Icons.person_rounded,
-                  color: Colors.blue,
-                  size: 22,
-                ),
-              );
-            }
-          ),
+              stream: _authService.authStateChanges,
+              builder: (context, snapshot) {
+                return CircleAvatar(
+                  backgroundColor: Colors.grey.shade100,
+                  radius: 18,
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: Colors.blue,
+                    size: 22,
+                  ),
+                );
+              }),
         ],
       ),
     );
@@ -243,13 +247,29 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  "Let's Practice Math!",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Let's Practice Math!",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (_currentStreak > 0)
+                      Text(
+                        "Current streak: $_currentStreak days" +
+                            (_longestStreak > _currentStreak
+                                ? " (Best: $_longestStreak)"
+                                : ""),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -263,63 +283,83 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           SizedBox(height: 12),
-          Row(
-            children: [
-              _buildStreakCircle('M', true),
-              _buildStreakCircle('T', false),
-              _buildStreakCircle('W', true),
-              _buildStreakCircle('T', true),
-              _buildStreakCircle('F', false),
-              _buildStreakCircle('S', false),
-              _buildStreakCircle('S', false),
-            ],
-          ),
+          _isLoadingStreak
+              ? Center(
+                  child: SizedBox(
+                    height: 30,
+                    width: 30,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              : _buildStreakRow(),
         ],
       ),
     );
   }
 
-  Widget _buildStreakCircle(String day, bool completed) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        child: Column(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: completed
-                    ? Colors.amber
-                    : Colors.white.withOpacity(0.2),
-                border: Border.all(
-                  color: completed
-                      ? Colors.amber.shade600
-                      : Colors.white.withOpacity(0.5),
-                  width: 2,
+  Widget _buildStreakRow() {
+    // Day abbreviations
+    final dayAbbreviations = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    return Row(
+      children: List.generate(7, (index) {
+        // Get the streak status for this day
+        final dayStreak = _weeklyStreak.getDayStreak(index);
+        final bool completed = dayStreak?.completed ?? false;
+
+        // Check if this is today
+        final now = DateTime.now();
+        final isToday = index == now.weekday % 7;
+
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Column(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: completed
+                        ? Colors.amber
+                        : (isToday
+                            ? Colors.white.withOpacity(0.3)
+                            : Colors.white.withOpacity(0.2)),
+                    border: Border.all(
+                      color: completed
+                          ? Colors.amber.shade600
+                          : (isToday
+                              ? Colors.white.withOpacity(0.6)
+                              : Colors.white.withOpacity(0.5)),
+                      width: 2,
+                    ),
+                  ),
+                  child: completed
+                      ? Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 16,
+                        )
+                      : null,
                 ),
-              ),
-              child: completed
-                  ? Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 16,
-                    )
-                  : null,
+                SizedBox(height: 4),
+                Text(
+                  dayAbbreviations[index],
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 4),
-            Text(
-              day,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      }),
     );
   }
 
@@ -333,29 +373,29 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisSpacing: 16,
       children: [
         _buildOperationCard(
-          'Addition', 
-          '+', 
+          'Addition',
+          '+',
           Colors.green,
           'addition',
           Icons.add_circle_rounded,
         ),
         _buildOperationCard(
-          'Subtraction', 
-          '-', 
+          'Subtraction',
+          '-',
           Colors.purple,
           'subtraction',
           Icons.remove_circle_rounded,
         ),
         _buildOperationCard(
-          'Multiplication', 
-          '×', 
+          'Multiplication',
+          '×',
           Colors.blue,
           'multiplication',
           Icons.close_rounded,
         ),
         _buildOperationCard(
-          'Division', 
-          '÷', 
+          'Division',
+          '÷',
           Colors.orange,
           'division',
           Icons.pie_chart_rounded,
@@ -364,9 +404,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildOperationCard(String title, String symbol, Color color, String operation, IconData icon) {
+  Widget _buildOperationCard(String title, String symbol, Color color,
+      String operation, IconData icon) {
     final bool isSelected = selectedOperation == operation;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -381,9 +422,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: isSelected 
-                ? color.withOpacity(0.5) 
-                : Colors.black.withOpacity(0.05),
+              color: isSelected
+                  ? color.withOpacity(0.5)
+                  : Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -397,8 +438,8 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              icon, 
-              size: 40, 
+              icon,
+              size: 40,
               color: isSelected ? Colors.white : color,
             ),
             SizedBox(height: 8),
@@ -414,9 +455,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: isSelected 
-                  ? Colors.white.withOpacity(0.3) 
-                  : color.withOpacity(0.1),
+                color: isSelected
+                    ? Colors.white.withOpacity(0.3)
+                    : color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -455,19 +496,24 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
           children: [
-            _buildDifficultyCard(DifficultyLevel.standard, 'Standard', Colors.green, 'Center number: 1-5'),
-            _buildDifficultyCard(DifficultyLevel.challenging, 'Challenging', Colors.blue, 'Center number: 6-10'),
-            _buildDifficultyCard(DifficultyLevel.Expert, 'Expert', Colors.orange, 'Center number: 11-20'),
-            _buildDifficultyCard(DifficultyLevel.Impossible, 'Impossible', Colors.red, 'Center number: 21-50'),
+            _buildDifficultyCard(DifficultyLevel.standard, 'Standard',
+                Colors.green, 'Center number: 1-5'),
+            _buildDifficultyCard(DifficultyLevel.challenging, 'Challenging',
+                Colors.blue, 'Center number: 6-10'),
+            _buildDifficultyCard(DifficultyLevel.Expert, 'Expert',
+                Colors.orange, 'Center number: 11-20'),
+            _buildDifficultyCard(DifficultyLevel.Impossible, 'Impossible',
+                Colors.red, 'Center number: 21-50'),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildDifficultyCard(DifficultyLevel level, String title, Color color, String description) {
+  Widget _buildDifficultyCard(
+      DifficultyLevel level, String title, Color color, String description) {
     final bool isSelected = selectedLevel == level;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -480,9 +526,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: isSelected 
-                ? color.withOpacity(0.5) 
-                : Colors.black.withOpacity(0.05),
+              color: isSelected
+                  ? color.withOpacity(0.5)
+                  : Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -514,7 +560,9 @@ class _HomeScreenState extends State<HomeScreen> {
               description,
               style: TextStyle(
                 fontSize: 12,
-                color: isSelected ? Colors.white.withOpacity(0.9) : Colors.grey.shade600,
+                color: isSelected
+                    ? Colors.white.withOpacity(0.9)
+                    : Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
             ),
@@ -525,10 +573,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMultiplicationTablesUI() {
-    final String operation = selectedOperation == 'multiplication' ? 'Multiplication' : 'Division';
+    final String operation =
+        selectedOperation == 'multiplication' ? 'Multiplication' : 'Division';
     final String symbol = selectedOperation == 'multiplication' ? '×' : '÷';
-    final Color color = selectedOperation == 'multiplication' ? Colors.blue : Colors.orange;
-    
+    final Color color =
+        selectedOperation == 'multiplication' ? Colors.blue : Colors.orange;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -541,7 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         SizedBox(height: 16),
-        
+
         // Categories grid
         GridView.count(
           shrinkWrap: true,
@@ -557,9 +607,9 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildTableCategoryCard('Impossible', [13, 14, 15], Colors.red),
           ],
         ),
-        
+
         SizedBox(height: 20),
-        
+
         Text(
           'Or Select Specific Table',
           style: TextStyle(
@@ -569,7 +619,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         SizedBox(height: 16),
-        
+
         // Tables grid
         GridView.builder(
           shrinkWrap: true,
@@ -586,9 +636,9 @@ class _HomeScreenState extends State<HomeScreen> {
             return _buildTableNumberCard(number);
           },
         ),
-        
+
         SizedBox(height: 20),
-        
+
         // Selected table info
         if (selectedMultiplicationTable != null)
           Container(
@@ -634,8 +684,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       SizedBox(height: 4),
                       Text(
                         selectedOperation == 'multiplication'
-                          ? 'Find products of $selectedMultiplicationTable in the outer ring'
-                          : 'Find numbers that, when divided, equal $selectedMultiplicationTable',
+                            ? 'Find products of $selectedMultiplicationTable in the outer ring'
+                            : 'Find numbers that, when divided, equal $selectedMultiplicationTable',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade700,
@@ -650,11 +700,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
-  
-  Widget _buildTableCategoryCard(String category, List<int> tables, Color color) {
-    final bool hasSelectedTable = selectedMultiplicationTable != null && 
-                                 tables.contains(selectedMultiplicationTable);
-    
+
+  Widget _buildTableCategoryCard(
+      String category, List<int> tables, Color color) {
+    final bool hasSelectedTable = selectedMultiplicationTable != null &&
+        tables.contains(selectedMultiplicationTable);
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -668,9 +719,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: hasSelectedTable 
-                ? color.withOpacity(0.5) 
-                : Colors.black.withOpacity(0.05),
+              color: hasSelectedTable
+                  ? color.withOpacity(0.5)
+                  : Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -684,7 +735,9 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              hasSelectedTable ? Icons.check_circle_rounded : Icons.star_rounded,
+              hasSelectedTable
+                  ? Icons.check_circle_rounded
+                  : Icons.star_rounded,
               size: 32,
               color: hasSelectedTable ? Colors.white : color,
             ),
@@ -702,7 +755,9 @@ class _HomeScreenState extends State<HomeScreen> {
               'Tables: ${tables.join(", ")}',
               style: TextStyle(
                 fontSize: 12,
-                color: hasSelectedTable ? Colors.white.withOpacity(0.9) : Colors.grey.shade600,
+                color: hasSelectedTable
+                    ? Colors.white.withOpacity(0.9)
+                    : Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
             ),
@@ -711,7 +766,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+
   Widget _buildTableNumberCard(int number) {
     // Determine category and color
     Color color;
@@ -724,9 +779,9 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       color = Colors.red;
     }
-    
+
     final bool isSelected = selectedMultiplicationTable == number;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -739,9 +794,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: isSelected 
-                ? color.withOpacity(0.5) 
-                : Colors.black.withOpacity(0.05),
+              color: isSelected
+                  ? color.withOpacity(0.5)
+                  : Colors.black.withOpacity(0.05),
               blurRadius: 6,
               offset: Offset(0, 2),
             ),
@@ -777,19 +832,20 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       buttonColor = Colors.orange;
     }
-    
+
     bool canStartGame = true;
     String? errorMessage;
-    
+
     // Check if all required selections have been made
     if (selectedOperation == null) {
       canStartGame = false;
-    } else if ((selectedOperation == 'multiplication' || selectedOperation == 'division') && 
-              selectedMultiplicationTable == null) {
+    } else if ((selectedOperation == 'multiplication' ||
+            selectedOperation == 'division') &&
+        selectedMultiplicationTable == null) {
       canStartGame = false;
       errorMessage = 'Please select a table first';
     }
-    
+
     return Column(
       children: [
         if (errorMessage != null) ...[
@@ -802,24 +858,34 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 8),
         ],
-        
         ElevatedButton(
-          onPressed: canStartGame ? () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => GameScreen(
-                  operationName: selectedOperation!,
-                  difficultyLevel: selectedLevel,
-                  targetNumber: (selectedOperation == 'multiplication' ||
-                              selectedOperation == 'division') &&
-                          selectedMultiplicationTable != null
-                      ? selectedMultiplicationTable
-                      : null,
-                ),
-              ),
-            );
-          } : null,
+          onPressed: canStartGame
+              ? () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GameScreen(
+                        operationName: selectedOperation!,
+                        difficultyLevel: selectedLevel,
+                        targetNumber: (selectedOperation == 'multiplication' ||
+                                    selectedOperation == 'division') &&
+                                selectedMultiplicationTable != null
+                            ? selectedMultiplicationTable
+                            : null,
+                      ),
+                    ),
+                  ).then((refreshRequired) {
+                    // Refresh streak data when returning from game if true was passed
+                    if (refreshRequired == true) {
+                      setState(() {
+                        _isLoadingStreak =
+                            true; // Show loading indicator immediately
+                      });
+                      _loadStreakData(); // This will fetch fresh data
+                    }
+                  });
+                }
+              : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: buttonColor,
             foregroundColor: Colors.white,

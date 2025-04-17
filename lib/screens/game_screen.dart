@@ -596,7 +596,8 @@ class _GameScreenState extends State<GameScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(dialogContext).pop();
-                    Navigator.of(context).pop();
+                    Navigator.of(context)
+                        .pop(true); // Pass true to indicate refreshing streaks
                   },
                   child: Text('Return to Menu'),
                 ),
