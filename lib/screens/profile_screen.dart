@@ -246,7 +246,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisCount: 2,
                         shrinkWrap: true,
                         physics: NeverScrollableScrollPhysics(),
-                        childAspectRatio: 1.5,
+                        childAspectRatio: 1.2,
                         mainAxisSpacing: 10,
                         crossAxisSpacing: 10,
                         children: [
