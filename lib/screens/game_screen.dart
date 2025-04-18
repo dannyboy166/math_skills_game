@@ -152,15 +152,14 @@ class _GameScreenState extends State<GameScreen> {
     List<int> innerNumbers;
     List<int> outerNumbers;
 
-    // Special handling for multiplication and division
     if (widget.operationName == 'multiplication') {
       innerNumbers = List.generate(12, (index) => index + 1); // 1-12
       outerNumbers = GameGenerator.generateMultiplicationNumbers(
-          targetNumber, widget.difficultyLevel.maxOuterNumber, random);
+          targetNumber, random); // ✅ removed maxOuterNumber
     } else if (widget.operationName == 'division') {
       innerNumbers = List.generate(12, (index) => index + 1); // 1-12
       outerNumbers = GameGenerator.generateDivisionNumbers(
-          targetNumber, widget.difficultyLevel.maxOuterNumber, random);
+          targetNumber, random); // ✅ removed maxOuterNumber
     } else {
       // Original logic for other operations
       innerNumbers = widget.difficultyLevel.innerRingNumbers;

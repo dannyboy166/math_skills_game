@@ -107,35 +107,25 @@ class GameGenerator {
         innerNumbers, targetNumber, maxOuterNumber, random);
   }
 
-  /// Generate numbers for multiplication operation
   static List<int> generateMultiplicationNumbers(
-      int targetNumber, int maxOuterNumber, Random random) {
-    // Special case for target=1
+      int targetNumber, Random random) {
     if (targetNumber == 1) {
-      // For target=1, just create a list of numbers 1-16 and shuffle them
       final outerNumbers = List.generate(16, (index) => index + 1);
       outerNumbers.shuffle(random);
       return outerNumbers;
     }
 
-    // Regular case (existing code for target > 1)
-    // Maximum product possible (may be adjusted if it's too large)
-    final effectiveMaxOuter = min(targetNumber * 12, maxOuterNumber);
-
-    // Initialize outer numbers list
+    final maxProduct = targetNumber * 12;
     final outerNumbers = List.filled(16, 0);
 
-    // 1. Choose 4 random numbers from 1-12 (not visible to player, just for calculation)
     Set<int> selectedInnerNumbers = {};
     while (selectedInnerNumbers.length < 4) {
       selectedInnerNumbers.add(random.nextInt(12) + 1);
     }
 
-    // 2. Calculate the 4 products with the center number
     List<int> productNumbers =
         selectedInnerNumbers.map((n) => n * targetNumber).toList();
 
-    // 3. Randomly place the 4 product numbers anywhere in the outer ring
     List<int> outerPositions = List.generate(16, (index) => index);
     outerPositions.shuffle(random);
 
@@ -143,18 +133,13 @@ class GameGenerator {
       outerNumbers[outerPositions[i]] = productNumbers[i];
     }
 
-    // 4. Fill remaining positions with numbers that:
-    //    - Are not duplicates of our chosen products
-    //    - Are not duplicates of any previously generated number
-    //    - Are within range 1 to maxOuterNumber
     Set<int> usedOuterNumbers = Set.from(productNumbers);
 
     for (int i = 0; i < 16; i++) {
       if (outerNumbers[i] == 0) {
-        // Generate a random number that's not already used
         int randomNum;
         do {
-          randomNum = random.nextInt(effectiveMaxOuter) + 1;
+          randomNum = random.nextInt(maxProduct) + 1;
         } while (usedOuterNumbers.contains(randomNum));
 
         outerNumbers[i] = randomNum;
@@ -165,35 +150,24 @@ class GameGenerator {
     return outerNumbers;
   }
 
-  static List<int> generateDivisionNumbers(
-      int targetNumber, int maxOuterNumber, Random random) {
-    // Special case for target=1
+  static List<int> generateDivisionNumbers(int targetNumber, Random random) {
     if (targetNumber == 1) {
-      // For target=1, just create a list of numbers 1-16 and shuffle them
       final outerNumbers = List.generate(16, (index) => index + 1);
       outerNumbers.shuffle(random);
       return outerNumbers;
     }
 
-    // Regular case (existing code for target > 1)
-    // Maximum dividend possible
-    final effectiveMaxOuter = min(targetNumber * 12, maxOuterNumber);
-
-    // Initialize outer numbers list
+    final maxDividend = targetNumber * 12;
     final outerNumbers = List.filled(16, 0);
 
-    // 1. Choose 4 random numbers from 1-12 as divisors
     Set<int> selectedInnerNumbers = {};
     while (selectedInnerNumbers.length < 4) {
       selectedInnerNumbers.add(random.nextInt(12) + 1);
     }
 
-    // 2. Calculate the 4 dividends (outer = inner × target)
-    // This ensures outer ÷ inner = target
     List<int> dividendNumbers =
         selectedInnerNumbers.map((n) => n * targetNumber).toList();
 
-    // 3. Randomly place the 4 dividend numbers anywhere in the outer ring
     List<int> outerPositions = List.generate(16, (index) => index);
     outerPositions.shuffle(random);
 
@@ -201,18 +175,13 @@ class GameGenerator {
       outerNumbers[outerPositions[i]] = dividendNumbers[i];
     }
 
-    // 4. Fill remaining positions with numbers that:
-    //    - Are not duplicates of our chosen dividends
-    //    - Are not duplicates of any previously generated number
-    //    - Are within range 1 to maxOuterNumber
     Set<int> usedOuterNumbers = Set.from(dividendNumbers);
 
     for (int i = 0; i < 16; i++) {
       if (outerNumbers[i] == 0) {
-        // Generate a random number that's not already used
         int randomNum;
         do {
-          randomNum = random.nextInt(effectiveMaxOuter) + 1;
+          randomNum = random.nextInt(maxDividend) + 1;
         } while (usedOuterNumbers.contains(randomNum));
 
         outerNumbers[i] = randomNum;
