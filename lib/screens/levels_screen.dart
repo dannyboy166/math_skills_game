@@ -7,6 +7,8 @@ import 'package:math_skills_game/screens/game_screen.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'dart:math';
 
+import 'package:math_skills_game/widgets/operation_selector.dart';
+
 class LevelsScreen extends StatefulWidget {
   final String operationName;
 
@@ -23,10 +25,12 @@ class _LevelsScreenState extends State<LevelsScreen> {
   final UserService _userService = UserService();
   bool _isLoading = true;
   List<LevelCompletionModel> _completedLevels = [];
+  late String _currentOperation;
 
   @override
   void initState() {
     super.initState();
+    _currentOperation = widget.operationName;
     _loadLevelData();
   }
 
@@ -42,7 +46,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
         // Filter completions for this operation
         _completedLevels = allCompletions
-            .where((level) => level.operationName == widget.operationName)
+            .where((level) => level.operationName == _currentOperation)
             .toList();
       } catch (e) {
         print('Error loading level data: $e');
@@ -65,9 +69,18 @@ class _LevelsScreenState extends State<LevelsScreen> {
     }
   }
 
+  void _handleOperationChanged(String operation) {
+    if (operation != _currentOperation) {
+      setState(() {
+        _currentOperation = operation;
+      });
+      _loadLevelData();
+    }
+  }
+
   // Get color for this operation
   Color _getOperationColor() {
-    switch (widget.operationName) {
+    switch (_currentOperation) {
       case 'addition':
         return Colors.green;
       case 'subtraction':
@@ -83,7 +96,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
   // Get symbol for this operation
   String _getOperationSymbol() {
-    switch (widget.operationName) {
+    switch (_currentOperation) {
       case 'addition':
         return '+';
       case 'subtraction':
@@ -99,8 +112,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
   // Format operation name for display
   String _formatOperationName() {
-    return widget.operationName.substring(0, 1).toUpperCase() +
-        widget.operationName.substring(1);
+    return _currentOperation.substring(0, 1).toUpperCase() +
+        _currentOperation.substring(1);
   }
 
   // Get levels for multiplication and division
@@ -250,8 +263,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
   // Get all levels for a specific difficulty
   List<Map<String, dynamic>> _getLevelsForDifficulty(String difficulty) {
-    if (widget.operationName == 'multiplication' ||
-        widget.operationName == 'division') {
+    if (_currentOperation == 'multiplication' ||
+        _currentOperation == 'division') {
       return _getMultiplicationDivisionLevels(difficulty);
     } else {
       return _getAdditionSubtractionLevels(difficulty);
@@ -331,8 +344,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
     int targetToUse = level['targetNumber'];
 
     // Generate a random number within the range for Expert and Impossible ranges
-    if ((widget.operationName == 'addition' ||
-            widget.operationName == 'subtraction') &&
+    if ((_currentOperation == 'addition' ||
+            _currentOperation == 'subtraction') &&
         level['rangeStart'] != level['rangeEnd']) {
       final random = Random();
       targetToUse = level['rangeStart'] +
@@ -343,7 +356,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => GameScreen(
-          operationName: widget.operationName,
+          operationName: _currentOperation,
           difficultyLevel: difficultyEnum,
           targetNumber: targetToUse,
         ),
@@ -367,55 +380,69 @@ class _LevelsScreenState extends State<LevelsScreen> {
         backgroundColor: operationColor,
         foregroundColor: Colors.white,
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: operationColor))
-          : Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    operationColor.withOpacity(0.1),
-                    Colors.white,
-                  ],
-                ),
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildOperationHeader(operationColor),
-                    SizedBox(height: 24),
+      body: Column(
+        children: [
+          // Add the operation selector at the top
+          OperationSelector(
+            currentOperation: _currentOperation,
+            onOperationSelected: _handleOperationChanged,
+          ),
 
-                    // Build each difficulty section
-                    for (String difficulty in [
-                      'Standard',
-                      'Challenging',
-                      'Expert',
-                      'Impossible'
-                    ]) ...[
-                      _buildDifficultySection(
-                        difficulty,
-                        operationColor,
-                        _getLevelsForDifficulty(difficulty),
+          // Rest of the content in an Expanded widget
+          Expanded(
+            child: _isLoading
+                ? Center(
+                    child: CircularProgressIndicator(color: operationColor))
+                : Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          operationColor.withOpacity(0.1),
+                          Colors.white,
+                        ],
                       ),
-                      SizedBox(height: 24),
-                    ],
-                  ],
-                ),
-              ),
-            ),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildOperationHeader(operationColor),
+                          SizedBox(height: 24),
+
+                          // Build each difficulty section
+                          for (String difficulty in [
+                            'Standard',
+                            'Challenging',
+                            'Expert',
+                            'Impossible'
+                          ]) ...[
+                            _buildDifficultySection(
+                              difficulty,
+                              operationColor,
+                              _getLevelsForDifficulty(difficulty),
+                            ),
+                            SizedBox(height: 24),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildOperationHeader(Color operationColor) {
     String description;
-    if (widget.operationName == 'multiplication') {
+    if (_currentOperation == 'multiplication') {
       description = 'Learn multiplication tables in a fun and interactive way';
-    } else if (widget.operationName == 'division') {
+    } else if (_currentOperation == 'division') {
       description = 'Practice division with different tables';
-    } else if (widget.operationName == 'addition') {
+    } else if (_currentOperation == 'addition') {
       description = 'Practice addition with various center numbers';
     } else {
       description = 'Master subtraction with increasing difficulty';
@@ -553,8 +580,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: widget.operationName == 'addition' ||
-                    widget.operationName == 'subtraction'
+            crossAxisCount: _currentOperation == 'addition' ||
+                    _currentOperation == 'subtraction'
                 ? 3
                 : 2,
             childAspectRatio:
@@ -584,8 +611,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
   }
 
   String _getDifficultyDescription(String difficultyName) {
-    if (widget.operationName == 'multiplication' ||
-        widget.operationName == 'division') {
+    if (_currentOperation == 'multiplication' ||
+        _currentOperation == 'division') {
       switch (difficultyName) {
         case 'Standard':
           return 'Standard tables: 1, 2, 5, and 10';
@@ -673,8 +700,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
             // For range-based levels, add a subtitle with less height
             if (isRange &&
-                (widget.operationName == 'addition' ||
-                    widget.operationName == 'subtraction'))
+                (_currentOperation == 'addition' ||
+                    _currentOperation == 'subtraction'))
               Text(
                 'Target Range',
                 style: TextStyle(
