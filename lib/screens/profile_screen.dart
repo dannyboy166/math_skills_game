@@ -44,8 +44,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Get streak data
           final streakData = await _userService.getStreakStats(userId);
 
+          final userData = docSnapshot.data()!;
+          final completedGames = userData['completedGames'] ?? {};
+
+          // Calculate the sum of all operation counts
+          int additionCount = completedGames['addition'] ?? 0;
+          int subtractionCount = completedGames['subtraction'] ?? 0;
+          int multiplicationCount = completedGames['multiplication'] ?? 0;
+          int divisionCount = completedGames['division'] ?? 0;
+
+          int calculatedTotal = additionCount +
+              subtractionCount +
+              multiplicationCount +
+              divisionCount;
+
+          // Use the calculated total instead of the stored total
+          userData['totalGames'] = calculatedTotal;
+
           setState(() {
-            _userData = docSnapshot.data();
+            _userData = userData;
             _streakData = streakData;
             _displayNameController.text = _userData?['displayName'] ?? '';
           });
