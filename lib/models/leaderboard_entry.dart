@@ -8,6 +8,7 @@ class LeaderboardEntry {
   final int totalGames;
   final int longestStreak;
   final Map<String, int> operationCounts;
+  final Map<String, int> operationStars;
   final String level;
   final DateTime lastUpdated;
 
@@ -18,6 +19,7 @@ class LeaderboardEntry {
     required this.totalGames,
     required this.longestStreak,
     required this.operationCounts,
+    this.operationStars = const {},
     required this.level,
     required this.lastUpdated,
   });
@@ -33,6 +35,16 @@ class LeaderboardEntry {
     operationCounts['subtraction'] = completedGames['subtraction'] ?? 0;
     operationCounts['multiplication'] = completedGames['multiplication'] ?? 0;
     operationCounts['division'] = completedGames['division'] ?? 0;
+
+    // Get operation stars (if available)
+    final operationStars = <String, int>{};
+    
+    // If we have operation stars stored directly in the user document
+    final gameStats = data['gameStats'] as Map<String, dynamic>? ?? {};
+    operationStars['addition'] = gameStats['additionStars'] ?? 0;
+    operationStars['subtraction'] = gameStats['subtractionStars'] ?? 0;
+    operationStars['multiplication'] = gameStats['multiplicationStars'] ?? 0;
+    operationStars['division'] = gameStats['divisionStars'] ?? 0;
 
     // Get streak data
     final streakData = data['streakData'] as Map<String, dynamic>? ?? {};
@@ -62,6 +74,7 @@ class LeaderboardEntry {
       totalGames: totalGames,
       longestStreak: longestStreak,
       operationCounts: operationCounts,
+      operationStars: operationStars,
       level: data['level'] ?? 'Novice',
       lastUpdated: lastUpdated,
     );

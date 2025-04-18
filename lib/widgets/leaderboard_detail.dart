@@ -1,7 +1,7 @@
 // lib/widgets/leaderboard_detail.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/leaderboard_entry.dart';
+import 'package:intl/intl.dart';
 
 class LeaderboardDetailBottomSheet extends StatelessWidget {
   final LeaderboardEntry entry;
@@ -35,7 +35,6 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      // Wrap everything in a SingleChildScrollView to prevent overflow
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -92,8 +91,7 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
               physics: NeverScrollableScrollPhysics(),
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
-              // Increase childAspectRatio to give more height
-              childAspectRatio: 1.3,
+              childAspectRatio: 1.5,
               children: [
                 _buildStatCard('Total Stars', entry.totalStars.toString(),
                     Icons.star, Colors.amber),
@@ -112,52 +110,67 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
 
             // Operations breakdown
             Text(
-              'Operations Breakdown',
+              'Star Progress by Operation',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
+            SizedBox(height: 4),
+            Text(
+              'Stars earned out of maximum possible stars',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
             SizedBox(height: 12),
 
+            // For each operation, we'll show the progress toward maximum stars
+            // Addition (60 max stars)
             LinearProgressIndicator(
-              value: _getProgressValue('addition'),
+              value: _getStarProgressValue('addition'),
               backgroundColor: Colors.grey.shade200,
               color: Colors.green,
               minHeight: 10,
               borderRadius: BorderRadius.circular(5),
             ),
-            _buildProgressLabel('Addition', 'addition', Colors.green),
+            _buildStarProgressLabel('Addition', 'addition', Colors.green, 60),
             SizedBox(height: 8),
 
+            // Subtraction (60 max stars)
             LinearProgressIndicator(
-              value: _getProgressValue('subtraction'),
+              value: _getStarProgressValue('subtraction'),
               backgroundColor: Colors.grey.shade200,
               color: Colors.purple,
               minHeight: 10,
               borderRadius: BorderRadius.circular(5),
             ),
-            _buildProgressLabel('Subtraction', 'subtraction', Colors.purple),
+            _buildStarProgressLabel(
+                'Subtraction', 'subtraction', Colors.purple, 60),
             SizedBox(height: 8),
 
+            // Multiplication (45 max stars)
             LinearProgressIndicator(
-              value: _getProgressValue('multiplication'),
+              value: _getStarProgressValue('multiplication'),
               backgroundColor: Colors.grey.shade200,
               color: Colors.blue,
               minHeight: 10,
               borderRadius: BorderRadius.circular(5),
             ),
-            _buildProgressLabel('Multiplication', 'multiplication', Colors.blue),
+            _buildStarProgressLabel(
+                'Multiplication', 'multiplication', Colors.blue, 45),
             SizedBox(height: 8),
 
+            // Division (45 max stars)
             LinearProgressIndicator(
-              value: _getProgressValue('division'),
+              value: _getStarProgressValue('division'),
               backgroundColor: Colors.grey.shade200,
               color: Colors.orange,
               minHeight: 10,
               borderRadius: BorderRadius.circular(5),
             ),
-            _buildProgressLabel('Division', 'division', Colors.orange),
+            _buildStarProgressLabel('Division', 'division', Colors.orange, 45),
 
             SizedBox(height: 24),
 
@@ -226,7 +239,7 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
   Widget _buildStatCard(
       String title, String value, IconData icon, Color color) {
     return Container(
-      padding: EdgeInsets.all(12), // Reduced padding
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -237,31 +250,27 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min, // Use min size to avoid excess space
         children: [
           Icon(
             icon,
             color: color,
-            size: 24, // Reduced size
+            size: 28,
           ),
-          SizedBox(height: 4), // Reduced spacing
+          SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 16, // Reduced font size
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
-          SizedBox(height: 2), // Reduced spacing
-          FittedBox( // Wrap in FittedBox to scale text if needed
-            fit: BoxFit.scaleDown,
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 12, // Reduced font size
-                color: Colors.grey[700],
-              ),
+          SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
             ),
           ),
         ],
@@ -269,9 +278,13 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressLabel(String label, String operation, Color color) {
-    final count = entry.operationCounts[operation] ?? 0;
-    final percentage = _getProgressValue(operation) * 100;
+  Widget _buildStarProgressLabel(
+      String label, String operation, Color color, int maxStars) {
+    // Use actual stars for this operation
+    final operationStars = entry.operationStars[operation] ?? 0;
+    final cappedStars = operationStars > maxStars ? maxStars : operationStars;
+
+    final percentage = _getStarProgressValue(operation) * 100;
 
     return Padding(
       padding: const EdgeInsets.only(top: 4.0),
@@ -296,24 +309,48 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
               ),
             ],
           ),
-          Text(
-            '$count games (${percentage.toStringAsFixed(0)}%)',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+          Row(
+            children: [
+              Icon(
+                Icons.star,
+                size: 14,
+                color: Colors.amber,
+              ),
+              SizedBox(width: 4),
+              Text(
+                '$cappedStars/$maxStars (${percentage.toStringAsFixed(0)}%)',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  double _getProgressValue(String operation) {
-    final total = entry.totalOperations;
-    if (total == 0) return 0;
+  double _getStarProgressValue(String operation) {
+    final operationStars = entry.operationStars[operation] ?? 0;
 
-    final count = entry.operationCounts[operation] ?? 0;
-    return count / total;
+    int maxStars;
+    switch (operation) {
+      case 'addition':
+      case 'subtraction':
+        maxStars = 60;
+        break;
+      case 'multiplication':
+      case 'division':
+        maxStars = 45;
+        break;
+      default:
+        maxStars = 60;
+    }
+
+    final progress = operationStars / maxStars;
+    // Cap at 1.0 (100%)
+    return progress > 1.0 ? 1.0 : progress;
   }
 
   Color _getLevelColor(String level) {
