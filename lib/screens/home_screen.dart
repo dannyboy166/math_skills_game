@@ -1,6 +1,7 @@
 // lib/screens/home_screen.dart (Redesigned)
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/screens/leaderboard_screen.dart';
 import 'package:math_skills_game/widgets/custom_bottom_nav_bar.dart';
 import 'package:math_skills_game/widgets/streak_flame_widget.dart';
 import 'dart:math';
@@ -961,40 +962,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Placeholder for Leaderboard screen (to be implemented)
   Widget _buildLeaderboardScreen() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.leaderboard_rounded,
-            size: 80,
-            color: Colors.blue.shade200,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'Leaderboard Coming Soon!',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
-            ),
-          ),
-          SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              'Challenge your friends and see who can get the highest score!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return LeaderboardScreen();
   }
 }
