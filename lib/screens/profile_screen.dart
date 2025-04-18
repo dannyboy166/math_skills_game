@@ -1,7 +1,7 @@
-// lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -12,11 +12,13 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
+  final UserService _userService = UserService();
   final TextEditingController _displayNameController = TextEditingController();
 
   bool _isEditing = false;
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
+  Map<String, dynamic>? _streakData;
 
   @override
   void initState() {
@@ -39,8 +41,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .get();
 
         if (docSnapshot.exists && mounted) {
+          // Get streak data
+          final streakData = await _userService.getStreakStats(userId);
+
           setState(() {
             _userData = docSnapshot.data();
+            _streakData = streakData;
             _displayNameController.text = _userData?['displayName'] ?? '';
           });
         }
@@ -114,6 +120,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     }
+  }
+
+  void _showStreakInfo() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.local_fire_department_rounded,
+                color: Colors.deepOrange,
+                size: 28,
+              ),
+              SizedBox(width: 10),
+              Text(
+                'About Streaks',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepOrange.shade700,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Practice math every day to build your streak! Each day you complete at least one practice session, your streak grows. Miss a day and your streak resets to zero.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Benefits of maintaining a streak:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• Builds consistent learning habits\n• Improves long-term retention\n• Makes learning math more fun\n• Track your dedication to math practice',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Keep your streak alive to earn special rewards!',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.deepOrange.shade400,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Got it',
+                style: TextStyle(
+                  color: Colors.deepOrange.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -222,6 +308,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SizedBox(height: 24),
                       Divider(),
                       SizedBox(height: 16),
+
+                      // Streak Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildSectionTitle('Streak Stats'),
+                          GestureDetector(
+                            onTap: _showStreakInfo,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 18,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'How streaks work',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Streak Cards (side by side)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStreakCard(
+                              'Current Streak',
+                              '${_streakData?['currentStreak'] ?? 0}',
+                              Icons.local_fire_department_rounded,
+                              Colors.deepOrange,
+                              'days',
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: _buildStreakCard(
+                              'Longest Streak',
+                              '${_streakData?['longestStreak'] ?? 0}',
+                              Icons.emoji_events_rounded,
+                              Colors.amber,
+                              'days',
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 24),
 
                       // Stats Section
                       _buildSectionTitle('Game Statistics'),
@@ -374,6 +515,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: Colors.black87,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStreakCard(
+      String title, String value, IconData icon, Color color, String unit) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: color.withOpacity(0.3), width: 1),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 28,
+                  color: color,
+                ),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[700],
+                    ),
+                    overflow: TextOverflow.visible,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              unit,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
         ),
       ),
     );
