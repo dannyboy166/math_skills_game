@@ -108,7 +108,6 @@ class LeaderboardService {
     }
   }
 
-  // Create or update user's ranking data
   Future<void> updateUserRankingData(String userId) async {
     try {
       final userDoc = await _firestore.collection('users').doc(userId).get();
@@ -118,8 +117,56 @@ class LeaderboardService {
       await _firestore.collection('users').doc(userId).update({
         'lastUpdated': FieldValue.serverTimestamp(),
       });
+
+      // Calculate and update operation stars
+      await _updateOperationStars(userId);
     } catch (e) {
       print('Error updating user ranking data: $e');
+    }
+  }
+
+  Future<void> _updateOperationStars(String userId) async {
+    try {
+      // Get all level completions
+      final completions = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('levelCompletions')
+          .get();
+
+      // Operation stars map
+      final operationStars = {
+        'addition': 0,
+        'subtraction': 0,
+        'multiplication': 0,
+        'division': 0
+      };
+
+      // Count stars for each operation
+      for (final doc in completions.docs) {
+        final data = doc.data();
+        final operation = data['operationName'] as String?;
+        final stars = data['stars'] as int?;
+
+        if (operation != null &&
+            stars != null &&
+            operationStars.containsKey(operation)) {
+          operationStars[operation] = (operationStars[operation] ?? 0) + stars;
+        }
+      }
+
+      // Update the user's document
+      await _firestore.collection('users').doc(userId).update({
+        'gameStats': {
+          'additionStars': operationStars['addition'],
+          'subtractionStars': operationStars['subtraction'],
+          'multiplicationStars': operationStars['multiplication'],
+          'divisionStars': operationStars['division'],
+          'lastCalculated': FieldValue.serverTimestamp(),
+        }
+      });
+    } catch (e) {
+      print('Error updating operation stars: $e');
     }
   }
 }

@@ -1,4 +1,5 @@
 // lib/widgets/leaderboard_detail.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../models/leaderboard_entry.dart';
 import 'package:intl/intl.dart';
@@ -20,7 +21,7 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => LeaderboardDetailBottomSheet(
+      builder: (context) => RefreshableLeaderboardDetail(
         entry: entry,
         rank: rank,
       ),
@@ -387,5 +388,92 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return DateFormat('MMM d, yyyy').format(date);
+  }
+}
+
+class RefreshableLeaderboardDetail extends StatefulWidget {
+  final LeaderboardEntry entry;
+  final int rank;
+
+  const RefreshableLeaderboardDetail({
+    Key? key,
+    required this.entry,
+    required this.rank,
+  }) : super(key: key);
+
+  @override
+  _RefreshableLeaderboardDetailState createState() =>
+      _RefreshableLeaderboardDetailState();
+}
+
+class _RefreshableLeaderboardDetailState
+    extends State<RefreshableLeaderboardDetail> {
+  late LeaderboardEntry _entry;
+  late int _rank;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _entry = widget.entry;
+    _rank = widget.rank;
+
+    // Refresh data after a short delay to get latest stats
+    Future.delayed(Duration(milliseconds: 500), () {
+      _refreshData();
+    });
+  }
+
+  Future<void> _refreshData() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Fetch updated user data
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_entry.userId)
+          .get();
+
+      if (userDoc.exists) {
+        setState(() {
+          _entry = LeaderboardEntry.fromDocument(userDoc);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error refreshing leaderboard detail: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        LeaderboardDetailBottomSheet(
+          entry: _entry,
+          rank: _rank,
+        ),
+        if (_isLoading)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
+import 'package:math_skills_game/services/leaderboard_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
+import 'package:math_skills_game/services/user_stats_service.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
 import 'dart:math';
 import 'dart:async'; // Add Timer import
@@ -645,6 +647,23 @@ class _GameScreenState extends State<GameScreen> {
         // Use Timestamp.fromDate instead of serverTimestamp
         await userService.saveLevelCompletion(userId, levelCompletion);
         print("Level completion saved successfully");
+
+        try {
+          final statsService = UserStatsService();
+          await statsService.calculateStarsPerOperation(userId);
+          print("Operation stars updated successfully");
+        } catch (e) {
+          print("Error updating operation stars: $e");
+        }
+
+        // Also refresh leaderboard data
+        try {
+          final leaderboardService = LeaderboardService();
+          await leaderboardService.updateUserRankingData(userId);
+          print("Leaderboard data updated successfully");
+        } catch (e) {
+          print("Error updating leaderboard data: $e");
+        }
       } else {
         print("User not signed in");
       }

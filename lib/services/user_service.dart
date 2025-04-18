@@ -42,15 +42,36 @@ class UserService {
     return _firestore.collection('users').doc(userId).snapshots();
   }
 
+// This is the corrected version of updateGameStats in user_service.dart
   Future<void> updateGameStats(String userId, String operation,
-      String difficulty, int targetNumber, int stars,
+      String difficulty, int targetNumber, int newStars,
       {int completionTimeMs = 0}) async {
     final userRef = _firestore.collection('users').doc(userId);
+
+    // Check if this level has been completed before and with what stars
+    final levelId = '${operation}_${difficulty}_${targetNumber}';
+    final levelRef = userRef.collection('levelCompletions').doc(levelId);
+    final levelDoc = await levelRef.get();
+
+    // Calculate star difference for accurate total stars update
+    int starDifference = newStars;
+    if (levelDoc.exists) {
+      final existingData = levelDoc.data() as Map<String, dynamic>;
+      final existingStars = (existingData['stars'] ?? 0) as int;
+
+      // Only count the improvement
+      if (existingStars >= newStars) {
+        starDifference = 0; // No improvement in stars
+      } else {
+        starDifference = newStars - existingStars;
+      }
+    }
 
     // Add to game history
     await userRef.update({
       'totalGames': FieldValue.increment(1),
-      'totalStars': FieldValue.increment(stars),
+      'totalStars':
+          FieldValue.increment(starDifference), // Only add the difference
       'completedGames.$operation': FieldValue.increment(1),
       'gameHistory': FieldValue.arrayUnion([
         {
@@ -58,7 +79,7 @@ class UserService {
           'difficulty': difficulty,
           'targetNumber': targetNumber,
           'completedAt': Timestamp.fromDate(DateTime.now()),
-          'stars': stars,
+          'stars': newStars,
           'completionTimeMs': completionTimeMs,
         }
       ]),
