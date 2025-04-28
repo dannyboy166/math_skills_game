@@ -104,7 +104,6 @@ class UserService {
     }
   }
 
-// Save level completion data with star rating
   Future<void> saveLevelCompletion(
       String userId, LevelCompletionModel completion) async {
     final userRef = _firestore.collection('users').doc(userId);
@@ -139,9 +138,9 @@ class UserService {
         completion.difficultyName, completion.targetNumber, completion.stars,
         completionTimeMs: completion.completionTimeMs);
 
-    // Also update the user's best time for this operation
-    await updateBestTime(
-        userId, completion.operationName, completion.completionTimeMs);
+    // Also update the user's best time for this operation, including difficulty-specific time
+    await updateBestTime(userId, completion.operationName,
+        completion.difficultyName, completion.completionTimeMs);
   }
 
   // Get all level completions for a user
@@ -363,27 +362,38 @@ class UserService {
     };
   }
 
-  Future<void> updateBestTime(
-      String userId, String operation, int completionTimeMs) async {
+  Future<void> updateBestTime(String userId, String operation,
+      String difficulty, int completionTimeMs) async {
     try {
       final userRef = _firestore.collection('users').doc(userId);
       final userDoc = await userRef.get();
 
       if (!userDoc.exists) return;
 
-      // Check if this is a new best time
+      // Store best times for both the operation overall and for the specific difficulty
       final userData = userDoc.data() as Map<String, dynamic>;
       final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
-      final currentBestTime = bestTimes[operation] as int? ?? 999999;
 
-      // Only update if this is faster than the current best time
+      // 1. Update the overall best time for this operation
+      final currentBestTime = bestTimes[operation] as int? ?? 999999;
       if (completionTimeMs < currentBestTime) {
         await userRef.update({
           'bestTimes.$operation': completionTimeMs,
         });
-
-        print('Updated best time for $operation: ${completionTimeMs}ms');
       }
+
+      // 2. Update the difficulty-specific best time
+      final difficultyKey = '$operation-${difficulty.toLowerCase()}';
+      final currentDifficultyBestTime =
+          bestTimes[difficultyKey] as int? ?? 999999;
+      if (completionTimeMs < currentDifficultyBestTime) {
+        await userRef.update({
+          'bestTimes.$difficultyKey': completionTimeMs,
+        });
+      }
+
+      print(
+          'Updated best times for $operation ($difficulty): ${completionTimeMs}ms');
     } catch (e) {
       print('Error updating best time: $e');
     }
@@ -439,7 +449,7 @@ class UserService {
     });
   }
 
-// Also add a stream for streak stats
+  // Also add a stream for streak stats
   Stream<Map<String, dynamic>> streakStatsStream(String userId) {
     return _firestore
         .collection('users')

@@ -88,13 +88,15 @@ class LeaderboardService {
       final usersWithTimes = await _firestore
           .collection('users')
           .where('bestTimes.$operation', isGreaterThan: 0)
-          .orderBy('bestTimes.$operation', descending: false) // Ascending by time (faster is better)
+          .orderBy('bestTimes.$operation',
+              descending: false) // Ascending by time (faster is better)
           .limit(limit)
           .get();
 
       if (usersWithTimes.docs.isEmpty) {
         // If no users have recorded best times yet, fall back to users who have played this operation
-        final usersByOperation = await getTopUsersByOperation(operation, limit: limit);
+        final usersByOperation =
+            await getTopUsersByOperation(operation, limit: limit);
         return usersByOperation;
       }
 
@@ -177,7 +179,7 @@ class LeaderboardService {
 
       // Calculate and update operation stars
       await _updateOperationStars(userId);
-      
+
       // Update best completion times
       await _updateBestCompletionTimes(userId);
     } catch (e) {
@@ -230,7 +232,39 @@ class LeaderboardService {
     }
   }
 
-  // NEW METHOD: Update the user's best completion times for each operation
+// Update this method in LeaderboardService class
+  Future<List<LeaderboardEntry>> getTopUsersByBestTimeAndDifficulty(
+      String operation, String difficulty,
+      {int limit = 20}) async {
+    try {
+      // Generate the key for the specific operation and difficulty
+      final timeKey = '$operation-${difficulty.toLowerCase()}';
+
+      // Find users with completion times for this specific difficulty
+      final usersWithTimes = await _firestore
+          .collection('users')
+          .where('bestTimes.$timeKey', isGreaterThan: 0)
+          .orderBy('bestTimes.$timeKey',
+              descending: false) // Ascending by time (faster is better)
+          .limit(limit)
+          .get();
+
+      // If no users have recorded best times for this difficulty yet, return an empty list
+      // Instead of falling back to overall operation times
+      if (usersWithTimes.docs.isEmpty) {
+        return [];
+      }
+
+      return usersWithTimes.docs
+          .map((doc) => LeaderboardEntry.fromDocument(doc))
+          .toList();
+    } catch (e) {
+      print('Error fetching leaderboard by best time and difficulty: $e');
+      return []; // Return empty list on error instead of falling back
+    }
+  }
+
+// Modify the _updateBestCompletionTimes method in LeaderboardService to handle difficulty-specific times
   Future<void> _updateBestCompletionTimes(String userId) async {
     try {
       // Get all level completions
@@ -240,7 +274,7 @@ class LeaderboardService {
           .collection('levelCompletions')
           .get();
 
-      // Track best times for each operation
+      // Track best times for each operation (overall)
       final bestTimes = {
         'addition': 999999,
         'subtraction': 999999,
@@ -248,17 +282,30 @@ class LeaderboardService {
         'division': 999999
       };
 
-      // Find best (lowest) completion time for each operation
+      // Track best times for each operation and difficulty combination
+      final difficultyBestTimes = <String, int>{};
+
+      // Find best (lowest) completion time for each operation and each difficulty
       for (final doc in completions.docs) {
         final data = doc.data();
         final operation = data['operationName'] as String?;
+        final difficulty = data['difficultyName'] as String?;
         final completionTime = data['completionTimeMs'] as int?;
 
-        if (operation != null && 
-            completionTime != null && 
-            bestTimes.containsKey(operation)) {
-          if (completionTime < bestTimes[operation]!) {
+        if (operation != null && completionTime != null && completionTime > 0) {
+          // Update overall best time for the operation
+          if (bestTimes.containsKey(operation) &&
+              completionTime < bestTimes[operation]!) {
             bestTimes[operation] = completionTime;
+          }
+
+          // Update difficulty-specific best time
+          if (difficulty != null) {
+            final difficultyKey = '$operation-${difficulty.toLowerCase()}';
+            final currentBest = difficultyBestTimes[difficultyKey] ?? 999999;
+            if (completionTime < currentBest) {
+              difficultyBestTimes[difficultyKey] = completionTime;
+            }
           }
         }
       }
@@ -271,6 +318,9 @@ class LeaderboardService {
         }
       });
 
+      // Merge the overall and difficulty-specific best times
+      filteredBestTimes.addAll(difficultyBestTimes);
+
       // Only update if we have any valid times
       if (filteredBestTimes.isNotEmpty) {
         await _firestore.collection('users').doc(userId).update({
@@ -279,6 +329,38 @@ class LeaderboardService {
       }
     } catch (e) {
       print('Error updating best completion times: $e');
+    }
+  }
+
+// Get user's rank by completion time for a specific operation and difficulty
+  Future<int> getUserRankByTimeAndDifficulty(
+      String operation, String difficulty, String userId) async {
+    try {
+      final timeKey = '$operation-${difficulty.toLowerCase()}';
+
+      // Get the user's best time
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) return 0;
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
+      final userTime = bestTimes[timeKey] ?? bestTimes[operation] ?? 0;
+
+      // If user has no recorded time, return 0 rank
+      if (userTime == 0) return 0;
+
+      // Count users with better (smaller) times
+      final count = await _firestore
+          .collection('users')
+          .where('bestTimes.$timeKey', isLessThan: userTime)
+          .count()
+          .get();
+
+      // Rank is count of users with better times + 1
+      return count.count! + 1;
+    } catch (e) {
+      print('Error getting user rank by time and difficulty: $e');
+      return 0;
     }
   }
 }

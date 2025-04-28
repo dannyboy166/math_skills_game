@@ -90,10 +90,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     if (tabIndex == 0 && _starLeaderboard.isNotEmpty) return;
     if (tabIndex == 1 && _streakLeaderboard.isNotEmpty) return;
     if (tabIndex == 2 && _gamesLeaderboard.isNotEmpty) return;
-    if (tabIndex == 3 && (_additionTimeLeaderboard.isEmpty || 
-                         _subtractionTimeLeaderboard.isEmpty ||
-                         _multiplicationTimeLeaderboard.isEmpty ||
-                         _divisionTimeLeaderboard.isEmpty)) {
+    if (tabIndex == 3 &&
+        (_additionTimeLeaderboard.isEmpty ||
+            _subtractionTimeLeaderboard.isEmpty ||
+            _multiplicationTimeLeaderboard.isEmpty ||
+            _divisionTimeLeaderboard.isEmpty)) {
       // For tab 3 (Time), load all operation time leaderboards
       setState(() {
         _isLoading = true;
@@ -171,25 +172,54 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
   }
 
-  Future<void> _loadTimeLeaderboard(String operation) async {
-    final leaderboard = await _leaderboardService.getTopUsersByBestTime(operation);
-    if (mounted) {
-      setState(() {
-        switch (operation) {
-          case 'addition':
-            _additionTimeLeaderboard = leaderboard;
-            break;
-          case 'subtraction':
-            _subtractionTimeLeaderboard = leaderboard;
-            break;
-          case 'multiplication':
-            _multiplicationTimeLeaderboard = leaderboard;
-            break;
-          case 'division':
-            _divisionTimeLeaderboard = leaderboard;
-            break;
-        }
-      });
+  Future<void> _loadTimeLeaderboard(String operation,
+      {String? difficulty}) async {
+    if (difficulty != null && difficulty != 'All') {
+      // Load difficulty-specific leaderboard
+      final leaderboard = await _leaderboardService
+          .getTopUsersByBestTimeAndDifficulty(operation, difficulty);
+
+      if (mounted) {
+        setState(() {
+          switch (operation) {
+            case 'addition':
+              _additionTimeLeaderboard = leaderboard;
+              break;
+            case 'subtraction':
+              _subtractionTimeLeaderboard = leaderboard;
+              break;
+            case 'multiplication':
+              _multiplicationTimeLeaderboard = leaderboard;
+              break;
+            case 'division':
+              _divisionTimeLeaderboard = leaderboard;
+              break;
+          }
+        });
+      }
+    } else {
+      // Load overall operation leaderboard
+      final leaderboard =
+          await _leaderboardService.getTopUsersByBestTime(operation);
+
+      if (mounted) {
+        setState(() {
+          switch (operation) {
+            case 'addition':
+              _additionTimeLeaderboard = leaderboard;
+              break;
+            case 'subtraction':
+              _subtractionTimeLeaderboard = leaderboard;
+              break;
+            case 'multiplication':
+              _multiplicationTimeLeaderboard = leaderboard;
+              break;
+            case 'division':
+              _divisionTimeLeaderboard = leaderboard;
+              break;
+          }
+        });
+      }
     }
   }
 
@@ -241,10 +271,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                         TimeLeaderboardTab(
                           additionLeaderboard: _additionTimeLeaderboard,
                           subtractionLeaderboard: _subtractionTimeLeaderboard,
-                          multiplicationLeaderboard: _multiplicationTimeLeaderboard,
+                          multiplicationLeaderboard:
+                              _multiplicationTimeLeaderboard,
                           divisionLeaderboard: _divisionTimeLeaderboard,
                           currentUserId: _currentUserId,
                           onRefresh: _refreshCurrentTab,
+                          onDifficultyChanged: (operation, difficulty) {
+                            _loadTimeLeaderboard(operation,
+                                difficulty: difficulty);
+                          },
                         ),
                       ],
                     ),

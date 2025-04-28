@@ -26,7 +26,7 @@ class LeaderboardEntry {
     required this.lastUpdated,
   });
 
-// Update the fromDocument factory method to include bestTimes:
+// lib/models/leaderboard_entry.dart
   factory LeaderboardEntry.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final completedGames =
@@ -52,10 +52,13 @@ class LeaderboardEntry {
     // Get best times (if available)
     final bestTimes = <String, int>{};
     final bestTimesData = data['bestTimes'] as Map<String, dynamic>? ?? {};
-    bestTimes['addition'] = bestTimesData['addition'] ?? 0;
-    bestTimes['subtraction'] = bestTimesData['subtraction'] ?? 0;
-    bestTimes['multiplication'] = bestTimesData['multiplication'] ?? 0;
-    bestTimes['division'] = bestTimesData['division'] ?? 0;
+
+    // Import all keys from the bestTimes map in Firebase
+    bestTimesData.forEach((key, value) {
+      if (value is int) {
+        bestTimes[key] = value;
+      }
+    });
 
     // Get streak data
     final streakData = data['streakData'] as Map<String, dynamic>? ?? {};
@@ -86,7 +89,7 @@ class LeaderboardEntry {
       longestStreak: longestStreak,
       operationCounts: operationCounts,
       operationStars: operationStars,
-      bestTimes: bestTimes, // Add this line
+      bestTimes: bestTimes, // Now includes all keys
       level: data['level'] ?? 'Novice',
       lastUpdated: lastUpdated,
     );
