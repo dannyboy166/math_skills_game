@@ -11,6 +11,7 @@ class LeaderboardEntry {
   final Map<String, int> operationStars;
   final String level;
   final DateTime lastUpdated;
+  final Map<String, int> bestTimes;
 
   const LeaderboardEntry({
     required this.userId,
@@ -20,15 +21,17 @@ class LeaderboardEntry {
     required this.longestStreak,
     required this.operationCounts,
     this.operationStars = const {},
+    this.bestTimes = const {}, // Add this line
     required this.level,
     required this.lastUpdated,
   });
 
-  // Create from Firestore document
+// Update the fromDocument factory method to include bestTimes:
   factory LeaderboardEntry.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    final completedGames = data['completedGames'] as Map<String, dynamic>? ?? {};
-    
+    final completedGames =
+        data['completedGames'] as Map<String, dynamic>? ?? {};
+
     // Check if there are operation counts
     final operationCounts = <String, int>{};
     operationCounts['addition'] = completedGames['addition'] ?? 0;
@@ -38,13 +41,21 @@ class LeaderboardEntry {
 
     // Get operation stars (if available)
     final operationStars = <String, int>{};
-    
+
     // If we have operation stars stored directly in the user document
     final gameStats = data['gameStats'] as Map<String, dynamic>? ?? {};
     operationStars['addition'] = gameStats['additionStars'] ?? 0;
     operationStars['subtraction'] = gameStats['subtractionStars'] ?? 0;
     operationStars['multiplication'] = gameStats['multiplicationStars'] ?? 0;
     operationStars['division'] = gameStats['divisionStars'] ?? 0;
+
+    // Get best times (if available)
+    final bestTimes = <String, int>{};
+    final bestTimesData = data['bestTimes'] as Map<String, dynamic>? ?? {};
+    bestTimes['addition'] = bestTimesData['addition'] ?? 0;
+    bestTimes['subtraction'] = bestTimesData['subtraction'] ?? 0;
+    bestTimes['multiplication'] = bestTimesData['multiplication'] ?? 0;
+    bestTimes['division'] = bestTimesData['division'] ?? 0;
 
     // Get streak data
     final streakData = data['streakData'] as Map<String, dynamic>? ?? {};
@@ -75,33 +86,40 @@ class LeaderboardEntry {
       longestStreak: longestStreak,
       operationCounts: operationCounts,
       operationStars: operationStars,
+      bestTimes: bestTimes, // Add this line
       level: data['level'] ?? 'Novice',
       lastUpdated: lastUpdated,
     );
   }
 
+// Add a helper method to get the best time for an operation
+  int getBestTimeForOperation(String operation) {
+    return bestTimes[operation] ?? 0;
+  }
+
   // Helper method to get total operations completed
-  int get totalOperations => operationCounts.values.fold(0, (sum, count) => sum + count);
-  
+  int get totalOperations =>
+      operationCounts.values.fold(0, (sum, count) => sum + count);
+
   // Get favorite operation (most played)
   String get favoriteOperation {
     if (operationCounts.isEmpty) return 'None';
-    
+
     String favorite = 'None';
     int maxCount = 0;
-    
+
     operationCounts.forEach((operation, count) {
       if (count > maxCount) {
         maxCount = count;
         favorite = operation;
       }
     });
-    
+
     // Capitalize first letter
     if (favorite != 'None') {
       favorite = favorite[0].toUpperCase() + favorite.substring(1);
     }
-    
+
     return favorite;
   }
 }

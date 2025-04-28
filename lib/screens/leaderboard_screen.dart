@@ -6,6 +6,7 @@ import 'package:math_skills_game/widgets/leaderboard_loading.dart';
 import '../models/leaderboard_entry.dart';
 import '../services/leaderboard_service.dart';
 import '../widgets/leaderboard_tab.dart';
+import '../widgets/time_leaderboard_tab.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({Key? key}) : super(key: key);
@@ -26,15 +27,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   List<LeaderboardEntry> _starLeaderboard = [];
   List<LeaderboardEntry> _streakLeaderboard = [];
   List<LeaderboardEntry> _gamesLeaderboard = [];
-  List<LeaderboardEntry> _additionLeaderboard = [];
-  List<LeaderboardEntry> _subtractionLeaderboard = [];
-  List<LeaderboardEntry> _multiplicationLeaderboard = [];
-  List<LeaderboardEntry> _divisionLeaderboard = [];
+  // Time-based leaderboards
+  List<LeaderboardEntry> _additionTimeLeaderboard = [];
+  List<LeaderboardEntry> _subtractionTimeLeaderboard = [];
+  List<LeaderboardEntry> _multiplicationTimeLeaderboard = [];
+  List<LeaderboardEntry> _divisionTimeLeaderboard = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_handleTabChange);
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -88,10 +90,32 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     if (tabIndex == 0 && _starLeaderboard.isNotEmpty) return;
     if (tabIndex == 1 && _streakLeaderboard.isNotEmpty) return;
     if (tabIndex == 2 && _gamesLeaderboard.isNotEmpty) return;
-    if (tabIndex == 3 && _additionLeaderboard.isNotEmpty) return;
-    if (tabIndex == 4 && _subtractionLeaderboard.isNotEmpty) return;
-    if (tabIndex == 5 && _multiplicationLeaderboard.isNotEmpty) return;
-    if (tabIndex == 6 && _divisionLeaderboard.isNotEmpty) return;
+    if (tabIndex == 3 && (_additionTimeLeaderboard.isEmpty || 
+                         _subtractionTimeLeaderboard.isEmpty ||
+                         _multiplicationTimeLeaderboard.isEmpty ||
+                         _divisionTimeLeaderboard.isEmpty)) {
+      // For tab 3 (Time), load all operation time leaderboards
+      setState(() {
+        _isLoading = true;
+      });
+      try {
+        await Future.wait([
+          _loadTimeLeaderboard('addition'),
+          _loadTimeLeaderboard('subtraction'),
+          _loadTimeLeaderboard('multiplication'),
+          _loadTimeLeaderboard('division'),
+        ]);
+      } catch (e) {
+        print('Error loading time leaderboards: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -107,18 +131,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           break;
         case 2:
           await _loadGamesLeaderboard();
-          break;
-        case 3:
-          await _loadOperationLeaderboard('addition');
-          break;
-        case 4:
-          await _loadOperationLeaderboard('subtraction');
-          break;
-        case 5:
-          await _loadOperationLeaderboard('multiplication');
-          break;
-        case 6:
-          await _loadOperationLeaderboard('division');
           break;
       }
     } catch (e) {
@@ -159,23 +171,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
   }
 
-  Future<void> _loadOperationLeaderboard(String operation) async {
-    final leaderboard =
-        await _leaderboardService.getTopUsersByOperation(operation);
+  Future<void> _loadTimeLeaderboard(String operation) async {
+    final leaderboard = await _leaderboardService.getTopUsersByBestTime(operation);
     if (mounted) {
       setState(() {
         switch (operation) {
           case 'addition':
-            _additionLeaderboard = leaderboard;
+            _additionTimeLeaderboard = leaderboard;
             break;
           case 'subtraction':
-            _subtractionLeaderboard = leaderboard;
+            _subtractionTimeLeaderboard = leaderboard;
             break;
           case 'multiplication':
-            _multiplicationLeaderboard = leaderboard;
+            _multiplicationTimeLeaderboard = leaderboard;
             break;
           case 'division':
-            _divisionLeaderboard = leaderboard;
+            _divisionTimeLeaderboard = leaderboard;
             break;
         }
       });
@@ -227,44 +238,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                           valueColor: Colors.blue,
                           onRefresh: _refreshCurrentTab,
                         ),
-                        LeaderboardTab(
-                          leaderboardEntries: _additionLeaderboard,
+                        TimeLeaderboardTab(
+                          additionLeaderboard: _additionTimeLeaderboard,
+                          subtractionLeaderboard: _subtractionTimeLeaderboard,
+                          multiplicationLeaderboard: _multiplicationTimeLeaderboard,
+                          divisionLeaderboard: _divisionTimeLeaderboard,
                           currentUserId: _currentUserId,
-                          valueSelector: (entry) =>
-                              entry.operationCounts['addition'] ?? 0,
-                          valueLabel: 'games',
-                          valueIcon: Icons.add_circle,
-                          valueColor: Colors.green,
-                          onRefresh: _refreshCurrentTab,
-                        ),
-                        LeaderboardTab(
-                          leaderboardEntries: _subtractionLeaderboard,
-                          currentUserId: _currentUserId,
-                          valueSelector: (entry) =>
-                              entry.operationCounts['subtraction'] ?? 0,
-                          valueLabel: 'games',
-                          valueIcon: Icons.remove_circle,
-                          valueColor: Colors.purple,
-                          onRefresh: _refreshCurrentTab,
-                        ),
-                        LeaderboardTab(
-                          leaderboardEntries: _multiplicationLeaderboard,
-                          currentUserId: _currentUserId,
-                          valueSelector: (entry) =>
-                              entry.operationCounts['multiplication'] ?? 0,
-                          valueLabel: 'games',
-                          valueIcon: Icons.close,
-                          valueColor: Colors.blue,
-                          onRefresh: _refreshCurrentTab,
-                        ),
-                        LeaderboardTab(
-                          leaderboardEntries: _divisionLeaderboard,
-                          currentUserId: _currentUserId,
-                          valueSelector: (entry) =>
-                              entry.operationCounts['division'] ?? 0,
-                          valueLabel: 'games',
-                          valueIcon: Icons.pie_chart,
-                          valueColor: Colors.orange,
                           onRefresh: _refreshCurrentTab,
                         ),
                       ],
@@ -350,7 +329,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       color: Colors.white,
       child: TabBar(
         controller: _tabController,
-        isScrollable: true,
         indicatorColor: Colors.blue,
         labelColor: Colors.blue,
         unselectedLabelColor: Colors.grey[600],
@@ -368,20 +346,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             text: 'Games',
           ),
           Tab(
-            icon: Icon(Icons.add_circle),
-            text: 'Addition',
-          ),
-          Tab(
-            icon: Icon(Icons.remove_circle),
-            text: 'Subtraction',
-          ),
-          Tab(
-            icon: Icon(Icons.close),
-            text: 'Multiplication',
-          ),
-          Tab(
-            icon: Icon(Icons.pie_chart),
-            text: 'Division',
+            icon: Icon(Icons.timer),
+            text: 'Time',
           ),
         ],
       ),

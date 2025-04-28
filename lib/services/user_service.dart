@@ -104,7 +104,7 @@ class UserService {
     }
   }
 
-  // Save level completion data with star rating
+// Save level completion data with star rating
   Future<void> saveLevelCompletion(
       String userId, LevelCompletionModel completion) async {
     final userRef = _firestore.collection('users').doc(userId);
@@ -138,6 +138,10 @@ class UserService {
     await updateGameStats(userId, completion.operationName,
         completion.difficultyName, completion.targetNumber, completion.stars,
         completionTimeMs: completion.completionTimeMs);
+
+    // Also update the user's best time for this operation
+    await updateBestTime(
+        userId, completion.operationName, completion.completionTimeMs);
   }
 
   // Get all level completions for a user
@@ -357,6 +361,32 @@ class UserService {
       'longestStreak': 0,
       'lastPlayedDate': null,
     };
+  }
+
+  Future<void> updateBestTime(
+      String userId, String operation, int completionTimeMs) async {
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final userDoc = await userRef.get();
+
+      if (!userDoc.exists) return;
+
+      // Check if this is a new best time
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
+      final currentBestTime = bestTimes[operation] as int? ?? 999999;
+
+      // Only update if this is faster than the current best time
+      if (completionTimeMs < currentBestTime) {
+        await userRef.update({
+          'bestTimes.$operation': completionTimeMs,
+        });
+
+        print('Updated best time for $operation: ${completionTimeMs}ms');
+      }
+    } catch (e) {
+      print('Error updating best time: $e');
+    }
   }
 
   // Helper function to get week number in the year
