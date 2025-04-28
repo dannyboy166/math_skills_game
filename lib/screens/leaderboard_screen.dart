@@ -24,7 +24,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   String _currentUserId = '';
 
   // Data for each leaderboard type
-  List<LeaderboardEntry> _starLeaderboard = [];
   List<LeaderboardEntry> _streakLeaderboard = [];
   List<LeaderboardEntry> _gamesLeaderboard = [];
   // Time-based leaderboards
@@ -36,7 +35,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // Changed from 4 to 3
     _tabController.addListener(_handleTabChange);
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -64,11 +63,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     });
 
     try {
-      // First load the stars leaderboard (default tab)
-      await _loadStarsLeaderboard();
+      // First load the streaks leaderboard (now the default tab)
+      await _loadStreakLeaderboard();
 
-      // Get user's rank
-      final rank = await _leaderboardService.getCurrentUserRankByStars();
+      // Get user's rank by streak instead of stars
+      final rank = await _leaderboardService.getCurrentUserRankByStreak();
 
       if (mounted) {
         setState(() {
@@ -87,15 +86,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   Future<void> _loadTabData(int tabIndex) async {
-    if (tabIndex == 0 && _starLeaderboard.isNotEmpty) return;
-    if (tabIndex == 1 && _streakLeaderboard.isNotEmpty) return;
-    if (tabIndex == 2 && _gamesLeaderboard.isNotEmpty) return;
-    if (tabIndex == 3 &&
+    if (tabIndex == 0 && _streakLeaderboard.isNotEmpty) return;
+    if (tabIndex == 1 && _gamesLeaderboard.isNotEmpty) return;
+    if (tabIndex == 2 &&
         (_additionTimeLeaderboard.isEmpty ||
             _subtractionTimeLeaderboard.isEmpty ||
             _multiplicationTimeLeaderboard.isEmpty ||
             _divisionTimeLeaderboard.isEmpty)) {
-      // For tab 3 (Time), load all operation time leaderboards
+      // For tab 2 (Time), load all operation time leaderboards
       setState(() {
         _isLoading = true;
       });
@@ -125,12 +123,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     try {
       switch (tabIndex) {
         case 0:
-          await _loadStarsLeaderboard();
-          break;
-        case 1:
           await _loadStreakLeaderboard();
           break;
-        case 2:
+        case 1:
           await _loadGamesLeaderboard();
           break;
       }
@@ -142,15 +137,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           _isLoading = false;
         });
       }
-    }
-  }
-
-  Future<void> _loadStarsLeaderboard() async {
-    final leaderboard = await _leaderboardService.getTopUsersByStars();
-    if (mounted) {
-      setState(() {
-        _starLeaderboard = leaderboard;
-      });
     }
   }
 
@@ -241,15 +227,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                   : TabBarView(
                       controller: _tabController,
                       children: [
-                        LeaderboardTab(
-                          leaderboardEntries: _starLeaderboard,
-                          currentUserId: _currentUserId,
-                          valueSelector: (entry) => entry.totalStars,
-                          valueLabel: 'stars',
-                          valueIcon: Icons.star,
-                          valueColor: Colors.amber,
-                          onRefresh: _refreshCurrentTab,
-                        ),
+                        // Removed the stars leaderboard tab
                         LeaderboardTab(
                           leaderboardEntries: _streakLeaderboard,
                           currentUserId: _currentUserId,
@@ -368,10 +346,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         labelColor: Colors.blue,
         unselectedLabelColor: Colors.grey[600],
         tabs: [
-          Tab(
-            icon: Icon(Icons.star),
-            text: 'Stars',
-          ),
+          // Removed the Stars tab
           Tab(
             icon: Icon(Icons.local_fire_department_rounded),
             text: 'Streaks',

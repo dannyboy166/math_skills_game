@@ -6,24 +6,6 @@ import '../models/leaderboard_entry.dart';
 class LeaderboardService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Fetch top users by total stars
-  Future<List<LeaderboardEntry>> getTopUsersByStars({int limit = 20}) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .orderBy('totalStars', descending: true)
-          .limit(limit)
-          .get();
-
-      return querySnapshot.docs
-          .map((doc) => LeaderboardEntry.fromDocument(doc))
-          .toList();
-    } catch (e) {
-      print('Error fetching leaderboard by stars: $e');
-      rethrow;
-    }
-  }
-
   // Fetch top users by longest streak
   Future<List<LeaderboardEntry>> getTopUsersByStreak({int limit = 20}) async {
     try {
@@ -80,11 +62,11 @@ class LeaderboardService {
     }
   }
 
-  // NEW METHOD: Get top users by best completion time for an operation
+  // Get top users by best completion time for an operation
   Future<List<LeaderboardEntry>> getTopUsersByBestTime(String operation,
       {int limit = 20}) async {
     try {
-      // First, find all users with completion times for this operation
+      // Find all users with completion times for this operation
       final usersWithTimes = await _firestore
           .collection('users')
           .where('bestTimes.$operation', isGreaterThan: 0)
@@ -110,8 +92,8 @@ class LeaderboardService {
     }
   }
 
-  // Get current user's rank by stars
-  Future<int> getCurrentUserRankByStars() async {
+  // Get current user's rank by streak
+  Future<int> getCurrentUserRankByStreak() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return 0;
@@ -121,24 +103,25 @@ class LeaderboardService {
       if (!userDoc.exists) return 0;
 
       final userData = userDoc.data() as Map<String, dynamic>;
-      final userStars = userData['totalStars'] ?? 0;
+      final streakData = userData['streakData'] as Map<String, dynamic>? ?? {};
+      final userStreak = streakData['longestStreak'] ?? 0;
 
-      // Count users with more stars
+      // Count users with longer streaks
       final count = await _firestore
           .collection('users')
-          .where('totalStars', isGreaterThan: userStars)
+          .where('streakData.longestStreak', isGreaterThan: userStreak)
           .count()
           .get();
 
-      // Rank is count of users with more stars + 1
+      // Rank is count of users with longer streaks + 1
       return count.count! + 1;
     } catch (e) {
-      print('Error getting user rank: $e');
+      print('Error getting user rank by streak: $e');
       return 0;
     }
   }
 
-  // NEW METHOD: Get user's rank by completion time for a specific operation
+  // Get user's rank by completion time for a specific operation
   Future<int> getUserRankByTime(String operation, String userId) async {
     try {
       // Get the user's best time
@@ -177,9 +160,6 @@ class LeaderboardService {
         'lastUpdated': FieldValue.serverTimestamp(),
       });
 
-      // Calculate and update operation stars
-      await _updateOperationStars(userId);
-
       // Update best completion times
       await _updateBestCompletionTimes(userId);
     } catch (e) {
@@ -187,52 +167,7 @@ class LeaderboardService {
     }
   }
 
-  Future<void> _updateOperationStars(String userId) async {
-    try {
-      // Get all level completions
-      final completions = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('levelCompletions')
-          .get();
-
-      // Operation stars map
-      final operationStars = {
-        'addition': 0,
-        'subtraction': 0,
-        'multiplication': 0,
-        'division': 0
-      };
-
-      // Count stars for each operation
-      for (final doc in completions.docs) {
-        final data = doc.data();
-        final operation = data['operationName'] as String?;
-        final stars = data['stars'] as int?;
-
-        if (operation != null &&
-            stars != null &&
-            operationStars.containsKey(operation)) {
-          operationStars[operation] = (operationStars[operation] ?? 0) + stars;
-        }
-      }
-
-      // Update the user's document
-      await _firestore.collection('users').doc(userId).update({
-        'gameStats': {
-          'additionStars': operationStars['addition'],
-          'subtractionStars': operationStars['subtraction'],
-          'multiplicationStars': operationStars['multiplication'],
-          'divisionStars': operationStars['division'],
-          'lastCalculated': FieldValue.serverTimestamp(),
-        }
-      });
-    } catch (e) {
-      print('Error updating operation stars: $e');
-    }
-  }
-
-// Update this method in LeaderboardService class
+  // Get top users by best time and difficulty
   Future<List<LeaderboardEntry>> getTopUsersByBestTimeAndDifficulty(
       String operation, String difficulty,
       {int limit = 20}) async {
@@ -250,7 +185,6 @@ class LeaderboardService {
           .get();
 
       // If no users have recorded best times for this difficulty yet, return an empty list
-      // Instead of falling back to overall operation times
       if (usersWithTimes.docs.isEmpty) {
         return [];
       }
@@ -260,11 +194,11 @@ class LeaderboardService {
           .toList();
     } catch (e) {
       print('Error fetching leaderboard by best time and difficulty: $e');
-      return []; // Return empty list on error instead of falling back
+      return []; // Return empty list on error
     }
   }
 
-// Modify the _updateBestCompletionTimes method in LeaderboardService to handle difficulty-specific times
+  // Update best completion times
   Future<void> _updateBestCompletionTimes(String userId) async {
     try {
       // Get all level completions
@@ -332,7 +266,7 @@ class LeaderboardService {
     }
   }
 
-// Get user's rank by completion time for a specific operation and difficulty
+  // Get user's rank by completion time for a specific operation and difficulty
   Future<int> getUserRankByTimeAndDifficulty(
       String operation, String difficulty, String userId) async {
     try {
