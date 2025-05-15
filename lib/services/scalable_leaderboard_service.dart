@@ -20,8 +20,6 @@ class ScalableLeaderboardService {
   static const String DIVISION_TIME = 'divisionTime';
 
 // Add this method to your ScalableLeaderboardService class
-
-// Get top entries for a specific difficulty level from a time leaderboard
   Future<List<LeaderboardEntry>> getTopEntriesForDifficulty(
       String leaderboardType, String difficulty, int limit) async {
     try {
@@ -49,6 +47,19 @@ class ScalableLeaderboardService {
         // Add the difficulty-specific time
         bestTimes[difficultyKey] = bestTime;
 
+        // Handle lastUpdated with proper null checking
+        DateTime lastUpdated;
+        if (data['updatedAt'] != null) {
+          try {
+            lastUpdated = (data['updatedAt'] as Timestamp).toDate();
+          } catch (e) {
+            print('Error converting updatedAt timestamp: $e');
+            lastUpdated = DateTime.now();
+          }
+        } else {
+          lastUpdated = DateTime.now();
+        }
+
         return LeaderboardEntry(
           userId: doc.id,
           displayName: data['displayName'] ?? 'Unknown',
@@ -59,7 +70,7 @@ class ScalableLeaderboardService {
           operationStars: Map<String, int>.from(data['operationStars'] ?? {}),
           bestTimes: bestTimes,
           level: data['level'] ?? 'Novice',
-          lastUpdated: (data['updatedAt'] as Timestamp).toDate(),
+          lastUpdated: lastUpdated,
         );
       }).toList();
 
@@ -121,6 +132,19 @@ class ScalableLeaderboardService {
           bestTimes.addAll(Map<String, int>.from(data['bestTimes'] ?? {}));
         }
 
+        // Handle lastUpdated with proper null checking
+        DateTime lastUpdated;
+        if (data['updatedAt'] != null) {
+          try {
+            lastUpdated = (data['updatedAt'] as Timestamp).toDate();
+          } catch (e) {
+            print('Error converting updatedAt timestamp: $e');
+            lastUpdated = DateTime.now();
+          }
+        } else {
+          lastUpdated = DateTime.now();
+        }
+
         // Convert to LeaderboardEntry for compatibility with existing UI
         return LeaderboardEntry(
           userId: doc.id,
@@ -132,7 +156,7 @@ class ScalableLeaderboardService {
           operationStars: Map<String, int>.from(data['operationStars'] ?? {}),
           bestTimes: bestTimes,
           level: data['level'] ?? 'Novice',
-          lastUpdated: (data['updatedAt'] as Timestamp).toDate(),
+          lastUpdated: lastUpdated,
         );
       }).toList();
     } catch (e) {
