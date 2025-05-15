@@ -35,6 +35,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   late TabController _operationTabController;
   int _currentTabIndex = 0;
   String _currentDifficulty = 'All'; // Default to showing all difficulties
+  bool _isLoading = true; // Add loading state
 
   // List of difficulty options
   final List<String> _difficulties = [
@@ -53,6 +54,25 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       if (!_operationTabController.indexIsChanging) {
         setState(() {
           _currentTabIndex = _operationTabController.index;
+          _isLoading = true; // Set loading to true when changing tabs
+        });
+        // Use Future.delayed to simulate data loading and hide loading state
+        // Use a longer delay to ensure data is processed
+        Future.delayed(Duration(milliseconds: 500), () {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        });
+      }
+    });
+    
+    // Initialize loading state to false after a longer delay to ensure data is loaded
+    Future.delayed(Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
         });
       }
     });
@@ -72,7 +92,15 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         _buildDifficultySelector(),
         Expanded(
           child: RefreshIndicator(
-            onRefresh: widget.onRefresh,
+            onRefresh: () async {
+              setState(() {
+                _isLoading = true;
+              });
+              await widget.onRefresh();
+              setState(() {
+                _isLoading = false;
+              });
+            },
             child: _buildCurrentOperationTab(),
           ),
         ),
@@ -126,10 +154,21 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
             onTap: () {
               setState(() {
                 _currentDifficulty = difficulty;
+                _isLoading = true; // Set loading state when changing difficulty
               });
+              
               // Call the callback with current operation and new difficulty
               String currentOperation = _getCurrentOperation();
               widget.onDifficultyChanged(currentOperation, difficulty);
+              
+              // Use Future.delayed with a longer delay to ensure data is fully loaded
+              Future.delayed(Duration(milliseconds: 800), () {
+                if (mounted) {
+                  setState(() {
+                    _isLoading = false;
+                  });
+                }
+              });
             },
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -198,10 +237,21 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
   Widget _buildTimeLeaderboard(List<LeaderboardEntry> entries, String operation,
       Color operationColor, IconData operationIcon) {
+      
+    // Always show loading indicator while data is being processed
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(operationColor),
+        ),
+      );
+    }
+    
     // For 'All' difficulty, we already have the correct entries from the parent component
     // that were fetched from the main operation leaderboard
-    List<LeaderboardEntry> filteredEntries = entries;
-
+    List<LeaderboardEntry> filteredEntries = [];
+    
+    // Only filter and process entries when we're not loading
     // Make sure we have entries with valid times
     if (_currentDifficulty == 'All') {
       // For 'All' difficulty, ensure entries have the operation key
@@ -247,6 +297,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       }
     }
 
+    // Only show the empty state when we're not loading and have no entries
     if (filteredEntries.isEmpty) {
       return Center(
         child: Column(
