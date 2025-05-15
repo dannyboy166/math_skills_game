@@ -175,9 +175,7 @@ class UserService {
     return null;
   }
 
-  // NEW STREAK METHODS
-
-  // Update daily streak when user plays a game
+// Replace your _updateDailyStreak method with this one
   Future<void> _updateDailyStreak(String userId) async {
     final userRef = _firestore.collection('users').doc(userId);
     final userData = await userRef.get();
@@ -203,25 +201,57 @@ class UserService {
     int currentStreak = userDataMap['streakData']?['currentStreak'] ?? 0;
     int longestStreak = userDataMap['streakData']?['longestStreak'] ?? 0;
 
-    // Check if this is first time playing today
-    if (lastPlayedDate == null || lastPlayedDate.isBefore(today)) {
-      // Check if continuing streak (yesterday) or breaking streak
-      if (lastPlayedDate != null &&
-          lastPlayedDate.difference(today).inDays == -1) {
-        // Continuing streak from yesterday
+    // Debug information
+    print('STREAK DEBUG: Current streak: $currentStreak');
+    print('STREAK DEBUG: Longest streak: $longestStreak');
+    print('STREAK DEBUG: Last played date: $lastPlayedDate');
+    print('STREAK DEBUG: Today: $today');
+
+    bool streakUpdated = false;
+
+    // Case 1: First time player (or missing streak data)
+    if (lastPlayedDate == null) {
+      print('STREAK DEBUG: First time player - setting streak to 1');
+      currentStreak = 1;
+      streakUpdated = true;
+    }
+    // Case 2: Playing on a new day
+    else if (lastPlayedDate.isBefore(today)) {
+      // Case 2a: Played yesterday, continuing streak
+      if (lastPlayedDate.difference(today).inDays == -1) {
+        print('STREAK DEBUG: Played yesterday - incrementing streak');
         currentStreak += 1;
-      } else if (lastPlayedDate == null ||
-          lastPlayedDate.difference(today).inDays < -1) {
-        // New streak (either first time or broke streak)
+        streakUpdated = true;
+      }
+      // Case 2b: Didn't play yesterday, reset streak
+      else {
+        print('STREAK DEBUG: Didn\'t play yesterday - resetting streak to 1');
         currentStreak = 1;
+        streakUpdated = true;
       }
-
-      // Update longest streak if needed
-      if (currentStreak > longestStreak) {
-        longestStreak = currentStreak;
+    }
+    // Case 3: Already played today, don't change streak
+    else {
+      print(
+          'STREAK DEBUG: Already played today - keeping streak at $currentStreak');
+      // If streak is 0 but playing today, set to 1 (fix for existing users)
+      if (currentStreak == 0) {
+        print('STREAK DEBUG: Fixing zero streak for today');
+        currentStreak = 1;
+        streakUpdated = true;
       }
+    }
 
-      // Store new streak data
+    // Update longest streak if needed
+    if (currentStreak > longestStreak) {
+      longestStreak = currentStreak;
+      print('STREAK DEBUG: Updated longest streak to $longestStreak');
+    }
+
+    // Store new streak data if changed
+    if (streakUpdated || currentStreak == 0) {
+      print(
+          'STREAK DEBUG: Saving streak data: currentStreak=$currentStreak, longestStreak=$longestStreak');
       await userRef.update({
         'streakData': {
           'lastPlayedDate': Timestamp.fromDate(today),
@@ -232,6 +262,8 @@ class UserService {
 
       // Also update weekly streak collection
       await _updateWeeklyStreak(userId, today);
+    } else {
+      print('STREAK DEBUG: No changes to streak data');
     }
   }
 

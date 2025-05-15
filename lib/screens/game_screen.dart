@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
-import 'package:math_skills_game/services/leaderboard_service.dart';
+import 'package:math_skills_game/services/scalable_leaderboard_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/services/user_stats_service.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
@@ -643,7 +643,7 @@ class _GameScreenState extends State<GameScreen> {
           completedAt: DateTime.now(),
         );
 
-        // Use Timestamp.fromDate instead of serverTimestamp
+        // Save level completion (this also updates streaks)
         await userService.saveLevelCompletion(userId, levelCompletion);
         print("Level completion saved successfully");
 
@@ -655,10 +655,15 @@ class _GameScreenState extends State<GameScreen> {
           print("Error updating operation stars: $e");
         }
 
-        // Also refresh leaderboard data
+        // IMPROVED: Direct leaderboard update for current user
         try {
-          final leaderboardService = LeaderboardService();
-          await leaderboardService.updateUserRankingData(userId);
+          // First update the scalable leaderboard for this user
+          final leaderboardService = ScalableLeaderboardService();
+          await leaderboardService.updateUserInAllLeaderboards(userId);
+
+          // Also ensure the streak leaderboard is updated
+          await leaderboardService.updateUserInStreakLeaderboard(userId);
+
           print("Leaderboard data updated successfully");
         } catch (e) {
           print("Error updating leaderboard data: $e");

@@ -493,6 +493,57 @@ class ScalableLeaderboardService {
     await _refreshTimeLeaderboard(DIVISION_TIME, 'division');
   }
 
+  // Add this method to your ScalableLeaderboardService class
+
+// Directly update streak leaderboard for a specific user
+  Future<void> updateUserInStreakLeaderboard(String userId) async {
+    try {
+      // Get user data first
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data()!;
+      final streakData = userData['streakData'] as Map<String, dynamic>? ?? {};
+      final longestStreak = streakData['longestStreak'] ?? 0;
+      final currentStreak = streakData['currentStreak'] ?? 0;
+
+      // Only update if the user has a streak
+      if (longestStreak > 0 || currentStreak > 0) {
+        // Get current top entries to determine rank
+        final rankSnapshot = await _firestore
+            .collection('leaderboards')
+            .doc(STREAK_LEADERBOARD)
+            .collection('entries')
+            .where('longestStreak', isGreaterThan: longestStreak)
+            .count()
+            .get();
+
+        final newRank = (rankSnapshot.count ?? 0) + 1;
+
+        // Update or add user to leaderboard
+        await _firestore
+            .collection('leaderboards')
+            .doc(STREAK_LEADERBOARD)
+            .collection('entries')
+            .doc(userId)
+            .set({
+          'userId': userId,
+          'displayName': userData['displayName'] ?? 'Unknown',
+          'longestStreak': longestStreak,
+          'currentStreak': currentStreak,
+          'level': userData['level'] ?? 'Novice',
+          'rank': newRank,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'operationCounts': userData['completedGames'] ?? {},
+        });
+
+        print('Streak leaderboard updated for user: $userId');
+      }
+    } catch (e) {
+      print('Error updating streak leaderboard: $e');
+    }
+  }
+
   // Helper to refresh a standard leaderboard
   Future<void> _refreshLeaderboard(
       String leaderboardType, String sortField, bool descendingOrder) async {
