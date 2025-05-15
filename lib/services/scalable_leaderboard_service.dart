@@ -19,7 +19,73 @@ class ScalableLeaderboardService {
   static const String MULTIPLICATION_TIME = 'multiplicationTime';
   static const String DIVISION_TIME = 'divisionTime';
 
-  // Get top entries from a leaderboard
+// Add this method to your ScalableLeaderboardService class
+
+// Get top entries for a specific difficulty level from a time leaderboard
+  Future<List<LeaderboardEntry>> getTopEntriesForDifficulty(
+      String leaderboardType, String difficulty, int limit) async {
+    try {
+      final snapshot = await _firestore
+          .collection('leaderboards')
+          .doc(leaderboardType)
+          .collection('difficulties')
+          .doc(difficulty)
+          .collection('entries')
+          .orderBy('rank')
+          .limit(limit)
+          .get();
+
+      // Convert to LeaderboardEntry objects
+      final entries = snapshot.docs.map((doc) {
+        final data = doc.data();
+        final bestTime = data['bestTime'] as int? ?? 0;
+        final difficultyKey =
+            '${_getOperationFromLeaderboardType(leaderboardType)}-$difficulty';
+
+        // Create best times map with both operation and difficulty times
+        final bestTimes = <String, int>{};
+        // Add the operation-specific time
+        bestTimes[_getOperationFromLeaderboardType(leaderboardType)] = bestTime;
+        // Add the difficulty-specific time
+        bestTimes[difficultyKey] = bestTime;
+
+        return LeaderboardEntry(
+          userId: doc.id,
+          displayName: data['displayName'] ?? 'Unknown',
+          totalStars: data['totalStars'] ?? 0,
+          totalGames: data['totalGames'] ?? 0,
+          longestStreak: data['longestStreak'] ?? 0,
+          operationCounts: Map<String, int>.from(data['operationCounts'] ?? {}),
+          operationStars: Map<String, int>.from(data['operationStars'] ?? {}),
+          bestTimes: bestTimes,
+          level: data['level'] ?? 'Novice',
+          lastUpdated: (data['updatedAt'] as Timestamp).toDate(),
+        );
+      }).toList();
+
+      return entries;
+    } catch (e) {
+      print('Error fetching difficulty-specific leaderboard entries: $e');
+      return [];
+    }
+  }
+
+// Helper to extract operation name from leaderboard type
+  String _getOperationFromLeaderboardType(String leaderboardType) {
+    switch (leaderboardType) {
+      case ADDITION_TIME:
+        return 'addition';
+      case SUBTRACTION_TIME:
+        return 'subtraction';
+      case MULTIPLICATION_TIME:
+        return 'multiplication';
+      case DIVISION_TIME:
+        return 'division';
+      default:
+        return 'addition';
+    }
+  }
+
   Future<List<LeaderboardEntry>> getTopLeaderboardEntries(
       String leaderboardType,
       {int limit = 20}) async {
@@ -35,6 +101,26 @@ class ScalableLeaderboardService {
       return snapshot.docs.map((doc) {
         final data = doc.data();
 
+        // Create a map for best times
+        final Map<String, int> bestTimes = {};
+
+        // If this is a time-based leaderboard, add the time to bestTimes map
+        if (leaderboardType == ADDITION_TIME ||
+            leaderboardType == SUBTRACTION_TIME ||
+            leaderboardType == MULTIPLICATION_TIME ||
+            leaderboardType == DIVISION_TIME) {
+          final operation = _getOperationFromLeaderboardType(leaderboardType);
+          final bestTime = data['bestTime'] as int? ?? 0;
+
+          // Store the time using the operation as key
+          if (bestTime > 0) {
+            bestTimes[operation] = bestTime;
+          }
+        } else if (data['bestTimes'] != null) {
+          // For other leaderboards, include any bestTimes from the data
+          bestTimes.addAll(Map<String, int>.from(data['bestTimes'] ?? {}));
+        }
+
         // Convert to LeaderboardEntry for compatibility with existing UI
         return LeaderboardEntry(
           userId: doc.id,
@@ -44,7 +130,7 @@ class ScalableLeaderboardService {
           longestStreak: data['longestStreak'] ?? 0,
           operationCounts: Map<String, int>.from(data['operationCounts'] ?? {}),
           operationStars: Map<String, int>.from(data['operationStars'] ?? {}),
-          bestTimes: Map<String, int>.from(data['bestTimes'] ?? {}),
+          bestTimes: bestTimes,
           level: data['level'] ?? 'Novice',
           lastUpdated: (data['updatedAt'] as Timestamp).toDate(),
         );

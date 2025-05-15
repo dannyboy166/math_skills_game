@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:math_skills_game/screens/admin_screen.dart';
+import 'package:math_skills_game/services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 
@@ -14,6 +16,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
   final TextEditingController _displayNameController = TextEditingController();
+
+  final AdminService _adminService = AdminService();
 
   bool _isEditing = false;
   bool _isLoading = true;
@@ -435,6 +439,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
 
+                      if (_adminService.isCurrentUserAdmin()) ...[
+                        SizedBox(height: 32),
+                        Divider(),
+                        _buildSectionTitle('Admin Tools'),
+                        ListTile(
+                          leading: Icon(Icons.admin_panel_settings,
+                              color: Colors.red),
+                          title: Text('Admin Dashboard'),
+                          subtitle: Text('Manage leaderboards and user data'),
+                          tileColor: Colors.red.shade50,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => AdminScreen()),
+                            );
+                          },
+                        ),
+                      ],
                       SizedBox(height: 32),
                       Divider(),
 

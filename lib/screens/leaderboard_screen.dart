@@ -2,9 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:math_skills_game/services/leaderboard_updater.dart';
+import 'package:math_skills_game/services/scalable_leaderboard_service.dart';
 import 'package:math_skills_game/widgets/leaderboard_loading.dart';
 import '../models/leaderboard_entry.dart';
-import '../services/leaderboard_service.dart';
 import '../widgets/leaderboard_tab.dart';
 import '../widgets/time_leaderboard_tab.dart';
 
@@ -17,7 +17,9 @@ class LeaderboardScreen extends StatefulWidget {
 
 class _LeaderboardScreenState extends State<LeaderboardScreen>
     with SingleTickerProviderStateMixin {
-  final LeaderboardService _leaderboardService = LeaderboardService();
+  // Use the scalable leaderboard service
+  final ScalableLeaderboardService _leaderboardService =
+      ScalableLeaderboardService();
   late TabController _tabController;
   bool _isLoading = true;
   int _currentUserRank = 0;
@@ -35,7 +37,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this); // Changed from 4 to 3
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -66,8 +68,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       // First load the streaks leaderboard (now the default tab)
       await _loadStreakLeaderboard();
 
-      // Get user's rank by streak instead of stars
-      final rank = await _leaderboardService.getCurrentUserRankByStreak();
+      // Get user's rank from the scalable leaderboard
+      final userData = await _leaderboardService.getUserLeaderboardData(
+          _currentUserId, ScalableLeaderboardService.STREAK_LEADERBOARD);
+
+      final rank = userData['rank'] as int? ?? 0;
 
       if (mounted) {
         setState(() {
@@ -141,7 +146,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   Future<void> _loadStreakLeaderboard() async {
-    final leaderboard = await _leaderboardService.getTopUsersByStreak();
+    // Use the scalable service to get top entries
+    final leaderboard = await _leaderboardService.getTopLeaderboardEntries(
+        ScalableLeaderboardService.STREAK_LEADERBOARD,
+        limit: 20);
+
     if (mounted) {
       setState(() {
         _streakLeaderboard = leaderboard;
@@ -150,7 +159,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   Future<void> _loadGamesLeaderboard() async {
-    final leaderboard = await _leaderboardService.getTopUsersByGamesPlayed();
+    // Use the scalable service to get top entries
+    final leaderboard = await _leaderboardService.getTopLeaderboardEntries(
+        ScalableLeaderboardService.GAMES_LEADERBOARD,
+        limit: 20);
+
     if (mounted) {
       setState(() {
         _gamesLeaderboard = leaderboard;
@@ -160,10 +173,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   Future<void> _loadTimeLeaderboard(String operation,
       {String? difficulty}) async {
+    String leaderboardType = _getTimeLeaderboardType(operation);
+
     if (difficulty != null && difficulty != 'All') {
-      // Load difficulty-specific leaderboard
-      final leaderboard = await _leaderboardService
-          .getTopUsersByBestTimeAndDifficulty(operation, difficulty);
+      // Load difficulty-specific leaderboard from scalable service
+      final leaderboard = await _leaderboardService.getTopEntriesForDifficulty(
+          leaderboardType, difficulty.toLowerCase(), 20);
 
       if (mounted) {
         setState(() {
@@ -184,9 +199,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         });
       }
     } else {
-      // Load overall operation leaderboard
-      final leaderboard =
-          await _leaderboardService.getTopUsersByBestTime(operation);
+      // Load overall operation leaderboard from scalable service
+      final leaderboard = await _leaderboardService
+          .getTopLeaderboardEntries(leaderboardType, limit: 20);
 
       if (mounted) {
         setState(() {
@@ -206,6 +221,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           }
         });
       }
+    }
+  }
+
+  // Helper method to get the correct leaderboard type for time leaderboards
+  String _getTimeLeaderboardType(String operation) {
+    switch (operation) {
+      case 'addition':
+        return ScalableLeaderboardService.ADDITION_TIME;
+      case 'subtraction':
+        return ScalableLeaderboardService.SUBTRACTION_TIME;
+      case 'multiplication':
+        return ScalableLeaderboardService.MULTIPLICATION_TIME;
+      case 'division':
+        return ScalableLeaderboardService.DIVISION_TIME;
+      default:
+        return ScalableLeaderboardService.ADDITION_TIME;
     }
   }
 
@@ -227,7 +258,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                   : TabBarView(
                       controller: _tabController,
                       children: [
-                        // Removed the stars leaderboard tab
                         LeaderboardTab(
                           leaderboardEntries: _streakLeaderboard,
                           currentUserId: _currentUserId,
@@ -346,7 +376,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         labelColor: Colors.blue,
         unselectedLabelColor: Colors.grey[600],
         tabs: [
-          // Removed the Stars tab
           Tab(
             icon: Icon(Icons.local_fire_department_rounded),
             text: 'Streaks',

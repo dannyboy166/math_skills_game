@@ -1,4 +1,6 @@
 // lib/widgets/time_leaderboard_tab.dart
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/level_completion_model.dart';
@@ -11,8 +13,7 @@ class TimeLeaderboardTab extends StatefulWidget {
   final List<LeaderboardEntry> divisionLeaderboard;
   final String currentUserId;
   final Future<void> Function() onRefresh;
-  final void Function(String operation, String difficulty)
-      onDifficultyChanged; // Add this line
+  final void Function(String operation, String difficulty) onDifficultyChanged;
 
   const TimeLeaderboardTab({
     Key? key,
@@ -22,7 +23,7 @@ class TimeLeaderboardTab extends StatefulWidget {
     required this.divisionLeaderboard,
     required this.currentUserId,
     required this.onRefresh,
-    required this.onDifficultyChanged, // Add this line
+    required this.onDifficultyChanged,
   }) : super(key: key);
 
   @override
@@ -127,23 +128,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                 _currentDifficulty = difficulty;
               });
               // Call the callback with current operation and new difficulty
-              String currentOperation;
-              switch (_currentTabIndex) {
-                case 0:
-                  currentOperation = 'addition';
-                  break;
-                case 1:
-                  currentOperation = 'subtraction';
-                  break;
-                case 2:
-                  currentOperation = 'multiplication';
-                  break;
-                case 3:
-                  currentOperation = 'division';
-                  break;
-                default:
-                  currentOperation = 'addition';
-              }
+              String currentOperation = _getCurrentOperation();
               widget.onDifficultyChanged(currentOperation, difficulty);
             },
             child: Container(
@@ -177,6 +162,21 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     );
   }
 
+  String _getCurrentOperation() {
+    switch (_currentTabIndex) {
+      case 0:
+        return 'addition';
+      case 1:
+        return 'subtraction';
+      case 2:
+        return 'multiplication';
+      case 3:
+        return 'division';
+      default:
+        return 'addition';
+    }
+  }
+
   Widget _buildCurrentOperationTab() {
     switch (_currentTabIndex) {
       case 0:
@@ -196,58 +196,52 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     }
   }
 
-// In _buildTimeLeaderboard method of TimeLeaderboardTab class
   Widget _buildTimeLeaderboard(List<LeaderboardEntry> entries, String operation,
       Color operationColor, IconData operationIcon) {
-    // Filter entries by difficulty if a specific difficulty is selected
+    // For 'All' difficulty, we already have the correct entries from the parent component
+    // that were fetched from the main operation leaderboard
     List<LeaderboardEntry> filteredEntries = entries;
 
-    if (_currentDifficulty != 'All') {
-      // Get the specific difficulty key
-      final difficultyKey = '$operation-${_currentDifficulty.toLowerCase()}';
-
-      // Only include entries that have a valid time for this specific difficulty
+    // Make sure we have entries with valid times
+    if (_currentDifficulty == 'All') {
+      // For 'All' difficulty, ensure entries have the operation key
       filteredEntries = entries.where((entry) {
-        return entry.bestTimes.containsKey(difficultyKey) &&
-            entry.bestTimes[difficultyKey]! > 0;
+        return entry.bestTimes.containsKey(operation) &&
+            entry.bestTimes[operation]! > 0;
       }).toList();
 
       // Debug output
-      print('Looking for key: $difficultyKey');
-      print('Found ${filteredEntries.length} entries with this difficulty');
+      print('Operation: $operation, Entries count: ${filteredEntries.length}');
 
-      // Sort by the specific difficulty time
+      // Log the first few entries for debugging
       if (filteredEntries.isNotEmpty) {
-        filteredEntries.sort((a, b) {
-          final timeA = a.bestTimes[difficultyKey]!;
-          final timeB = b.bestTimes[difficultyKey]!;
-          return timeA.compareTo(timeB);
-        });
+        for (int i = 0; i < min(3, filteredEntries.length); i++) {
+          print(
+              'Entry $i bestTime: ${filteredEntries[i].bestTimes[operation]}');
+        }
       }
-
-      // REMOVE THIS SECTION - Don't fall back to overall operation times
-      // We want to show only players who have completed the specific difficulty
-      /*
-    // If no entries found with the specific difficulty, just show all entries with the operation
-    if (filteredEntries.isEmpty) {
-      filteredEntries = entries.where((entry) {
-        return entry.bestTimes.containsKey(operation) &&
-            entry.bestTimes[operation]! > 0;
-      }).toList();
-    }
-    */
-    } else {
-      // For 'All' difficulty, show entries with a valid time for the operation
-      filteredEntries = entries.where((entry) {
-        return entry.bestTimes.containsKey(operation) &&
-            entry.bestTimes[operation]! > 0;
-      }).toList();
 
       // Sort by the operation time
       if (filteredEntries.isNotEmpty) {
         filteredEntries.sort((a, b) {
           final timeA = a.bestTimes[operation]!;
           final timeB = b.bestTimes[operation]!;
+          return timeA.compareTo(timeB);
+        });
+      }
+    } else {
+      // Specific difficulty code - this part should work fine
+      final difficultyKey = '$operation-${_currentDifficulty.toLowerCase()}';
+
+      filteredEntries = entries.where((entry) {
+        return entry.bestTimes.containsKey(difficultyKey) &&
+            entry.bestTimes[difficultyKey]! > 0;
+      }).toList();
+
+      if (filteredEntries.isNotEmpty) {
+        filteredEntries.sort((a, b) {
+          final timeA = a.bestTimes[difficultyKey]!;
+          final timeB = b.bestTimes[difficultyKey]!;
           return timeA.compareTo(timeB);
         });
       }
@@ -278,7 +272,6 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       );
     }
 
-    // Rest of the method remains the same...
     return ListView.builder(
       padding: EdgeInsets.only(top: 16),
       itemCount: filteredEntries.length + 1, // +1 for the top 3 section
@@ -588,7 +581,6 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     }
   }
 
-// Update the _getBestTime method in TimeLeaderboardTab class
   int _getBestTime(LeaderboardEntry entry, String operation) {
     // If a specific difficulty is selected, get that difficulty's time
     if (_currentDifficulty != 'All') {
@@ -602,8 +594,6 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       }
 
       // If no specific difficulty time, return a very high value
-      // This ensures players without the specific difficulty time
-      // would be ranked at the bottom if they somehow appear in the list
       return 999999;
     }
 
