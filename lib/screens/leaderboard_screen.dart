@@ -98,26 +98,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   Future<void> _loadTabData(int tabIndex) async {
-    if (tabIndex == 0 &&
-        _streakLeaderboard != null &&
-        _streakLeaderboard!.isNotEmpty) return;
-    if (tabIndex == 1 &&
-        _gamesLeaderboard != null &&
-        _gamesLeaderboard!.isNotEmpty) return;
-    if (tabIndex == 2 &&
-        (_additionTimeLeaderboard != null &&
-                _additionTimeLeaderboard!.isNotEmpty ||
-            _subtractionTimeLeaderboard != null &&
-                _subtractionTimeLeaderboard!.isNotEmpty ||
-            _multiplicationTimeLeaderboard != null &&
-                _multiplicationTimeLeaderboard!.isNotEmpty ||
-            _divisionTimeLeaderboard != null &&
-                _divisionTimeLeaderboard!.isNotEmpty)) {
-      // For tab 2 (Time), load all operation time leaderboards
+    // Time tab is index 2
+    if (tabIndex == 2) {
+      // Always set loading state to true when entering time tab
       setState(() {
         _isLoading = true;
       });
+
       try {
+        // Load all operation time leaderboards
         await Future.wait([
           _loadTimeLeaderboard('addition'),
           _loadTimeLeaderboard('subtraction'),
@@ -135,6 +124,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       }
       return;
     }
+
+    // For other tabs, check if data is already loaded
+    if (tabIndex == 0 &&
+        _streakLeaderboard != null &&
+        _streakLeaderboard!.isNotEmpty) return;
+    if (tabIndex == 1 &&
+        _gamesLeaderboard != null &&
+        _gamesLeaderboard!.isNotEmpty) return;
 
     setState(() {
       _isLoading = true;
