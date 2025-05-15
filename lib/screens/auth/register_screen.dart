@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/screens/home_screen.dart';
 import 'package:math_skills_game/services/auth_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 
@@ -10,7 +11,8 @@ class RegisterScreen extends StatefulWidget {
   _RegisterScreenState createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
   final _formKey = GlobalKey<FormState>();
@@ -23,27 +25,27 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   String _errorMessage = '';
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize animation controller
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    
+
     _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeOutBack,
       ),
     );
-    
+
     _animationController.forward();
   }
-  
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -53,7 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
     _animationController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -86,11 +88,14 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       if (mounted) {
         // Show a fun success animation or dialog
         _showSuccessDialog();
-        
-        // Briefly delay before popping back to login screen
+
+        // Briefly delay before navigating to HomeScreen
         Future.delayed(Duration(seconds: 2), () {
-          // Pop back to login screen
-          Navigator.of(context).pop();
+          // Navigate to home screen instead of going back to login
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomeScreen()),
+          );
         });
       }
     } catch (e) {
@@ -224,12 +229,12 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                         },
                       ),
                     ),
-                    
+
                     SizedBox(height: 20),
-                    
+
                     // App Logo and Title
                     _buildAppLogo(),
-                    
+
                     SizedBox(height: 8),
                     _buildWelcomeText(),
                     SizedBox(height: 32),
@@ -237,23 +242,22 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                     // Form Fields
                     _buildNameField(),
                     SizedBox(height: 16),
-                    
+
                     _buildEmailField(),
                     SizedBox(height: 16),
-                    
+
                     _buildPasswordField(),
                     SizedBox(height: 16),
-                    
+
                     _buildConfirmPasswordField(),
                     SizedBox(height: 24),
 
                     // Error Message
-                    if (_errorMessage.isNotEmpty)
-                      _buildErrorMessage(),
+                    if (_errorMessage.isNotEmpty) _buildErrorMessage(),
 
                     // Register Button
                     _buildRegisterButton(),
-                    
+
                     SizedBox(height: 16),
 
                     // Sign In Link
@@ -267,7 +271,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   Widget _buildAppLogo() {
     return Column(
       children: [
@@ -328,7 +332,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ],
     );
   }
-  
+
   Widget _buildWelcomeText() {
     return Column(
       children: [
@@ -353,7 +357,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ],
     );
   }
-  
+
   Widget _buildNameField() {
     return Container(
       decoration: BoxDecoration(
@@ -401,7 +405,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   Widget _buildEmailField() {
     return Container(
       decoration: BoxDecoration(
@@ -454,7 +458,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   Widget _buildPasswordField() {
     return Container(
       decoration: BoxDecoration(
@@ -506,7 +510,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   Widget _buildConfirmPasswordField() {
     return Container(
       decoration: BoxDecoration(
@@ -558,7 +562,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   Widget _buildErrorMessage() {
     return Container(
       padding: EdgeInsets.all(12),
@@ -582,7 +586,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   Widget _buildRegisterButton() {
     return Container(
       height: 56,
@@ -632,7 +636,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   Widget _buildSignInLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
