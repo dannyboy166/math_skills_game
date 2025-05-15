@@ -31,11 +31,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final result = await _authService.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-
       // Navigation happens automatically through the auth state listener
     } catch (e) {
       setState(() {
