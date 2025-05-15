@@ -1,7 +1,7 @@
-// lib/screens/auth/login_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/screens/auth/register_screen.dart';
+import 'package:math_skills_game/screens/home_screen.dart';
 import 'package:math_skills_game/services/auth_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 
@@ -22,7 +22,14 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String _errorMessage = '';
 
-  // lib/screens/auth/login_screen.dart - Simplest most reliable sign-in method
+  @override
+  void initState() {
+    super.initState();
+    print("LOGIN DEBUG: LoginScreen initialized");
+    // Check if there's a current user when the login screen initializes
+    print(
+        "LOGIN DEBUG: Current user on init: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
+  }
 
   Future<void> _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
@@ -32,15 +39,34 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = '';
     });
 
-    try {
-      // Simplest, most direct sign-in approach
-      await _authService.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
+    print(
+        "LOGIN DEBUG: Starting email sign-in for: ${_emailController.text.trim()}");
+    print(
+        "LOGIN DEBUG: Current user before sign-in attempt: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
 
-      // Don't need to do anything else - auth state listener will handle navigation
+    try {
+      // Sign-in approach
+
+      print("LOGIN DEBUG: Sign-in call completed");
+      print(
+          "LOGIN DEBUG: Current user after sign-in: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
+
+      // IMPORTANT FIX: Force navigation to HomeScreen instead of waiting for the auth state listener
+      if (mounted && FirebaseAuth.instance.currentUser != null) {
+        print(
+            "LOGIN DEBUG: User is logged in, manually navigating to HomeScreen");
+        // Use pushReplacement to replace the login screen with HomeScreen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
+      } else {
+        print(
+            "LOGIN DEBUG: Auth state listener should handle navigation automatically");
+      }
     } catch (e) {
+      print("LOGIN DEBUG: Sign-in failed with error: $e");
+
       if (mounted) {
         setState(() {
           _errorMessage = _getErrorMessage(e);
@@ -51,6 +77,10 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           _isLoading = false;
         });
+
+        // Final check to see if we're actually logged in
+        print(
+            "LOGIN DEBUG: Final check - current user: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
       }
     }
   }
@@ -61,16 +91,24 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = '';
     });
 
+    print("LOGIN DEBUG: Starting Google sign-in");
+
     try {
       final result = await _authService.signInWithGoogle();
 
       if (result != null && result.user != null) {
+        print(
+            "LOGIN DEBUG: Google sign-in successful for user: ${result.user!.uid}");
         // Create user profile if signing in for the first time
         await _userService.createUserProfile(result.user!);
+      } else {
+        print("LOGIN DEBUG: Google sign-in returned null result");
       }
 
       // Navigation happens automatically through the auth state listener
     } catch (e) {
+      print("LOGIN DEBUG: Google sign-in failed with error: $e");
+
       setState(() {
         _errorMessage = _getErrorMessage(e);
       });
@@ -79,6 +117,10 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           _isLoading = false;
         });
+
+        // Final check
+        print(
+            "LOGIN DEBUG: Final check after Google sign-in - current user: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
       }
     }
   }
@@ -216,6 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    print("LOGIN DEBUG: LoginScreen disposing");
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();

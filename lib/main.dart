@@ -1,4 +1,3 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -54,7 +53,11 @@ class MyApp extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+        print("MAIN DEBUG: Auth state changed. Connection state: ${snapshot.connectionState}");
+        print("MAIN DEBUG: Has data: ${snapshot.hasData}, User: ${snapshot.data?.uid ?? 'null'}");
+        
         if (snapshot.connectionState == ConnectionState.waiting) {
+          print("MAIN DEBUG: Auth state is waiting");
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(),
@@ -64,10 +67,12 @@ class MyApp extends StatelessWidget {
 
         if (snapshot.hasData && snapshot.data != null) {
           // User is logged in
+          print("MAIN DEBUG: User is logged in: ${snapshot.data!.uid}");
           return HomeScreen();
         }
 
         // User is not logged in
+        print("MAIN DEBUG: User is NOT logged in, showing LoginScreen");
         return LoginScreen();
       },
     );

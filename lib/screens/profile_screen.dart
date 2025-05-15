@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:math_skills_game/screens/admin_screen.dart';
@@ -495,11 +496,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             },
                           );
 
+                          // Add debug before logout
+                          print("PROFILE DEBUG: Starting logout process");
+                          print(
+                              "PROFILE DEBUG: Current user before logout: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
+
                           // Perform logout after a brief delay to ensure dialog is shown
                           Future.delayed(Duration(milliseconds: 300), () async {
                             try {
                               // Sign out
                               await _authService.signOut();
+
+                              // Check after signout
+                              print("PROFILE DEBUG: Logout completed");
+                              print(
+                                  "PROFILE DEBUG: Current user after logout: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
 
                               // Navigate directly to login screen
                               Navigator.of(context).pushAndRemoveUntil(
@@ -507,8 +518,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     builder: (context) => LoginScreen()),
                                 (route) => false,
                               );
+
+                              print("PROFILE DEBUG: Navigated to login screen");
                             } catch (e) {
-                              print('Error during logout: $e');
+                              print("PROFILE DEBUG: Error during logout: $e");
 
                               // If there's an error, pop the dialog and show error
                               Navigator.of(context).pop();
