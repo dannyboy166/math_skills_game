@@ -1,4 +1,3 @@
-// lib/screens/leaderboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:math_skills_game/services/leaderboard_updater.dart';
@@ -32,6 +31,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   List<LeaderboardEntry>? _subtractionTimeLeaderboard;
   List<LeaderboardEntry>? _multiplicationTimeLeaderboard;
   List<LeaderboardEntry>? _divisionTimeLeaderboard;
+
+  // Track currently loading time leaderboards to prevent race conditions
+  final Map<String, bool> _loadingTimeLeaderboards = {};
 
   @override
   void initState() {
@@ -183,56 +185,84 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
   }
 
+  // Modified to track loading state and prevent race conditions
   Future<void> _loadTimeLeaderboard(String operation,
       {String? difficulty}) async {
-    String leaderboardType = _getTimeLeaderboardType(operation);
-
-    if (difficulty != null && difficulty != 'All') {
-      // Load difficulty-specific leaderboard from scalable service
-      final leaderboard = await _leaderboardService.getTopEntriesForDifficulty(
-          leaderboardType, difficulty.toLowerCase(), 20);
-
-      if (mounted) {
-        setState(() {
-          switch (operation) {
-            case 'addition':
-              _additionTimeLeaderboard = leaderboard;
-              break;
-            case 'subtraction':
-              _subtractionTimeLeaderboard = leaderboard;
-              break;
-            case 'multiplication':
-              _multiplicationTimeLeaderboard = leaderboard;
-              break;
-            case 'division':
-              _divisionTimeLeaderboard = leaderboard;
-              break;
-          }
-        });
+    // Create a unique key for this load operation
+    final loadKey = difficulty != null && difficulty != 'All'
+        ? '$operation-${difficulty.toLowerCase()}'
+        : operation;
+    
+    // If already loading this exact combination, return the existing operation
+    if (_loadingTimeLeaderboards[loadKey] == true) {
+      print('LEADERBOARD DEBUG: Already loading $loadKey, skipping duplicate request');
+      // Wait for the existing operation to complete
+      while (_loadingTimeLeaderboards[loadKey] == true) {
+        await Future.delayed(Duration(milliseconds: 50));
       }
-    } else {
-      // Load overall operation leaderboard from scalable service
-      final leaderboard = await _leaderboardService
-          .getTopLeaderboardEntries(leaderboardType, limit: 20);
+      return;
+    }
+    
+    // Mark this combination as loading
+    _loadingTimeLeaderboards[loadKey] = true;
+    print('LEADERBOARD DEBUG: Started loading $loadKey');
+    
+    try {
+      String leaderboardType = _getTimeLeaderboardType(operation);
 
-      if (mounted) {
-        setState(() {
-          switch (operation) {
-            case 'addition':
-              _additionTimeLeaderboard = leaderboard;
-              break;
-            case 'subtraction':
-              _subtractionTimeLeaderboard = leaderboard;
-              break;
-            case 'multiplication':
-              _multiplicationTimeLeaderboard = leaderboard;
-              break;
-            case 'division':
-              _divisionTimeLeaderboard = leaderboard;
-              break;
-          }
-        });
+      if (difficulty != null && difficulty != 'All') {
+        // Load difficulty-specific leaderboard from scalable service
+        final leaderboard = await _leaderboardService.getTopEntriesForDifficulty(
+            leaderboardType, difficulty.toLowerCase(), 20);
+
+        if (mounted) {
+          setState(() {
+            switch (operation) {
+              case 'addition':
+                _additionTimeLeaderboard = leaderboard;
+                break;
+              case 'subtraction':
+                _subtractionTimeLeaderboard = leaderboard;
+                break;
+              case 'multiplication':
+                _multiplicationTimeLeaderboard = leaderboard;
+                break;
+              case 'division':
+                _divisionTimeLeaderboard = leaderboard;
+                break;
+            }
+          });
+        }
+      } else {
+        // Load overall operation leaderboard from scalable service
+        final leaderboard = await _leaderboardService
+            .getTopLeaderboardEntries(leaderboardType, limit: 20);
+
+        if (mounted) {
+          setState(() {
+            switch (operation) {
+              case 'addition':
+                _additionTimeLeaderboard = leaderboard;
+                break;
+              case 'subtraction':
+                _subtractionTimeLeaderboard = leaderboard;
+                break;
+              case 'multiplication':
+                _multiplicationTimeLeaderboard = leaderboard;
+                break;
+              case 'division':
+                _divisionTimeLeaderboard = leaderboard;
+                break;
+            }
+          });
+        }
       }
+      print('LEADERBOARD DEBUG: Finished loading $loadKey');
+    } catch (e) {
+      print('Error loading time leaderboard for $loadKey: $e');
+    } finally {
+      // Mark this combination as no longer loading
+      _loadingTimeLeaderboards[loadKey] = false;
     }
   }
 
@@ -296,8 +326,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     divisionLeaderboard: _divisionTimeLeaderboard ?? [],
                     currentUserId: _currentUserId,
                     onRefresh: _refreshCurrentTab,
-                    onDifficultyChanged: (operation, difficulty) {
-                      _loadTimeLeaderboard(operation, difficulty: difficulty);
+                    onDifficultyChanged: (operation, difficulty) async {
+                      // Now returns the Future from _loadTimeLeaderboard
+                      await _loadTimeLeaderboard(operation, difficulty: difficulty);
                     },
                   ),
                 ],

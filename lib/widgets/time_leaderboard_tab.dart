@@ -1,6 +1,3 @@
-// lib/widgets/time_leaderboard_tab.dart
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/level_completion_model.dart';
@@ -13,7 +10,7 @@ class TimeLeaderboardTab extends StatefulWidget {
   final List<LeaderboardEntry> divisionLeaderboard;
   final String currentUserId;
   final Future<void> Function() onRefresh;
-  final void Function(String operation, String difficulty) onDifficultyChanged;
+  final Future<void> Function(String operation, String difficulty) onDifficultyChanged;
 
   const TimeLeaderboardTab({
     Key? key,
@@ -34,9 +31,14 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     with SingleTickerProviderStateMixin {
   late TabController _operationTabController;
   int _currentTabIndex = 0;
-  String _currentDifficulty = 'All'; // Default to showing all difficulties
-  bool _isLoading = true; // Add loading state
-
+  String _currentDifficulty = 'All';
+  bool _isLoading = true;
+  
+  // Track current and pending operations/difficulties
+  String _currentOperation = 'addition';
+  String _pendingOperation = '';
+  String _pendingDifficulty = '';
+  
   // List of difficulty options
   final List<String> _difficulties = [
     'All',
@@ -52,37 +54,36 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     _operationTabController = TabController(length: 4, vsync: this);
     _operationTabController.addListener(() {
       if (!_operationTabController.indexIsChanging) {
-        setState(() {
-          _currentTabIndex = _operationTabController.index;
-          _isLoading = true; // Set loading to true when changing tabs
-        });
-
-        // Call onDifficultyChanged when changing tabs
-        String currentOperation = _getCurrentOperation();
-        widget.onDifficultyChanged(currentOperation, _currentDifficulty);
-
-        // Use a shorter delay for smoother experience
-        Future.delayed(Duration(milliseconds: 300), () {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
-        });
+        _currentTabIndex = _operationTabController.index;
+        _currentOperation = _getCurrentOperation();
+        
+        // Set pending changes and trigger data loading
+        _loadData(_currentOperation, _currentDifficulty);
       }
     });
 
-    // Trigger an initial data load for the default tab (Addition)
-    Future.delayed(Duration.zero, () {
-      String currentOperation = _getCurrentOperation();
-      widget.onDifficultyChanged(currentOperation, _currentDifficulty);
+    // Initial data load
+    _loadData('addition', 'All');
+  }
+
+  // Method to handle data loading and state changes
+  void _loadData(String operation, String difficulty) {
+    setState(() {
+      _isLoading = true;
+      _pendingOperation = operation;
+      _pendingDifficulty = difficulty;
     });
 
-    // Shorter initial loading time
-    Future.delayed(Duration(milliseconds: 500), () {
-      if (mounted) {
+    // Call the parent's callback to load the data
+    widget.onDifficultyChanged(operation, difficulty).then((_) {
+      // Only update if this is still the pending request (prevent race conditions)
+      if (mounted && _pendingOperation == operation && _pendingDifficulty == difficulty) {
         setState(() {
+          _currentOperation = operation;
+          _currentDifficulty = difficulty;
           _isLoading = false;
+          _pendingOperation = '';
+          _pendingDifficulty = '';
         });
       }
     });
@@ -107,9 +108,15 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                 _isLoading = true;
               });
               await widget.onRefresh();
-              setState(() {
-                _isLoading = false;
-              });
+              
+              // After refresh, reload current selection
+              await widget.onDifficultyChanged(_currentOperation, _currentDifficulty);
+              
+              if (mounted) {
+                setState(() {
+                  _isLoading = false;
+                });
+              }
             },
             child: _buildCurrentOperationTab(),
           ),
@@ -162,23 +169,9 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
           return GestureDetector(
             onTap: () {
-              setState(() {
-                _currentDifficulty = difficulty;
-                _isLoading = true; // Set loading state when changing difficulty
-              });
-
-              // Call the callback with current operation and new difficulty
-              String currentOperation = _getCurrentOperation();
-              widget.onDifficultyChanged(currentOperation, difficulty);
-
-              // Use Future.delayed with a longer delay to ensure data is fully loaded
-              Future.delayed(Duration(milliseconds: 800), () {
-                if (mounted) {
-                  setState(() {
-                    _isLoading = false;
-                  });
-                }
-              });
+              if (difficulty != _currentDifficulty && !_isLoading) {
+                _loadData(_currentOperation, difficulty);
+              }
             },
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -247,8 +240,11 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
   Widget _buildTimeLeaderboard(List<LeaderboardEntry> entries, String operation,
       Color operationColor, IconData operationIcon) {
-    // Always show loading indicator while data is being processed
+    print(
+        'LEADERBOARD DEBUG: build leaderboard for $operation | difficulty: $_currentDifficulty | loading: $_isLoading | entries.length: ${entries.length}');
+
     if (_isLoading) {
+      print('LEADERBOARD DEBUG: Still loading...');
       return Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(operationColor),
@@ -256,93 +252,100 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       );
     }
 
-    // For 'All' difficulty, we already have the correct entries from the parent component
-    // that were fetched from the main operation leaderboard
-    List<LeaderboardEntry> filteredEntries = [];
+    // Only filter when not loading
+    List<LeaderboardEntry> filteredEntries = _getFilteredEntries(entries, operation);
 
-    // Only filter and process entries when we're not loading
-    // Make sure we have entries with valid times
-    if (_currentDifficulty == 'All') {
-      // For 'All' difficulty, ensure entries have the operation key
-      filteredEntries = entries.where((entry) {
-        return entry.bestTimes.containsKey(operation) &&
-            entry.bestTimes[operation]! > 0;
-      }).toList();
-
-      // Debug output
-      print('Operation: $operation, Entries count: ${filteredEntries.length}');
-
-      // Log the first few entries for debugging
-      if (filteredEntries.isNotEmpty) {
-        for (int i = 0; i < min(3, filteredEntries.length); i++) {
-          print(
-              'Entry $i bestTime: ${filteredEntries[i].bestTimes[operation]}');
-        }
-      }
-
-      // Sort by the operation time
-      if (filteredEntries.isNotEmpty) {
-        filteredEntries.sort((a, b) {
-          final timeA = a.bestTimes[operation]!;
-          final timeB = b.bestTimes[operation]!;
-          return timeA.compareTo(timeB);
-        });
-      }
-    } else {
-      // Specific difficulty code - this part should work fine
-      final difficultyKey = '$operation-${_currentDifficulty.toLowerCase()}';
-
-      filteredEntries = entries.where((entry) {
-        return entry.bestTimes.containsKey(difficultyKey) &&
-            entry.bestTimes[difficultyKey]! > 0;
-      }).toList();
-
-      if (filteredEntries.isNotEmpty) {
-        filteredEntries.sort((a, b) {
-          final timeA = a.bestTimes[difficultyKey]!;
-          final timeB = b.bestTimes[difficultyKey]!;
-          return timeA.compareTo(timeB);
-        });
-      }
-    }
-
-    // Only show the empty state when we're not loading and have no entries
     if (filteredEntries.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.timer_outlined,
-              size: 48,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.timer_outlined, size: 48, color: Colors.grey[400]),
             SizedBox(height: 16),
             Text(
               _currentDifficulty == 'All'
                   ? 'No time records available yet'
                   : 'No time records for $_currentDifficulty difficulty',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
           ],
         ),
       );
     }
 
+    return _buildLeaderboardList(filteredEntries, operation, operationColor, operationIcon);
+  }
+
+  // Method to handle filtering of entries
+  List<LeaderboardEntry> _getFilteredEntries(List<LeaderboardEntry> entries, String operation) {
+    List<LeaderboardEntry> filteredEntries = [];
+
+    if (_currentDifficulty == 'All') {
+      print('LEADERBOARD DEBUG: Filtering for general operation: $operation');
+
+      filteredEntries = entries.where((entry) {
+        final hasValidTime = entry.bestTimes.containsKey(operation) &&
+            entry.bestTimes[operation]! > 0;
+        if (!hasValidTime) {
+          print(
+              'SKIP ENTRY: ${entry.displayName} has no valid time for $operation');
+        }
+        return hasValidTime;
+      }).toList();
+
+      if (filteredEntries.isNotEmpty) {
+        print(
+            'LEADERBOARD DEBUG: First valid entry: ${filteredEntries.first.displayName}, time: ${filteredEntries.first.bestTimes[operation]}');
+      }
+
+      filteredEntries.sort((a, b) {
+        final timeA = a.bestTimes[operation]!;
+        final timeB = b.bestTimes[operation]!;
+        return timeA.compareTo(timeB);
+      });
+    } else {
+      final difficultyKey = '$operation-${_currentDifficulty.toLowerCase()}';
+      print('LEADERBOARD DEBUG: Filtering for difficulty: $difficultyKey');
+
+      filteredEntries = entries.where((entry) {
+        final hasValidTime = entry.bestTimes.containsKey(difficultyKey) &&
+            entry.bestTimes[difficultyKey]! > 0;
+        if (!hasValidTime) {
+          print(
+              'SKIP ENTRY: ${entry.displayName} has no valid time for $difficultyKey');
+        }
+        return hasValidTime;
+      }).toList();
+
+      if (filteredEntries.isNotEmpty) {
+        print(
+            'LEADERBOARD DEBUG: First valid entry: ${filteredEntries.first.displayName}, time: ${filteredEntries.first.bestTimes[difficultyKey]}');
+      }
+
+      filteredEntries.sort((a, b) {
+        final timeA = a.bestTimes[difficultyKey]!;
+        final timeB = b.bestTimes[difficultyKey]!;
+        return timeA.compareTo(timeB);
+      });
+    }
+    
+    return filteredEntries;
+  }
+
+  // Method to build the leaderboard list
+  Widget _buildLeaderboardList(List<LeaderboardEntry> entries, String operation, 
+      Color operationColor, IconData operationIcon) {
     return ListView.builder(
       padding: EdgeInsets.only(top: 16),
-      itemCount: filteredEntries.length + 1, // +1 for the top 3 section
+      itemCount: entries.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
           return _buildTopThreeSection(
-              filteredEntries, operation, operationColor, operationIcon);
+              entries, operation, operationColor, operationIcon);
         }
 
         final actualIndex = index - 1;
-        final entry = filteredEntries[actualIndex];
+        final entry = entries[actualIndex];
         final rank = actualIndex + 1;
 
         return _buildLeaderboardItem(
@@ -642,22 +645,14 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   }
 
   int _getBestTime(LeaderboardEntry entry, String operation) {
-    // If a specific difficulty is selected, get that difficulty's time
-    if (_currentDifficulty != 'All') {
-      final difficultyKey = '$operation-${_currentDifficulty.toLowerCase()}';
+    final key = _currentDifficulty == 'All'
+        ? operation
+        : '$operation-${_currentDifficulty.toLowerCase()}';
 
-      // Only return the specific difficulty time
-      // Don't fall back to the general operation time
-      if (entry.bestTimes.containsKey(difficultyKey) &&
-          entry.bestTimes[difficultyKey]! > 0) {
-        return entry.bestTimes[difficultyKey]!;
-      }
+    final time = entry.bestTimes[key];
+    print(
+        'DEBUG: ${entry.displayName} best time for "$key": ${time ?? 'none'}');
 
-      // If no specific difficulty time, return a very high value
-      return 999999;
-    }
-
-    // If showing 'All' difficulties, return the overall best time for the operation
-    return entry.bestTimes[operation] ?? 999999;
+    return time ?? 999999;
   }
 }

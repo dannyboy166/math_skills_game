@@ -73,10 +73,9 @@ class LeaderboardEntry {
 
     // Handle lastUpdated
     DateTime lastUpdated;
-    if (data['lastUpdated'] != null) {
-      lastUpdated = (data['lastUpdated'] as Timestamp).toDate();
-    } else if (data['updatedAt'] != null) {
-      lastUpdated = (data['updatedAt'] as Timestamp).toDate();
+    Timestamp? ts = data['lastUpdated'] ?? data['updatedAt'];
+    if (ts is Timestamp) {
+      lastUpdated = ts.toDate();
     } else {
       lastUpdated = DateTime.now();
     }
