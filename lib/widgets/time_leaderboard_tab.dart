@@ -360,16 +360,18 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       return SizedBox.shrink();
     }
 
+    // Ensure our top section has a fixed height with proper constraints
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      height: 180,
+      height: 225, // Increased height to accommodate all elements
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end, // Align items to the bottom
         children: [
           // Second place
           if (entries.length > 1)
             Expanded(
               child: _buildTopPlaceItem(entries[1], 2, Colors.grey.shade300,
-                  110, operation, operationColor, operationIcon),
+                  90, operation, operationColor, operationIcon),
             ),
 
           // First place (tallest)
@@ -383,7 +385,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           if (entries.length > 2)
             Expanded(
               child: _buildTopPlaceItem(entries[2], 3, Colors.brown.shade300,
-                  100, operation, operationColor, operationIcon),
+                  60, operation, operationColor, operationIcon),
             ),
         ],
       ),
@@ -394,114 +396,144 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       LeaderboardEntry entry,
       int place,
       Color color,
-      double height,
+      double podiumHeight,
       String operation,
       Color operationColor,
       IconData operationIcon) {
     // Get the best time for this operation and difficulty
     int bestTime = _getBestTime(entry, operation);
 
+    // Calculate total height needed and ensure it fits within constraints
     return GestureDetector(
       onTap: () {
         TimeLeaderboardDetail.show(context, entry, place, operation);
       },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Profile circle
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(
-                color: color,
-                width: 3,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                entry.displayName.substring(0, 1).toUpperCase(),
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ),
-          ),
-
-          SizedBox(height: 8),
-
-          // Name and Score
-          Text(
-            entry.displayName,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The LayoutBuilder helps us understand how much space we have
+          double availableHeight = constraints.maxHeight;
+          
+          // Make sure podium doesn't exceed available space
+          double adjustedPodiumHeight = podiumHeight;
+          
+          // Calculate needed height for other elements
+          double topElementsHeight = 112; // Avatar, name, score, spacing
+          
+          // Adjust podium height if needed to fit everything
+          if (topElementsHeight + podiumHeight > availableHeight) {
+            adjustedPodiumHeight = availableHeight - topElementsHeight;
+            // Ensure minimum height
+            adjustedPodiumHeight = adjustedPodiumHeight.clamp(50.0, podiumHeight);
+          }
+          
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min, // Use minimum space needed
             children: [
-              Icon(
-                Icons.timer,
-                size: 14,
-                color: operationColor,
+              // Profile circle
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(
+                    color: color,
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    entry.displayName.substring(0, 1).toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ),
               ),
-              SizedBox(width: 2),
-              Text(
-                StarRatingCalculator.formatTime(bestTime),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: operationColor,
+
+              SizedBox(height: 8),
+
+              // Name and Score - keep these components compact
+              Container(
+                height: 40, // Fixed height for name and score
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      entry.displayName,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.timer,
+                          size: 14,
+                          color: operationColor,
+                        ),
+                        SizedBox(width: 2),
+                        Text(
+                          StarRatingCalculator.formatTime(bestTime),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: operationColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 8),
+
+              // Podium with adjusted height
+              Container(
+                width: double.infinity,
+                height: adjustedPodiumHeight,
+                margin: EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '#$place',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],
-          ),
-
-          SizedBox(height: 8),
-
-          // Podium
-          Container(
-            width: double.infinity,
-            height: height,
-            margin: EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                '#$place',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
+          );
+        }
       ),
     );
   }
