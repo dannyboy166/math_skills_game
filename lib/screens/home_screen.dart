@@ -458,6 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+// Updated _buildOperationCard method to fix alignment issues
   Widget _buildOperationCard(String title, String symbol, Color color,
       String operation, IconData icon) {
     final bool isSelected = selectedOperation == operation;
@@ -489,14 +490,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
+            // Top icon circle
             Icon(
               icon,
               size: 40,
               color: isSelected ? Colors.white : color,
             ),
-            SizedBox(height: 8),
+
+            // Middle text
             Text(
               title,
               style: TextStyle(
@@ -505,15 +508,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: isSelected ? Colors.white : Colors.black87,
               ),
             ),
-            SizedBox(height: 4),
+
+            // Bottom symbol - Fixed vertical centering
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.white.withOpacity(0.3)
                     : color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
+              // Add alignment to center the content vertically and horizontally
+              alignment: Alignment.center,
               child: Text(
                 symbol,
                 style: TextStyle(
