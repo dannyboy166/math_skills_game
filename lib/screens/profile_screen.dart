@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:math_skills_game/screens/admin_screen.dart';
+import 'package:math_skills_game/screens/auth/login_screen.dart';
 import 'package:math_skills_game/services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -474,10 +475,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ListTile(
                         leading: Icon(Icons.logout, color: Colors.red),
                         title: Text('Logout'),
-                        onTap: () async {
-                          await _authService.signOut();
-                          Navigator.of(context)
-                              .pop(); // Return to previous screen
+                        onTap: () {
+                          // Show a simple loading dialog
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (BuildContext dialogContext) {
+                              return SimpleDialog(
+                                title: Center(child: Text('Logging out...')),
+                                children: [
+                                  Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+
+                          // Perform logout after a brief delay to ensure dialog is shown
+                          Future.delayed(Duration(milliseconds: 300), () async {
+                            try {
+                              // Sign out
+                              await _authService.signOut();
+
+                              // Navigate directly to login screen
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                    builder: (context) => LoginScreen()),
+                                (route) => false,
+                              );
+                            } catch (e) {
+                              print('Error during logout: $e');
+
+                              // If there's an error, pop the dialog and show error
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        'Failed to log out. Please try again.')),
+                              );
+                            }
+                          });
                         },
                       ),
                     ],

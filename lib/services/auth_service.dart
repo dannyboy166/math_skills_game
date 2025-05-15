@@ -1,4 +1,5 @@
-// lib/services/auth_service.dart
+// lib/services/auth_service.dart - Simple, reliable version
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -13,11 +14,20 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   
   // Sign in with email and password
-  Future<UserCredential> signInWithEmail(String email, String password) {
-    return _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+  Future<UserCredential> signInWithEmail(String email, String password) async {
+    try {
+      // Clear any existing credentials first
+      await _auth.signOut(); 
+      
+      // Sign in with new credentials
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } catch (e) {
+      print('Error signing in with email: $e');
+      throw e;
+    }
   }
   
   // Register with email and password
@@ -54,10 +64,22 @@ class AuthService {
     }
   }
   
-  // Sign out
+  // Sign out - Simple, robust version
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    return _auth.signOut();
+    try {
+      // Sign out from Google first
+      await _googleSignIn.signOut().catchError((e) {
+        print("Google sign out error (non-critical): $e");
+      });
+      
+      // Then sign out from Firebase
+      await _auth.signOut();
+      
+      print("Successfully signed out");
+    } catch (e) {
+      print("Error during sign out: $e");
+      throw e;
+    }
   }
   
   // Reset password

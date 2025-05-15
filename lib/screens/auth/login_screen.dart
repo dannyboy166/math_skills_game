@@ -22,6 +22,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String _errorMessage = '';
 
+  // lib/screens/auth/login_screen.dart - Simplest most reliable sign-in method
+
   Future<void> _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -31,11 +33,19 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Navigation happens automatically through the auth state listener
+      // Simplest, most direct sign-in approach
+      await _authService.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+
+      // Don't need to do anything else - auth state listener will handle navigation
     } catch (e) {
-      setState(() {
-        _errorMessage = _getErrorMessage(e);
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = _getErrorMessage(e);
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
