@@ -10,7 +10,8 @@ class TimeLeaderboardTab extends StatefulWidget {
   final List<LeaderboardEntry> divisionLeaderboard;
   final String currentUserId;
   final Future<void> Function() onRefresh;
-  final Future<void> Function(String operation, String difficulty) onDifficultyChanged;
+  final Future<void> Function(String operation, String difficulty)
+      onDifficultyChanged;
 
   const TimeLeaderboardTab({
     Key? key,
@@ -33,12 +34,12 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   int _currentTabIndex = 0;
   String _currentDifficulty = 'All';
   bool _isLoading = true;
-  
+
   // Track current and pending operations/difficulties
   String _currentOperation = 'addition';
   String _pendingOperation = '';
   String _pendingDifficulty = '';
-  
+
   // List of difficulty options
   final List<String> _difficulties = [
     'All',
@@ -56,7 +57,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       if (!_operationTabController.indexIsChanging) {
         _currentTabIndex = _operationTabController.index;
         _currentOperation = _getCurrentOperation();
-        
+
         // Set pending changes and trigger data loading
         _loadData(_currentOperation, _currentDifficulty);
       }
@@ -77,7 +78,9 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     // Call the parent's callback to load the data
     widget.onDifficultyChanged(operation, difficulty).then((_) {
       // Only update if this is still the pending request (prevent race conditions)
-      if (mounted && _pendingOperation == operation && _pendingDifficulty == difficulty) {
+      if (mounted &&
+          _pendingOperation == operation &&
+          _pendingDifficulty == difficulty) {
         setState(() {
           _currentOperation = operation;
           _currentDifficulty = difficulty;
@@ -108,10 +111,11 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                 _isLoading = true;
               });
               await widget.onRefresh();
-              
+
               // After refresh, reload current selection
-              await widget.onDifficultyChanged(_currentOperation, _currentDifficulty);
-              
+              await widget.onDifficultyChanged(
+                  _currentOperation, _currentDifficulty);
+
               if (mounted) {
                 setState(() {
                   _isLoading = false;
@@ -158,11 +162,12 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
   Widget _buildDifficultySelector() {
     return Container(
-      height: 50,
+      height: 60, // Increased height to give more vertical space
       color: Colors.grey.shade100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _difficulties.length,
+        padding: EdgeInsets.symmetric(horizontal: 8), // Add padding to the list
         itemBuilder: (context, index) {
           final difficulty = _difficulties[index];
           final isSelected = difficulty == _currentDifficulty;
@@ -174,8 +179,12 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
               }
             },
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              margin: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 10), // Increased padding
+              margin: EdgeInsets.symmetric(
+                  horizontal: 6, vertical: 10), // Increased margin
+              width: 120, // Set a fixed width to ensure text fits
+              alignment: Alignment.center, // Center the text
               decoration: BoxDecoration(
                 color: isSelected
                     ? _getOperationColor(_currentTabIndex).withOpacity(0.2)
@@ -196,6 +205,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                       ? _getOperationColor(_currentTabIndex)
                       : Colors.grey.shade700,
                 ),
+                textAlign: TextAlign.center, // Center-align the text
+                overflow: TextOverflow.ellipsis, // Handle text overflow
               ),
             ),
           );
@@ -253,7 +264,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     }
 
     // Only filter when not loading
-    List<LeaderboardEntry> filteredEntries = _getFilteredEntries(entries, operation);
+    List<LeaderboardEntry> filteredEntries =
+        _getFilteredEntries(entries, operation);
 
     if (filteredEntries.isEmpty) {
       return Center(
@@ -273,11 +285,13 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       );
     }
 
-    return _buildLeaderboardList(filteredEntries, operation, operationColor, operationIcon);
+    return _buildLeaderboardList(
+        filteredEntries, operation, operationColor, operationIcon);
   }
 
   // Method to handle filtering of entries
-  List<LeaderboardEntry> _getFilteredEntries(List<LeaderboardEntry> entries, String operation) {
+  List<LeaderboardEntry> _getFilteredEntries(
+      List<LeaderboardEntry> entries, String operation) {
     List<LeaderboardEntry> filteredEntries = [];
 
     if (_currentDifficulty == 'All') {
@@ -328,12 +342,12 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         return timeA.compareTo(timeB);
       });
     }
-    
+
     return filteredEntries;
   }
 
   // Method to build the leaderboard list
-  Widget _buildLeaderboardList(List<LeaderboardEntry> entries, String operation, 
+  Widget _buildLeaderboardList(List<LeaderboardEntry> entries, String operation,
       Color operationColor, IconData operationIcon) {
     return ListView.builder(
       padding: EdgeInsets.only(top: 16),
@@ -370,8 +384,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           // Second place
           if (entries.length > 1)
             Expanded(
-              child: _buildTopPlaceItem(entries[1], 2, Colors.grey.shade300,
-                  90, operation, operationColor, operationIcon),
+              child: _buildTopPlaceItem(entries[1], 2, Colors.grey.shade300, 90,
+                  operation, operationColor, operationIcon),
             ),
 
           // First place (tallest)
@@ -408,133 +422,130 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       onTap: () {
         TimeLeaderboardDetail.show(context, entry, place, operation);
       },
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // The LayoutBuilder helps us understand how much space we have
-          double availableHeight = constraints.maxHeight;
-          
-          // Make sure podium doesn't exceed available space
-          double adjustedPodiumHeight = podiumHeight;
-          
-          // Calculate needed height for other elements
-          double topElementsHeight = 112; // Avatar, name, score, spacing
-          
-          // Adjust podium height if needed to fit everything
-          if (topElementsHeight + podiumHeight > availableHeight) {
-            adjustedPodiumHeight = availableHeight - topElementsHeight;
-            // Ensure minimum height
-            adjustedPodiumHeight = adjustedPodiumHeight.clamp(50.0, podiumHeight);
-          }
-          
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min, // Use minimum space needed
-            children: [
-              // Profile circle
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(
-                    color: color,
-                    width: 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+      child: LayoutBuilder(builder: (context, constraints) {
+        // The LayoutBuilder helps us understand how much space we have
+        double availableHeight = constraints.maxHeight;
+
+        // Make sure podium doesn't exceed available space
+        double adjustedPodiumHeight = podiumHeight;
+
+        // Calculate needed height for other elements
+        double topElementsHeight = 112; // Avatar, name, score, spacing
+
+        // Adjust podium height if needed to fit everything
+        if (topElementsHeight + podiumHeight > availableHeight) {
+          adjustedPodiumHeight = availableHeight - topElementsHeight;
+          // Ensure minimum height
+          adjustedPodiumHeight = adjustedPodiumHeight.clamp(50.0, podiumHeight);
+        }
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min, // Use minimum space needed
+          children: [
+            // Profile circle
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(
+                  color: color,
+                  width: 3,
                 ),
-                child: Center(
-                  child: Text(
-                    entry.displayName.substring(0, 1).toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  entry.displayName.substring(0, 1).toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: color,
                   ),
                 ),
               ),
+            ),
 
-              SizedBox(height: 8),
+            SizedBox(height: 8),
 
-              // Name and Score - keep these components compact
-              Container(
-                height: 40, // Fixed height for name and score
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      entry.displayName,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+            // Name and Score - keep these components compact
+            Container(
+              height: 40, // Fixed height for name and score
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    entry.displayName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
-                    
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.timer,
-                          size: 14,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.timer,
+                        size: 14,
+                        color: operationColor,
+                      ),
+                      SizedBox(width: 2),
+                      Text(
+                        StarRatingCalculator.formatTime(bestTime),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                           color: operationColor,
                         ),
-                        SizedBox(width: 2),
-                        Text(
-                          StarRatingCalculator.formatTime(bestTime),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: operationColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+            ),
 
-              SizedBox(height: 8),
+            SizedBox(height: 8),
 
-              // Podium with adjusted height
-              Container(
-                width: double.infinity,
-                height: adjustedPodiumHeight,
-                margin: EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    '#$place',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+            // Podium with adjusted height
+            Container(
+              width: double.infinity,
+              height: adjustedPodiumHeight,
+              margin: EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  '#$place',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ),
-            ],
-          );
-        }
-      ),
+            ),
+          ],
+        );
+      }),
     );
   }
 
