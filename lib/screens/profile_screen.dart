@@ -236,6 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('My Profile'),
+        automaticallyImplyLeading: false,
         actions: [
           if (!_isEditing && !_isLoading)
             IconButton(

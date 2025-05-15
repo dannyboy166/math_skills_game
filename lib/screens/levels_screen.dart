@@ -377,6 +377,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
           '${_formatOperationName()} Levels',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        automaticallyImplyLeading: false,
         backgroundColor: operationColor,
         foregroundColor: Colors.white,
       ),
