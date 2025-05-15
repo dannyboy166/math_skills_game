@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:math_skills_game/services/leaderboard_updater.dart';
 import 'package:math_skills_game/services/scalable_leaderboard_service.dart';
-import 'package:math_skills_game/widgets/leaderboard_loading.dart';
 import '../models/leaderboard_entry.dart';
 import '../widgets/leaderboard_tab.dart';
 import '../widgets/time_leaderboard_tab.dart';
@@ -26,13 +25,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   String _currentUserId = '';
 
   // Data for each leaderboard type
-  List<LeaderboardEntry> _streakLeaderboard = [];
-  List<LeaderboardEntry> _gamesLeaderboard = [];
+  List<LeaderboardEntry>? _streakLeaderboard;
+  List<LeaderboardEntry>? _gamesLeaderboard;
   // Time-based leaderboards
-  List<LeaderboardEntry> _additionTimeLeaderboard = [];
-  List<LeaderboardEntry> _subtractionTimeLeaderboard = [];
-  List<LeaderboardEntry> _multiplicationTimeLeaderboard = [];
-  List<LeaderboardEntry> _divisionTimeLeaderboard = [];
+  List<LeaderboardEntry>? _additionTimeLeaderboard;
+  List<LeaderboardEntry>? _subtractionTimeLeaderboard;
+  List<LeaderboardEntry>? _multiplicationTimeLeaderboard;
+  List<LeaderboardEntry>? _divisionTimeLeaderboard;
 
   @override
   void initState() {
@@ -40,6 +39,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    // Initialize all leaderboard lists as null to trigger loading state
+    _streakLeaderboard = null;
+    _gamesLeaderboard = null;
+    _additionTimeLeaderboard = null;
+    _subtractionTimeLeaderboard = null;
+    _multiplicationTimeLeaderboard = null;
+    _divisionTimeLeaderboard = null;
 
     // Start the leaderboard updater
     LeaderboardUpdater().startUpdates();
@@ -91,13 +98,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   Future<void> _loadTabData(int tabIndex) async {
-    if (tabIndex == 0 && _streakLeaderboard.isNotEmpty) return;
-    if (tabIndex == 1 && _gamesLeaderboard.isNotEmpty) return;
+    if (tabIndex == 0 &&
+        _streakLeaderboard != null &&
+        _streakLeaderboard!.isNotEmpty) return;
+    if (tabIndex == 1 &&
+        _gamesLeaderboard != null &&
+        _gamesLeaderboard!.isNotEmpty) return;
     if (tabIndex == 2 &&
-        (_additionTimeLeaderboard.isEmpty ||
-            _subtractionTimeLeaderboard.isEmpty ||
-            _multiplicationTimeLeaderboard.isEmpty ||
-            _divisionTimeLeaderboard.isEmpty)) {
+        (_additionTimeLeaderboard != null &&
+                _additionTimeLeaderboard!.isNotEmpty ||
+            _subtractionTimeLeaderboard != null &&
+                _subtractionTimeLeaderboard!.isNotEmpty ||
+            _multiplicationTimeLeaderboard != null &&
+                _multiplicationTimeLeaderboard!.isNotEmpty ||
+            _divisionTimeLeaderboard != null &&
+                _divisionTimeLeaderboard!.isNotEmpty)) {
       // For tab 2 (Time), load all operation time leaderboards
       setState(() {
         _isLoading = true;
@@ -253,44 +268,43 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             _buildHeader(),
             _buildTabBar(),
             Expanded(
-              child: _isLoading
-                  ? Center(child: LeaderboardLoading())
-                  : TabBarView(
-                      controller: _tabController,
-                      children: [
-                        LeaderboardTab(
-                          leaderboardEntries: _streakLeaderboard,
-                          currentUserId: _currentUserId,
-                          valueSelector: (entry) => entry.longestStreak,
-                          valueLabel: 'days',
-                          valueIcon: Icons.local_fire_department_rounded,
-                          valueColor: Colors.deepOrange,
-                          onRefresh: _refreshCurrentTab,
-                        ),
-                        LeaderboardTab(
-                          leaderboardEntries: _gamesLeaderboard,
-                          currentUserId: _currentUserId,
-                          valueSelector: (entry) => entry.totalGames,
-                          valueLabel: 'games',
-                          valueIcon: Icons.sports_esports,
-                          valueColor: Colors.blue,
-                          onRefresh: _refreshCurrentTab,
-                        ),
-                        TimeLeaderboardTab(
-                          additionLeaderboard: _additionTimeLeaderboard,
-                          subtractionLeaderboard: _subtractionTimeLeaderboard,
-                          multiplicationLeaderboard:
-                              _multiplicationTimeLeaderboard,
-                          divisionLeaderboard: _divisionTimeLeaderboard,
-                          currentUserId: _currentUserId,
-                          onRefresh: _refreshCurrentTab,
-                          onDifficultyChanged: (operation, difficulty) {
-                            _loadTimeLeaderboard(operation,
-                                difficulty: difficulty);
-                          },
-                        ),
-                      ],
-                    ),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  LeaderboardTab(
+                    leaderboardEntries: _streakLeaderboard,
+                    currentUserId: _currentUserId,
+                    valueSelector: (entry) => entry.longestStreak,
+                    valueLabel: 'days',
+                    valueIcon: Icons.local_fire_department_rounded,
+                    valueColor: Colors.deepOrange,
+                    onRefresh: _refreshCurrentTab,
+                    isLoading: _isLoading, // Pass global loading state
+                  ),
+                  LeaderboardTab(
+                    leaderboardEntries: _gamesLeaderboard,
+                    currentUserId: _currentUserId,
+                    valueSelector: (entry) => entry.totalGames,
+                    valueLabel: 'games',
+                    valueIcon: Icons.sports_esports,
+                    valueColor: Colors.blue,
+                    onRefresh: _refreshCurrentTab,
+                    isLoading: _isLoading, // Pass global loading state
+                  ),
+                  TimeLeaderboardTab(
+                    additionLeaderboard: _additionTimeLeaderboard ?? [],
+                    subtractionLeaderboard: _subtractionTimeLeaderboard ?? [],
+                    multiplicationLeaderboard:
+                        _multiplicationTimeLeaderboard ?? [],
+                    divisionLeaderboard: _divisionTimeLeaderboard ?? [],
+                    currentUserId: _currentUserId,
+                    onRefresh: _refreshCurrentTab,
+                    onDifficultyChanged: (operation, difficulty) {
+                      _loadTimeLeaderboard(operation, difficulty: difficulty);
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),

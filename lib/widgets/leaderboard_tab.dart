@@ -4,13 +4,14 @@ import '../models/leaderboard_entry.dart';
 import 'leaderboard_detail.dart';
 
 class LeaderboardTab extends StatelessWidget {
-  final List<LeaderboardEntry> leaderboardEntries;
+  final List<LeaderboardEntry>? leaderboardEntries;
   final String currentUserId;
   final int Function(LeaderboardEntry) valueSelector;
   final String valueLabel;
   final IconData valueIcon;
   final Color valueColor;
   final Future<void> Function() onRefresh;
+  final bool isLoading;
 
   const LeaderboardTab({
     Key? key,
@@ -21,11 +22,36 @@ class LeaderboardTab extends StatelessWidget {
     required this.valueIcon,
     required this.valueColor,
     required this.onRefresh,
+    this.isLoading = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    if (leaderboardEntries.isEmpty) {
+    // If leaderboardEntries is null OR we're explicitly loading, show loading indicator
+    // This ensures the loading indicator shows as the default initial state
+    if (leaderboardEntries == null || isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(valueColor),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Loading Leaderboard...',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Show empty state only when entries list is explicitly empty (not null) AND not loading
+    if (leaderboardEntries!.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -52,14 +78,14 @@ class LeaderboardTab extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView.builder(
         padding: EdgeInsets.only(top: 8),
-        itemCount: leaderboardEntries.length + 1, // +1 for the top 3 section
+        itemCount: leaderboardEntries!.length + 1, // +1 for the top 3 section
         itemBuilder: (context, index) {
           if (index == 0) {
             return _buildTopThreeSection(context);
           }
           
           final actualIndex = index - 1;
-          final entry = leaderboardEntries[actualIndex];
+          final entry = leaderboardEntries![actualIndex];
           final rank = actualIndex + 1;
           
           return _buildLeaderboardItem(context, entry, rank);
@@ -69,7 +95,7 @@ class LeaderboardTab extends StatelessWidget {
   }
 
   Widget _buildTopThreeSection(BuildContext context) {
-    if (leaderboardEntries.length < 3) {
+    if (leaderboardEntries == null || leaderboardEntries!.length < 3) {
       return SizedBox.shrink();
     }
 
@@ -79,11 +105,11 @@ class LeaderboardTab extends StatelessWidget {
       child: Row(
         children: [
           // Second place
-          if (leaderboardEntries.length > 1)
+          if (leaderboardEntries!.length > 1)
             Expanded(
               child: _buildTopPlaceItem(
                 context,
-                leaderboardEntries[1],
+                leaderboardEntries![1],
                 2,
                 Colors.grey.shade300,
                 110,
@@ -95,7 +121,7 @@ class LeaderboardTab extends StatelessWidget {
             flex: 3,
             child: _buildTopPlaceItem(
               context,
-              leaderboardEntries[0],
+              leaderboardEntries![0],
               1,
               Colors.amber.shade300,
               140,
@@ -103,11 +129,11 @@ class LeaderboardTab extends StatelessWidget {
           ),
           
           // Third place
-          if (leaderboardEntries.length > 2)
+          if (leaderboardEntries!.length > 2)
             Expanded(
               child: _buildTopPlaceItem(
                 context,
-                leaderboardEntries[2],
+                leaderboardEntries![2],
                 3,
                 Colors.brown.shade300,
                 100,
