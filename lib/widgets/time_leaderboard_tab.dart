@@ -50,14 +50,19 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   void initState() {
     super.initState();
     _operationTabController = TabController(length: 4, vsync: this);
+    // In the initState() method of _TimeLeaderboardTabState
     _operationTabController.addListener(() {
       if (!_operationTabController.indexIsChanging) {
         setState(() {
           _currentTabIndex = _operationTabController.index;
           _isLoading = true; // Set loading to true when changing tabs
         });
+
+        // This is the missing piece - need to call onDifficultyChanged when changing tabs
+        String currentOperation = _getCurrentOperation();
+        widget.onDifficultyChanged(currentOperation, _currentDifficulty);
+
         // Use Future.delayed to simulate data loading and hide loading state
-        // Use a longer delay to ensure data is processed
         Future.delayed(Duration(milliseconds: 500), () {
           if (mounted) {
             setState(() {
@@ -67,7 +72,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         });
       }
     });
-    
+
     // Initialize loading state to false after a longer delay to ensure data is loaded
     Future.delayed(Duration(milliseconds: 800), () {
       if (mounted) {
@@ -156,11 +161,11 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                 _currentDifficulty = difficulty;
                 _isLoading = true; // Set loading state when changing difficulty
               });
-              
+
               // Call the callback with current operation and new difficulty
               String currentOperation = _getCurrentOperation();
               widget.onDifficultyChanged(currentOperation, difficulty);
-              
+
               // Use Future.delayed with a longer delay to ensure data is fully loaded
               Future.delayed(Duration(milliseconds: 800), () {
                 if (mounted) {
@@ -237,7 +242,6 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
   Widget _buildTimeLeaderboard(List<LeaderboardEntry> entries, String operation,
       Color operationColor, IconData operationIcon) {
-      
     // Always show loading indicator while data is being processed
     if (_isLoading) {
       return Center(
@@ -246,11 +250,11 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         ),
       );
     }
-    
+
     // For 'All' difficulty, we already have the correct entries from the parent component
     // that were fetched from the main operation leaderboard
     List<LeaderboardEntry> filteredEntries = [];
-    
+
     // Only filter and process entries when we're not loading
     // Make sure we have entries with valid times
     if (_currentDifficulty == 'All') {
