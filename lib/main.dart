@@ -1,8 +1,9 @@
+// lib/main.dart - Updated to include landing screen
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/home_screen.dart';
-import 'screens/auth/login_screen.dart';
+import 'screens/landing_screen.dart'; // Import the new landing screen
 import 'services/leaderboard_initializer.dart';
 
 void main() async {
@@ -43,6 +44,16 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
+        // Define text themes that are kid-friendly
+        textTheme: TextTheme(
+          displayLarge: TextStyle(fontFamily: 'ComicSans'),
+          displayMedium: TextStyle(fontFamily: 'ComicSans'),
+          displaySmall: TextStyle(fontFamily: 'ComicSans'),
+          headlineMedium: TextStyle(fontFamily: 'ComicSans'),
+          titleLarge: TextStyle(fontFamily: 'ComicSans'),
+          bodyLarge: TextStyle(fontFamily: 'ComicSans'),
+          bodyMedium: TextStyle(fontFamily: 'ComicSans'),
+        ),
       ),
       home: _handleAuthState(),
       debugShowCheckedModeBanner: false,
@@ -53,9 +64,11 @@ class MyApp extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        print("MAIN DEBUG: Auth state changed. Connection state: ${snapshot.connectionState}");
-        print("MAIN DEBUG: Has data: ${snapshot.hasData}, User: ${snapshot.data?.uid ?? 'null'}");
-        
+        print(
+            "MAIN DEBUG: Auth state changed. Connection state: ${snapshot.connectionState}");
+        print(
+            "MAIN DEBUG: Has data: ${snapshot.hasData}, User: ${snapshot.data?.uid ?? 'null'}");
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           print("MAIN DEBUG: Auth state is waiting");
           return const Scaffold(
@@ -72,8 +85,9 @@ class MyApp extends StatelessWidget {
         }
 
         // User is not logged in
-        print("MAIN DEBUG: User is NOT logged in, showing LoginScreen");
-        return LoginScreen();
+        print("MAIN DEBUG: User is NOT logged in, showing LandingScreen");
+        // Return the landing screen instead of the login screen directly
+        return LandingScreen();
       },
     );
   }
