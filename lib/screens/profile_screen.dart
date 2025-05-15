@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:math_skills_game/screens/admin_screen.dart';
-import 'package:math_skills_game/screens/auth/login_screen.dart';
+import 'package:math_skills_game/screens/landing_screen.dart';
 import 'package:math_skills_game/services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -512,14 +512,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               print(
                                   "PROFILE DEBUG: Current user after logout: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
 
-                              // Navigate directly to login screen
+                              // Import the LandingScreen at the top of the file
+                              // import 'package:math_skills_game/screens/landing_screen.dart';
+
+                              // Navigate to landing screen and clear the stack
                               Navigator.of(context).pushAndRemoveUntil(
                                 MaterialPageRoute(
-                                    builder: (context) => LoginScreen()),
-                                (route) => false,
+                                    builder: (context) => LandingScreen()),
+                                (route) =>
+                                    false, // This removes all previous routes
                               );
 
-                              print("PROFILE DEBUG: Navigated to login screen");
+                              print(
+                                  "PROFILE DEBUG: Navigated to landing screen");
                             } catch (e) {
                               print("PROFILE DEBUG: Error during logout: $e");
 
