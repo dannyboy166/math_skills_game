@@ -71,12 +71,17 @@ class GameGenerator {
       }
     }
 
-    // 2. Place valid outer numbers at corners
-    List<int> cornerPositions = [0, 4, 8, 12]; // Corner positions
-    cornerPositions.shuffle(random);
+    // 2. NEW: Place valid outer numbers at RANDOM positions, not just corners
+    // Generate all possible positions and shuffle them
+    List<int> allPositions = List.generate(16, (index) => index);
+    allPositions.shuffle(random);
 
+    // Take the first 4 positions for our valid numbers
+    List<int> validPositions = allPositions.sublist(0, 4);
+
+    // Place valid numbers at the random positions
     for (int i = 0; i < 4; i++) {
-      outerNumbers[cornerPositions[i]] = validOuterNumbers[i];
+      outerNumbers[validPositions[i]] = validOuterNumbers[i];
     }
 
     // 3. Fill remaining positions with random numbers within range
