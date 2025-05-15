@@ -50,7 +50,6 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   void initState() {
     super.initState();
     _operationTabController = TabController(length: 4, vsync: this);
-    // In the initState() method of _TimeLeaderboardTabState
     _operationTabController.addListener(() {
       if (!_operationTabController.indexIsChanging) {
         setState(() {
@@ -58,12 +57,12 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           _isLoading = true; // Set loading to true when changing tabs
         });
 
-        // This is the missing piece - need to call onDifficultyChanged when changing tabs
+        // Call onDifficultyChanged when changing tabs
         String currentOperation = _getCurrentOperation();
         widget.onDifficultyChanged(currentOperation, _currentDifficulty);
 
-        // Use Future.delayed to simulate data loading and hide loading state
-        Future.delayed(Duration(milliseconds: 500), () {
+        // Use a shorter delay for smoother experience
+        Future.delayed(Duration(milliseconds: 300), () {
           if (mounted) {
             setState(() {
               _isLoading = false;
@@ -73,8 +72,14 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       }
     });
 
-    // Initialize loading state to false after a longer delay to ensure data is loaded
-    Future.delayed(Duration(milliseconds: 800), () {
+    // Trigger an initial data load for the default tab (Addition)
+    Future.delayed(Duration.zero, () {
+      String currentOperation = _getCurrentOperation();
+      widget.onDifficultyChanged(currentOperation, _currentDifficulty);
+    });
+
+    // Shorter initial loading time
+    Future.delayed(Duration(milliseconds: 500), () {
       if (mounted) {
         setState(() {
           _isLoading = false;
