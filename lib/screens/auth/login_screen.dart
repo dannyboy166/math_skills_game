@@ -45,17 +45,19 @@ class _LoginScreenState extends State<LoginScreen> {
         "LOGIN DEBUG: Current user before sign-in attempt: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
 
     try {
-      // Sign-in approach
+      // ✅ THIS WAS MISSING
+      final result = await _authService.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
 
       print("LOGIN DEBUG: Sign-in call completed");
       print(
           "LOGIN DEBUG: Current user after sign-in: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
 
-      // IMPORTANT FIX: Force navigation to HomeScreen instead of waiting for the auth state listener
-      if (mounted && FirebaseAuth.instance.currentUser != null) {
+      if (mounted && result.user != null) {
         print(
             "LOGIN DEBUG: User is logged in, manually navigating to HomeScreen");
-        // Use pushReplacement to replace the login screen with HomeScreen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => HomeScreen()),
@@ -66,7 +68,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       print("LOGIN DEBUG: Sign-in failed with error: $e");
-
       if (mounted) {
         setState(() {
           _errorMessage = _getErrorMessage(e);
@@ -78,7 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
 
-        // Final check to see if we're actually logged in
         print(
             "LOGIN DEBUG: Final check - current user: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
       }
@@ -94,9 +94,12 @@ class _LoginScreenState extends State<LoginScreen> {
     print("LOGIN DEBUG: Starting Google sign-in");
 
     try {
-      final result = await _authService.signInWithGoogle();
+      final result = await _authService.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
 
-      if (result != null && result.user != null) {
+      if (result.user != null) {
         print(
             "LOGIN DEBUG: Google sign-in successful for user: ${result.user!.uid}");
         // Create user profile if signing in for the first time
