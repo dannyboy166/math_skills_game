@@ -7,6 +7,7 @@ import 'package:math_skills_game/models/difficulty_level.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
 import 'package:math_skills_game/services/haptic_service.dart';
 import 'package:math_skills_game/services/scalable_leaderboard_service.dart';
+import 'package:math_skills_game/services/sound_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/services/user_stats_service.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
@@ -59,6 +60,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _isTimerRunning = false;
 
   final HapticService _hapticService = HapticService();
+  final SoundService _soundService = SoundService();
 
   @override
   void initState() {
@@ -401,20 +403,22 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-// Handle tapping on an equation element (corner tiles or equals sign)
   void _handleEquationTap(int cornerIndex) {
     // Check if this equation is correct
     if (_checkEquation(cornerIndex)) {
-      // Provide haptic feedback for success
-      _hapticService.mediumImpact();
+      // Play correct sound and vibration
+      _soundService.playCorrect();
 
       // If it's correct, lock it
       _lockEquation(cornerIndex);
     } else {
-      // Provide error haptic feedback
-      _hapticService.error();
+      // Play incorrect sound and vibration
+      _soundService.playIncorrect();
 
-      // If it's not correct, show a message
+      // Hide any current snackbar before showing a new one
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      // Show the new snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -577,8 +581,8 @@ class _GameScreenState extends State<GameScreen> {
       );
       print("Star rating calculated: $starRating");
 
-      // Celebration haptic feedback
-      _hapticService.celebration();
+      // Play celebration sound based on star rating
+      _soundService.playCelebrationByStar(starRating);
 
       // Show celebration animation first
       if (context.mounted) {
