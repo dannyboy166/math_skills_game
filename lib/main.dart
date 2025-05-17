@@ -1,14 +1,22 @@
-// lib/main.dart - Updated to include landing screen
+// lib/main.dart - Updated to include haptic service
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 import 'screens/landing_screen.dart'; // Import the new landing screen
 import 'services/leaderboard_initializer.dart';
+import 'services/haptic_service.dart'; // Import the haptic service
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  
+  // Initialize SharedPreferences
+  await SharedPreferences.getInstance();
+  
+  // Initialize haptic service
+  await HapticService().initialize();
 
   // Initialize the app
   runApp(const MyApp());

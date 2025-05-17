@@ -1,9 +1,11 @@
 // lib/screens/game_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:math_skills_game/animations/celebration_animation.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
+import 'package:math_skills_game/services/haptic_service.dart';
 import 'package:math_skills_game/services/scalable_leaderboard_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/services/user_stats_service.dart';
@@ -55,6 +57,8 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _gameTimer;
   int _elapsedTimeMs = 0;
   bool _isTimerRunning = false;
+
+  final HapticService _hapticService = HapticService();
 
   @override
   void initState() {
@@ -244,6 +248,9 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _updateOuterRing(int steps) {
+    // Light haptic feedback when rotating
+    _hapticService.lightImpact();
+
     setState(() {
       // Create a new model with the rotation applied
       outerRingModel = outerRingModel.copyWithRotation(steps);
@@ -252,6 +259,9 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _updateInnerRing(int steps) {
+    // Light haptic feedback when rotating
+    _hapticService.lightImpact();
+
     setState(() {
       // Create a new model with the rotation applied
       innerRingModel = innerRingModel.copyWithRotation(steps);
@@ -259,7 +269,7 @@ class _GameScreenState extends State<GameScreen> {
     _checkAllEquations();
   }
 
-  // Lock an equation when it's correct
+// Lock an equation when it's correct
   void _lockEquation(int cornerIndex) {
     // If already locked, do nothing
     if (lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
@@ -286,6 +296,9 @@ class _GameScreenState extends State<GameScreen> {
       equationString:
           operation.getEquationString(innerNumber, targetNumber, outerNumber),
     );
+
+    // Provide haptic feedback for success
+    _hapticService.success();
 
     // Update state with locked positions
     setState(() {
@@ -392,9 +405,15 @@ class _GameScreenState extends State<GameScreen> {
   void _handleEquationTap(int cornerIndex) {
     // Check if this equation is correct
     if (_checkEquation(cornerIndex)) {
+      // Provide haptic feedback for success
+      _hapticService.mediumImpact();
+
       // If it's correct, lock it
       _lockEquation(cornerIndex);
     } else {
+      // Provide error haptic feedback
+      _hapticService.error();
+
       // If it's not correct, show a message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -421,8 +440,11 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  // Handle tapping on a ring tile
+// Handle tapping on a ring tile
   void _handleTileTap(int cornerIndex, int position) {
+    // Provide light haptic feedback when tapping
+    _hapticService.lightImpact();
+
     // Same behavior as tapping on an equation element
     _handleEquationTap(cornerIndex);
   }
@@ -441,8 +463,11 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  // Show hint button functionality
+// Show hint button functionality
   void _showHint() {
+    // Light haptic feedback when showing hint
+    _hapticService.lightImpact();
+
     // Find an unlocked corner that could be locked with the current position
     bool foundHint = false;
     for (int i = 0; i < 4; i++) {
@@ -552,79 +577,26 @@ class _GameScreenState extends State<GameScreen> {
       );
       print("Star rating calculated: $starRating");
 
-      // ✅ Show dialog first (non-blocking)
+      // Celebration haptic feedback
+      _hapticService.celebration();
+
+      // Show celebration animation first
       if (context.mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) {
-            return AlertDialog(
-              title: Text(
-                'Success!',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: operation.color,
-                ),
-                textAlign: TextAlign.center,
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: CelebrationAnimation(
+                starRating:
+                    starRating, // Pass star rating to show appropriate message
+                onComplete: () {
+                  Navigator.of(dialogContext).pop();
+                  _showCompletionStatsDialog(completionTimeMs, starRating);
+                },
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(3, (index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Icon(
-                          Icons.star,
-                          size: 30,
-                          color: index < starRating
-                              ? Colors.amber
-                              : Colors.grey.withOpacity(0.3),
-                        ),
-                      );
-                    }),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    Navigator.of(context)
-                        .pop(true); // Pass true to indicate refreshing streaks
-                  },
-                  child: Text('Return to Menu'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    setState(() {
-                      lockedEquations = [];
-                      isGameComplete = false;
-                      starAnimations = [];
-
-                      final random = Random();
-                      targetNumber =
-                          widget.difficultyLevel.getRandomCenterNumber(random);
-
-                      _generateGameNumbers();
-                      _elapsedTimeMs = 0;
-                      _startGameTimer();
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: operation.color,
-                  ),
-                  child: Text('Play Again!'),
-                ),
-              ],
             );
           },
         );
@@ -678,8 +650,123 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  // Help dialog with game instructions
+  void _showCompletionStatsDialog(int completionTimeMs, int starRating) {
+    if (context.mounted) {
+      // Get appropriate message based on star rating
+      String message;
+
+      switch (starRating) {
+        case 0:
+          message = "Try a little faster to earn stars!";
+          break;
+        case 1:
+          message = "Good speed! Can you go faster?";
+          break;
+        case 2:
+          message = "Great time! Almost perfect!";
+          break;
+        case 3:
+          message = "Amazing speed! Perfect score!";
+          break;
+        default:
+          message =
+              "You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds";
+      }
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: Text(
+              'Success!',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: operation.color,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(3, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        Icons.star,
+                        size: 30,
+                        color: index < starRating
+                            ? Colors.amber
+                            : Colors.grey.withOpacity(0.3),
+                      ),
+                    );
+                  }),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds',
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: starRating == 3
+                        ? Colors.green
+                        : starRating == 0
+                            ? Colors.orange
+                            : operation.color,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  Navigator.of(context)
+                      .pop(true); // Pass true to indicate refreshing streaks
+                },
+                child: Text('Return to Menu'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  setState(() {
+                    lockedEquations = [];
+                    isGameComplete = false;
+                    starAnimations = [];
+
+                    final random = Random();
+                    targetNumber =
+                        widget.difficultyLevel.getRandomCenterNumber(random);
+
+                    _generateGameNumbers();
+                    _elapsedTimeMs = 0;
+                    _startGameTimer();
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: operation.color,
+                ),
+                child: Text('Play Again!'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
   void _showHelpDialog() {
+    // Light haptic feedback when showing help
+    _hapticService.lightImpact();
+
     String equationFormat;
     String additionalInfo = '';
 
