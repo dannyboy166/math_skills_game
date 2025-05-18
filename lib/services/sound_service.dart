@@ -1,19 +1,19 @@
-// lib/services/sound_service.dart
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:math_skills_game/services/haptic_service.dart'; // Add this import
 
 class SoundService {
   static final SoundService _instance = SoundService._internal();
   factory SoundService() => _instance;
   SoundService._internal();
 
-  // Updated for AudioPlayers v3.0.0+
   final AudioPlayer _audioPlayer = AudioPlayer();
   final Map<String, AudioPlayer> _audioPlayers = {};
   bool _soundEnabled = true;
-  bool _vibrationEnabled = true;
 
-  // Initialize and preload sound effects
+  // Reference to haptic service
+  final HapticService _hapticService = HapticService();
+
   Future<void> initialize() async {
     // Create a list of sounds to preload
     final sounds = [
@@ -24,11 +24,15 @@ class SoundService {
       'sounds/2starWin.mp3',
       'sounds/3starWin.mp3',
     ];
-    
+
     // Pre-create an AudioPlayer for each sound
     for (var sound in sounds) {
       _audioPlayers[sound] = AudioPlayer();
     }
+
+    // Load preferences
+    final prefs = await SharedPreferences.getInstance();
+    _soundEnabled = prefs.getBool('sound_enabled') ?? true;
   }
 
   // Play sound for correct equation
@@ -36,8 +40,8 @@ class SoundService {
     if (_soundEnabled) {
       _playSound('sounds/Correct.mp3');
     }
-    if (_vibrationEnabled) {
-      HapticFeedback.mediumImpact();
+    if (_hapticService.isVibrationEnabled) {
+      _hapticService.mediumImpact();
     }
   }
 
@@ -46,20 +50,20 @@ class SoundService {
     if (_soundEnabled) {
       _playSound('sounds/Incorrect.mp3');
     }
-    if (_vibrationEnabled) {
-      HapticFeedback.vibrate();
+    if (_hapticService.isVibrationEnabled) {
+      _hapticService.vibrate();
     }
   }
 
   // Play celebration sound based on star rating
   void playCelebrationByStar(int stars) {
     if (!_soundEnabled) return;
-    
+
     String soundFile = 'sounds/${stars}starWin.mp3';
     _playSound(soundFile);
-    
-    if (_vibrationEnabled) {
-      _playSuccessVibrationPattern();
+
+    if (_hapticService.isVibrationEnabled) {
+      _hapticService.celebration();
     }
   }
 
@@ -68,14 +72,14 @@ class SoundService {
     try {
       // Get or create an AudioPlayer for this sound
       final player = _audioPlayers[soundFile] ?? AudioPlayer();
-      
+
       // Stop any currently playing sound on this player
       await player.stop();
-      
+
       // Play the sound from assets
       await player.setSource(AssetSource(soundFile));
       await player.resume();
-      
+
       // Save the player if it's new
       if (_audioPlayers[soundFile] == null) {
         _audioPlayers[soundFile] = player;
@@ -85,26 +89,16 @@ class SoundService {
     }
   }
 
-  // Enable/disable sound
-  void toggleSound() {
+  Future<void> toggleSound() async {
     _soundEnabled = !_soundEnabled;
+
+    // Save the preference
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('sound_enabled', _soundEnabled);
   }
 
-  // Enable/disable vibration
-  void toggleVibration() {
-    _vibrationEnabled = !_vibrationEnabled;
-  }
-
-  // Getters for current state
+  // Getter for current state
   bool get isSoundEnabled => _soundEnabled;
-  bool get isVibrationEnabled => _vibrationEnabled;
-
-  // Custom vibration patterns
-  void _playSuccessVibrationPattern() {
-    HapticFeedback.mediumImpact();
-    Future.delayed(Duration(milliseconds: 200), () => HapticFeedback.mediumImpact());
-    Future.delayed(Duration(milliseconds: 400), () => HapticFeedback.heavyImpact());
-  }
 
   // Clean up resources
   void dispose() {

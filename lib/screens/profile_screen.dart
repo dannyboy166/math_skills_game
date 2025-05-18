@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:math_skills_game/screens/admin_screen.dart';
 import 'package:math_skills_game/screens/landing_screen.dart';
+import 'package:math_skills_game/screens/settings_screen.dart';
 import 'package:math_skills_game/services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -236,8 +237,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('My Profile'),
+        centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
+          // Add settings button
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsScreen()),
+              );
+            },
+          ),
           if (!_isEditing && !_isLoading)
             IconButton(
               icon: Icon(Icons.edit),
