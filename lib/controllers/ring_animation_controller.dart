@@ -41,6 +41,8 @@ class RingAnimationController {
   // Callback for when animation completes
   VoidCallback? _onAnimationComplete;
 
+  AnimationController get animationController => _animationController;
+
   RingAnimationController(this._vsync, {double transitionRate = 1.0}) {
     _transitionRate = transitionRate;
     _initializeAnimationController();
@@ -196,7 +198,15 @@ class RingAnimationController {
 
   void startAnimation() {
     if (_isAnimating) {
-      _animationController.forward();
+      // Make sure the controller is at the start
+      if (_animationController.isCompleted) {
+        _animationController.reset();
+      }
+
+      // Small delay to ensure reset is complete
+      Future.delayed(Duration(milliseconds: 2), () {
+        _animationController.forward();
+      });
     }
   }
 

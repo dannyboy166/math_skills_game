@@ -1,12 +1,16 @@
 // lib/services/scalable_leaderboard_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:math_skills_game/models/leaderboard_entry.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class ScalableLeaderboardService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Constants
   static const int TOP_ENTRIES_LIMIT = 100; // Number of top entries to maintain
+  static const int MIN_UPDATE_INTERVAL_MINUTES =
+      15; // Minimum time between leaderboard updates
 
   // Leaderboard types
   static const String STREAK_LEADERBOARD = 'streaks';
@@ -19,7 +23,10 @@ class ScalableLeaderboardService {
   static const String MULTIPLICATION_TIME = 'multiplicationTime';
   static const String DIVISION_TIME = 'divisionTime';
 
-// Add this method to your ScalableLeaderboardService class
+  // Shared preferences keys
+  static const String LAST_LEADERBOARD_UPDATE_KEY = 'last_leaderboard_update';
+  static const String CACHED_USER_RANKS_KEY = 'cached_user_ranks';
+
   Future<List<LeaderboardEntry>> getTopEntriesForDifficulty(
       String leaderboardType, String difficulty, int limit) async {
     try {
@@ -81,7 +88,7 @@ class ScalableLeaderboardService {
     }
   }
 
-// Helper to extract operation name from leaderboard type
+  // Helper to extract operation name from leaderboard type
   String _getOperationFromLeaderboardType(String leaderboardType) {
     switch (leaderboardType) {
       case ADDITION_TIME:
@@ -169,6 +176,28 @@ class ScalableLeaderboardService {
   Future<Map<String, dynamic>> getUserLeaderboardData(
       String userId, String leaderboardType) async {
     try {
+      // Try to get cached rank data first
+      final prefs = await SharedPreferences.getInstance();
+      final cachedRanksJson = prefs.getString(CACHED_USER_RANKS_KEY);
+
+      if (cachedRanksJson != null) {
+        try {
+          final Map<String, dynamic> cachedRanks = Map<String, dynamic>.from(
+              Map<String, dynamic>.from(json.decode(cachedRanksJson)));
+
+          if (cachedRanks.containsKey(leaderboardType)) {
+            final leaderboardData = cachedRanks[leaderboardType];
+            if (leaderboardData is Map<String, dynamic> &&
+                leaderboardData.containsKey('rank')) {
+              return leaderboardData;
+            }
+          }
+        } catch (e) {
+          print('Error parsing cached ranks: $e');
+          // Continue to fetch from Firestore
+        }
+      }
+
       final docSnapshot = await _firestore
           .collection('leaderboards')
           .doc(leaderboardType)
@@ -180,51 +209,264 @@ class ScalableLeaderboardService {
         return {'rank': 0, 'data': null};
       }
 
-      return {
+      final result = {
         'rank': docSnapshot.data()?['rank'] ?? 0,
         'data': docSnapshot.data(),
       };
+
+      // Cache this result
+      _cacheUserRank(userId, leaderboardType, result);
+
+      return result;
     } catch (e) {
       print('Error fetching user leaderboard data: $e');
       return {'rank': 0, 'data': null};
     }
   }
 
-  // Update all leaderboards for a single user
+  // Cache user rank data locally
+  Future<void> _cacheUserRank(String userId, String leaderboardType,
+      Map<String, dynamic> rankData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedRanksJson = prefs.getString(CACHED_USER_RANKS_KEY);
+
+      Map<String, dynamic> cachedRanks = {};
+      if (cachedRanksJson != null) {
+        try {
+          cachedRanks = Map<String, dynamic>.from(json.decode(cachedRanksJson));
+        } catch (e) {
+          print('Error parsing cached ranks: $e');
+          cachedRanks = {};
+        }
+      }
+
+      if (!cachedRanks.containsKey(userId)) {
+        cachedRanks[userId] = {};
+      }
+
+      cachedRanks[userId][leaderboardType] = rankData;
+
+      await prefs.setString(CACHED_USER_RANKS_KEY, json.encode(cachedRanks));
+    } catch (e) {
+      print('Error caching user rank: $e');
+    }
+  }
+
+  // Update all leaderboards for a single user - OPTIMIZED
   Future<void> updateUserInAllLeaderboards(String userId) async {
     try {
+      // Check if we need to throttle updates
+      if (!await _shouldUpdateLeaderboards(userId)) {
+        print('Skipping leaderboard update due to throttling');
+        return;
+      }
+
       // Get user data first
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (!userDoc.exists) return;
 
       final userData = userDoc.data()!;
 
-      // Update user in streak leaderboard
-      await _updateUserInStreakLeaderboard(userId, userData);
+      // Check for significant changes that warrant an update
+      if (!await _hasSignificantLeaderboardChanges(userId, userData)) {
+        print('Skipping leaderboard update - no significant changes');
+        return;
+      }
 
-      // Update user in games played leaderboard
-      await _updateUserInGamesLeaderboard(userId, userData);
+      // Create a single batch for all leaderboard updates
+      final batch = _firestore.batch();
+      int batchCount = 0;
 
-      // Update user in stars leaderboard
-      await _updateUserInStarsLeaderboard(userId, userData);
+      // Process streak leaderboard
+      batchCount = await _prepareStreakLeaderboardBatch(
+          userId, userData, batch, batchCount);
 
-      // Update user in time-based leaderboards
-      await _updateUserInTimeLeaderboards(userId, userData);
+      // Process games played leaderboard
+      batchCount = await _prepareGamesLeaderboardBatch(
+          userId, userData, batch, batchCount);
+
+      // Process stars leaderboard
+      batchCount = await _prepareStarsLeaderboardBatch(
+          userId, userData, batch, batchCount);
+
+      // Process time-based leaderboards
+      batchCount = await _prepareTimeLeaderboardsBatch(
+          userId, userData, batch, batchCount);
+
+      // Only commit if we have operations to perform
+      if (batchCount > 0) {
+        await batch.commit();
+        print(
+            'Updated leaderboards for user $userId with $batchCount operations');
+
+        // Record the update time
+        await _recordLeaderboardUpdate(userId);
+      }
     } catch (e) {
       print('Error updating user in leaderboards: $e');
     }
   }
 
-  // Helper method to update streak leaderboard
-  Future<void> _updateUserInStreakLeaderboard(
+  // Check if enough time has passed since the last update
+  Future<bool> _shouldUpdateLeaderboards(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastUpdateStr =
+          prefs.getString('${LAST_LEADERBOARD_UPDATE_KEY}_$userId');
+
+      if (lastUpdateStr != null) {
+        final lastUpdate = DateTime.parse(lastUpdateStr);
+        final now = DateTime.now();
+        final minutesSinceLastUpdate = now.difference(lastUpdate).inMinutes;
+
+        // Allow immediate updates for players with fewer than 5 games
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        final userData = userDoc.data();
+        final totalGames = userData?['totalGames'] ?? 0;
+
+        if (totalGames < 5) {
+          return true;
+        }
+
+        return minutesSinceLastUpdate >= MIN_UPDATE_INTERVAL_MINUTES;
+      }
+
+      return true; // No record of previous update
+    } catch (e) {
+      print('Error checking update throttle: $e');
+      return true; // Default to allowing updates if we can't check
+    }
+  }
+
+  // Record that we've updated the leaderboards
+  Future<void> _recordLeaderboardUpdate(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('${LAST_LEADERBOARD_UPDATE_KEY}_$userId',
+          DateTime.now().toIso8601String());
+    } catch (e) {
+      print('Error recording leaderboard update: $e');
+    }
+  }
+
+  // Check if there are significant changes that warrant a leaderboard update
+  Future<bool> _hasSignificantLeaderboardChanges(
       String userId, Map<String, dynamic> userData) async {
+    try {
+      // Get user's current entries in leaderboards
+      final streakData =
+          await getUserLeaderboardData(userId, STREAK_LEADERBOARD);
+      final gamesData = await getUserLeaderboardData(userId, GAMES_LEADERBOARD);
+      final starsData = await getUserLeaderboardData(userId, STARS_LEADERBOARD);
+
+      // Current values from user data
+      final newLongestStreak =
+          (userData['streakData'] as Map<String, dynamic>?)?['longestStreak'] ??
+              0;
+      final newTotalGames = userData['totalGames'] ?? 0;
+      final newTotalStars = userData['totalStars'] ?? 0;
+
+      // Previous values from leaderboard
+      final oldLongestStreak = streakData['data']?['longestStreak'] ?? 0;
+      final oldTotalGames = gamesData['data']?['totalGames'] ?? 0;
+      final oldTotalStars = starsData['data']?['totalStars'] ?? 0;
+
+      // Calculate percentage changes
+      double streakChange = oldLongestStreak > 0
+          ? (newLongestStreak - oldLongestStreak) / oldLongestStreak
+          : (newLongestStreak > 0 ? 1.0 : 0.0);
+
+      double gamesChange = oldTotalGames > 0
+          ? (newTotalGames - oldTotalGames) / oldTotalGames
+          : (newTotalGames > 0 ? 1.0 : 0.0);
+
+      double starsChange = oldTotalStars > 0
+          ? (newTotalStars - oldTotalStars) / oldTotalStars
+          : (newTotalStars > 0 ? 1.0 : 0.0);
+
+      // Check for time-based leaderboard changes
+      bool hasNewBestTime = await _checkForNewBestTimes(userId, userData);
+
+      // Update if any metric has changed by more than 10% or if there's a new best time
+      // Also always update if it's a new player (total games <= 10)
+      return newTotalGames <= 10 ||
+          streakChange >= 0.1 ||
+          gamesChange >= 0.1 ||
+          starsChange >= 0.1 ||
+          hasNewBestTime;
+    } catch (e) {
+      print('Error checking for significant changes: $e');
+      return true; // Default to allowing updates if we can't check
+    }
+  }
+
+  // Check if user has new best times since last update
+  Future<bool> _checkForNewBestTimes(
+      String userId, Map<String, dynamic> userData) async {
+    try {
+      final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
+
+      // If no best times, no need to update
+      if (bestTimes.isEmpty) return false;
+
+      // Check each operation
+      for (final operation in [
+        'addition',
+        'subtraction',
+        'multiplication',
+        'division'
+      ]) {
+        final bestTime = bestTimes[operation] as int? ?? 0;
+        if (bestTime <= 0) continue;
+
+        // Determine leaderboard type
+        String leaderboardType;
+        switch (operation) {
+          case 'addition':
+            leaderboardType = ADDITION_TIME;
+            break;
+          case 'subtraction':
+            leaderboardType = SUBTRACTION_TIME;
+            break;
+          case 'multiplication':
+            leaderboardType = MULTIPLICATION_TIME;
+            break;
+          case 'division':
+            leaderboardType = DIVISION_TIME;
+            break;
+          default:
+            continue;
+        }
+
+        // Get current time in leaderboard
+        final timeData = await getUserLeaderboardData(userId, leaderboardType);
+        final oldBestTime = timeData['data']?['bestTime'] ?? 0;
+
+        // If time improved (lower is better), update
+        if (oldBestTime == 0 || bestTime < oldBestTime) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (e) {
+      print('Error checking for new best times: $e');
+      return false;
+    }
+  }
+
+  // Prepare streak leaderboard batch operations
+  Future<int> _prepareStreakLeaderboardBatch(String userId,
+      Map<String, dynamic> userData, WriteBatch batch, int batchCount) async {
     try {
       final streakData = userData['streakData'] as Map<String, dynamic>? ?? {};
       final longestStreak = streakData['longestStreak'] ?? 0;
+      final currentStreak = streakData['currentStreak'] ?? 0;
 
       // Only update if the user has a streak
-      if (longestStreak > 0) {
-        // Get current top entries to determine rank
+      if (longestStreak > 0 || currentStreak > 0) {
+        // Get current rank
         final rankSnapshot = await _firestore
             .collection('leaderboards')
             .doc(STREAK_LEADERBOARD)
@@ -235,36 +477,43 @@ class ScalableLeaderboardService {
 
         final newRank = (rankSnapshot.count ?? 0) + 1;
 
-        // Update or add user to leaderboard
-        await _firestore
-            .collection('leaderboards')
-            .doc(STREAK_LEADERBOARD)
-            .collection('entries')
-            .doc(userId)
-            .set({
-          'userId': userId,
-          'displayName': userData['displayName'] ?? 'Unknown',
-          'longestStreak': longestStreak,
-          'currentStreak': streakData['currentStreak'] ?? 0,
-          'level': userData['level'] ?? 'Novice',
-          'rank': newRank,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        // Add to batch
+        batch.set(
+            _firestore
+                .collection('leaderboards')
+                .doc(STREAK_LEADERBOARD)
+                .collection('entries')
+                .doc(userId),
+            {
+              'userId': userId,
+              'displayName': userData['displayName'] ?? 'Unknown',
+              'longestStreak': longestStreak,
+              'currentStreak': currentStreak,
+              'level': userData['level'] ?? 'Novice',
+              'rank': newRank,
+              'updatedAt': FieldValue.serverTimestamp(),
+              'operationCounts': userData['completedGames'] ?? {},
+            });
+
+        return batchCount + 1;
       }
+
+      return batchCount;
     } catch (e) {
-      print('Error updating streak leaderboard: $e');
+      print('Error preparing streak leaderboard batch: $e');
+      return batchCount;
     }
   }
 
-  // Helper method to update games played leaderboard
-  Future<void> _updateUserInGamesLeaderboard(
-      String userId, Map<String, dynamic> userData) async {
+  // Prepare games leaderboard batch operations
+  Future<int> _prepareGamesLeaderboardBatch(String userId,
+      Map<String, dynamic> userData, WriteBatch batch, int batchCount) async {
     try {
       final totalGames = userData['totalGames'] ?? 0;
 
       // Only update if the user has played games
       if (totalGames > 0) {
-        // Get current top entries to determine rank
+        // Get current rank
         final rankSnapshot = await _firestore
             .collection('leaderboards')
             .doc(GAMES_LEADERBOARD)
@@ -275,36 +524,42 @@ class ScalableLeaderboardService {
 
         final newRank = (rankSnapshot.count ?? 0) + 1;
 
-        // Update or add user to leaderboard
-        await _firestore
-            .collection('leaderboards')
-            .doc(GAMES_LEADERBOARD)
-            .collection('entries')
-            .doc(userId)
-            .set({
-          'userId': userId,
-          'displayName': userData['displayName'] ?? 'Unknown',
-          'totalGames': totalGames,
-          'level': userData['level'] ?? 'Novice',
-          'operationCounts': userData['completedGames'] ?? {},
-          'rank': newRank,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        // Add to batch
+        batch.set(
+            _firestore
+                .collection('leaderboards')
+                .doc(GAMES_LEADERBOARD)
+                .collection('entries')
+                .doc(userId),
+            {
+              'userId': userId,
+              'displayName': userData['displayName'] ?? 'Unknown',
+              'totalGames': totalGames,
+              'level': userData['level'] ?? 'Novice',
+              'operationCounts': userData['completedGames'] ?? {},
+              'rank': newRank,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+
+        return batchCount + 1;
       }
+
+      return batchCount;
     } catch (e) {
-      print('Error updating games leaderboard: $e');
+      print('Error preparing games leaderboard batch: $e');
+      return batchCount;
     }
   }
 
-  // Helper method to update stars leaderboard
-  Future<void> _updateUserInStarsLeaderboard(
-      String userId, Map<String, dynamic> userData) async {
+  // Prepare stars leaderboard batch operations
+  Future<int> _prepareStarsLeaderboardBatch(String userId,
+      Map<String, dynamic> userData, WriteBatch batch, int batchCount) async {
     try {
       final totalStars = userData['totalStars'] ?? 0;
 
       // Only update if the user has stars
       if (totalStars > 0) {
-        // Get current top entries to determine rank
+        // Get current rank
         final rankSnapshot = await _firestore
             .collection('leaderboards')
             .doc(STARS_LEADERBOARD)
@@ -318,131 +573,166 @@ class ScalableLeaderboardService {
         // Extract operation stars
         final gameStats = userData['gameStats'] as Map<String, dynamic>? ?? {};
 
-        // Update or add user to leaderboard
-        await _firestore
-            .collection('leaderboards')
-            .doc(STARS_LEADERBOARD)
-            .collection('entries')
-            .doc(userId)
-            .set({
-          'userId': userId,
-          'displayName': userData['displayName'] ?? 'Unknown',
-          'totalStars': totalStars,
-          'level': userData['level'] ?? 'Novice',
-          'operationStars': {
-            'addition': gameStats['additionStars'] ?? 0,
-            'subtraction': gameStats['subtractionStars'] ?? 0,
-            'multiplication': gameStats['multiplicationStars'] ?? 0,
-            'division': gameStats['divisionStars'] ?? 0,
-          },
-          'rank': newRank,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        // Add to batch
+        batch.set(
+            _firestore
+                .collection('leaderboards')
+                .doc(STARS_LEADERBOARD)
+                .collection('entries')
+                .doc(userId),
+            {
+              'userId': userId,
+              'displayName': userData['displayName'] ?? 'Unknown',
+              'totalStars': totalStars,
+              'level': userData['level'] ?? 'Novice',
+              'operationStars': {
+                'addition': gameStats['additionStars'] ?? 0,
+                'subtraction': gameStats['subtractionStars'] ?? 0,
+                'multiplication': gameStats['multiplicationStars'] ?? 0,
+                'division': gameStats['divisionStars'] ?? 0,
+              },
+              'rank': newRank,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+
+        return batchCount + 1;
       }
+
+      return batchCount;
     } catch (e) {
-      print('Error updating stars leaderboard: $e');
+      print('Error preparing stars leaderboard batch: $e');
+      return batchCount;
     }
   }
 
-  // Helper method to update time-based leaderboards
-  Future<void> _updateUserInTimeLeaderboards(
-      String userId, Map<String, dynamic> userData) async {
+  // Prepare time leaderboards batch operations
+  Future<int> _prepareTimeLeaderboardsBatch(String userId,
+      Map<String, dynamic> userData, WriteBatch batch, int batchCount) async {
     try {
       final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
+      int localBatchCount = batchCount;
 
-      // Only proceed if user has time records
-      if (bestTimes.isNotEmpty) {
-        // Update each operation leaderboard
-        final operations = [
-          'addition',
-          'subtraction',
-          'multiplication',
-          'division'
-        ];
+      // Skip if no times
+      if (bestTimes.isEmpty) return localBatchCount;
 
-        for (final operation in operations) {
-          final bestTime = bestTimes[operation] as int? ?? 0;
+      // Process operations
+      for (final operation in [
+        'addition',
+        'subtraction',
+        'multiplication',
+        'division'
+      ]) {
+        final bestTime = bestTimes[operation] as int? ?? 0;
+        if (bestTime <= 0) continue;
 
-          // Skip if no best time
-          if (bestTime <= 0) continue;
-
-          // Determine leaderboard type
-          String leaderboardType;
-          switch (operation) {
-            case 'addition':
-              leaderboardType = ADDITION_TIME;
-              break;
-            case 'subtraction':
-              leaderboardType = SUBTRACTION_TIME;
-              break;
-            case 'multiplication':
-              leaderboardType = MULTIPLICATION_TIME;
-              break;
-            case 'division':
-              leaderboardType = DIVISION_TIME;
-              break;
-            default:
-              continue;
-          }
-
-          // Get current rank
-          final rankSnapshot = await _firestore
-              .collection('leaderboards')
-              .doc(leaderboardType)
-              .collection('entries')
-              .where('bestTime',
-                  isLessThan: bestTime) // Lower is better for time
-              .count()
-              .get();
-
-          final newRank = (rankSnapshot.count ?? 0) + 1;
-
-          // Update or add user to leaderboard
-          await _firestore
-              .collection('leaderboards')
-              .doc(leaderboardType)
-              .collection('entries')
-              .doc(userId)
-              .set({
-            'userId': userId,
-            'displayName': userData['displayName'] ?? 'Unknown',
-            'bestTime': bestTime,
-            'level': userData['level'] ?? 'Novice',
-            'rank': newRank,
-            'difficulty': 'All', // Default for overall time
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-
-          // Also update difficulty-specific times
-          await _updateUserDifficultyTimeLeaderboards(
-              userId, userData, operation, leaderboardType);
+        // Determine leaderboard type
+        String leaderboardType;
+        switch (operation) {
+          case 'addition':
+            leaderboardType = ADDITION_TIME;
+            break;
+          case 'subtraction':
+            leaderboardType = SUBTRACTION_TIME;
+            break;
+          case 'multiplication':
+            leaderboardType = MULTIPLICATION_TIME;
+            break;
+          case 'division':
+            leaderboardType = DIVISION_TIME;
+            break;
+          default:
+            continue;
         }
+
+        // Check if this is an improvement over previous time
+        final existingData =
+            await getUserLeaderboardData(userId, leaderboardType);
+        final existingTime = existingData['data']?['bestTime'] ?? 0;
+
+        // Skip if not an improvement (lower is better for time)
+        if (existingTime > 0 && bestTime >= existingTime) continue;
+
+        // Get current rank
+        final rankSnapshot = await _firestore
+            .collection('leaderboards')
+            .doc(leaderboardType)
+            .collection('entries')
+            .where('bestTime', isLessThan: bestTime)
+            .count()
+            .get();
+
+        final newRank = (rankSnapshot.count ?? 0) + 1;
+
+        // Add to batch
+        batch.set(
+            _firestore
+                .collection('leaderboards')
+                .doc(leaderboardType)
+                .collection('entries')
+                .doc(userId),
+            {
+              'userId': userId,
+              'displayName': userData['displayName'] ?? 'Unknown',
+              'bestTime': bestTime,
+              'level': userData['level'] ?? 'Novice',
+              'rank': newRank,
+              'difficulty': 'All',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+
+        localBatchCount++;
+
+        // Only update difficulty leaderboards if we actually updated the main one
+        localBatchCount = await _prepareDifficultyTimeLeaderboardsBatch(userId,
+            userData, operation, leaderboardType, batch, localBatchCount);
       }
+
+      return localBatchCount;
     } catch (e) {
-      print('Error updating time leaderboards: $e');
+      print('Error preparing time leaderboards batch: $e');
+      return batchCount;
     }
   }
 
-  // Helper for difficulty-specific time leaderboards
-  Future<void> _updateUserDifficultyTimeLeaderboards(
+  // Prepare difficulty-specific time leaderboards batch operations
+  Future<int> _prepareDifficultyTimeLeaderboardsBatch(
       String userId,
       Map<String, dynamic> userData,
       String operation,
-      String leaderboardType) async {
+      String leaderboardType,
+      WriteBatch batch,
+      int batchCount) async {
     try {
       final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
+      int localBatchCount = batchCount;
 
-      // Check for difficulty-specific times
-      final difficulties = ['standard', 'challenging', 'expert', 'impossible'];
-
-      for (final difficulty in difficulties) {
+      // Process each difficulty
+      for (final difficulty in [
+        'standard',
+        'challenging',
+        'expert',
+        'impossible'
+      ]) {
         final difficultyKey = '$operation-$difficulty';
         final bestTime = bestTimes[difficultyKey] as int? ?? 0;
-
-        // Skip if no time for this difficulty
         if (bestTime <= 0) continue;
 
-        // Get current rank for this difficulty
+        // Check if this is an improvement
+        final docRef = _firestore
+            .collection('leaderboards')
+            .doc(leaderboardType)
+            .collection('difficulties')
+            .doc(difficulty)
+            .collection('entries')
+            .doc(userId);
+
+        final existingDoc = await docRef.get();
+        if (existingDoc.exists) {
+          final existingTime = existingDoc.data()?['bestTime'] ?? 0;
+          if (existingTime > 0 && bestTime >= existingTime) continue;
+        }
+
+        // Get current rank
         final rankSnapshot = await _firestore
             .collection('leaderboards')
             .doc(leaderboardType)
@@ -455,50 +745,38 @@ class ScalableLeaderboardService {
 
         final newRank = (rankSnapshot.count ?? 0) + 1;
 
-        // Update or add user to difficulty leaderboard
-        await _firestore
-            .collection('leaderboards')
-            .doc(leaderboardType)
-            .collection('difficulties')
-            .doc(difficulty)
-            .collection('entries')
-            .doc(userId)
-            .set({
+        // Add to batch
+        batch.set(docRef, {
           'userId': userId,
           'displayName': userData['displayName'] ?? 'Unknown',
           'bestTime': bestTime,
           'level': userData['level'] ?? 'Novice',
           'rank': newRank,
           'difficulty': difficulty.substring(0, 1).toUpperCase() +
-              difficulty.substring(1), // Capitalize
+              difficulty.substring(1),
           'updatedAt': FieldValue.serverTimestamp(),
         });
+
+        localBatchCount++;
       }
+
+      return localBatchCount;
     } catch (e) {
-      print('Error updating difficulty time leaderboards: $e');
+      print('Error preparing difficulty time leaderboards batch: $e');
+      return batchCount;
     }
   }
 
-  // Method to refresh all leaderboards
-  Future<void> refreshAllLeaderboards() async {
-    await _refreshLeaderboard(
-        STREAK_LEADERBOARD, 'streakData.longestStreak', true);
-    await _refreshLeaderboard(GAMES_LEADERBOARD, 'totalGames', true);
-    await _refreshLeaderboard(STARS_LEADERBOARD, 'totalStars', true);
-
-    // Time leaderboards (lower is better)
-    await _refreshTimeLeaderboard(ADDITION_TIME, 'addition');
-    await _refreshTimeLeaderboard(SUBTRACTION_TIME, 'subtraction');
-    await _refreshTimeLeaderboard(MULTIPLICATION_TIME, 'multiplication');
-    await _refreshTimeLeaderboard(DIVISION_TIME, 'division');
-  }
-
-  // Add this method to your ScalableLeaderboardService class
-
-// Directly update streak leaderboard for a specific user
+  // This modified method only updates streak leaderboard when necessary
   Future<void> updateUserInStreakLeaderboard(String userId) async {
     try {
-      // Get user data first
+      // Check if we need to throttle updates
+      if (!await _shouldUpdateLeaderboards(userId)) {
+        print('Skipping streak leaderboard update due to throttling');
+        return;
+      }
+
+      // Get user data
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (!userDoc.exists) return;
 
@@ -507,9 +785,16 @@ class ScalableLeaderboardService {
       final longestStreak = streakData['longestStreak'] ?? 0;
       final currentStreak = streakData['currentStreak'] ?? 0;
 
-      // Only update if the user has a streak
-      if (longestStreak > 0 || currentStreak > 0) {
-        // Get current top entries to determine rank
+      // Get existing leaderboard entry
+      final existingData =
+          await getUserLeaderboardData(userId, STREAK_LEADERBOARD);
+      final existingLongestStreak = existingData['data']?['longestStreak'] ?? 0;
+      final existingCurrentStreak = existingData['data']?['currentStreak'] ?? 0;
+
+      // Only update if there's a significant change in streak
+      if (longestStreak > existingLongestStreak ||
+          (currentStreak > 0 && currentStreak != existingCurrentStreak)) {
+        // Get current rank
         final rankSnapshot = await _firestore
             .collection('leaderboards')
             .doc(STREAK_LEADERBOARD)
@@ -520,7 +805,7 @@ class ScalableLeaderboardService {
 
         final newRank = (rankSnapshot.count ?? 0) + 1;
 
-        // Update or add user to leaderboard
+        // Update streak leaderboard
         await _firestore
             .collection('leaderboards')
             .doc(STREAK_LEADERBOARD)
@@ -538,13 +823,17 @@ class ScalableLeaderboardService {
         });
 
         print('Streak leaderboard updated for user: $userId');
+
+        // Record the update
+        await _recordLeaderboardUpdate(userId);
+      } else {
+        print('Skipping streak update - no significant changes');
       }
     } catch (e) {
       print('Error updating streak leaderboard: $e');
     }
   }
 
-  // Helper to refresh a standard leaderboard
   Future<void> _refreshLeaderboard(
       String leaderboardType, String sortField, bool descendingOrder) async {
     try {
@@ -740,5 +1029,18 @@ class ScalableLeaderboardService {
     } catch (e) {
       print('Error refreshing difficulty time leaderboard: $e');
     }
-  }
+  } // Method to refresh all leaderboards
+
+  Future<void> refreshAllLeaderboards() async {
+    await _refreshLeaderboard(
+        STREAK_LEADERBOARD, 'streakData.longestStreak', true);
+    await _refreshLeaderboard(GAMES_LEADERBOARD, 'totalGames', true);
+    await _refreshLeaderboard(STARS_LEADERBOARD, 'totalStars', true);
+
+    // Time leaderboards (lower is better)
+    await _refreshTimeLeaderboard(ADDITION_TIME, 'addition');
+    await _refreshTimeLeaderboard(SUBTRACTION_TIME, 'subtraction');
+    await _refreshTimeLeaderboard(MULTIPLICATION_TIME, 'multiplication');
+    await _refreshTimeLeaderboard(DIVISION_TIME, 'division');
+  } // lib/services/scalable_leaderboard_service.dart
 }

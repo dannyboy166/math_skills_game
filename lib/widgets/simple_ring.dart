@@ -63,6 +63,14 @@ class _SimpleRingState extends State<SimpleRing>
 
     // Initialize position mappings
     _updatePositionMappings();
+
+// In simple_ring.dart
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _animationController.animationController.value = 0.01;
+      Future.delayed(Duration(milliseconds: 10), () {
+        _animationController.animationController.value = 0;
+      });
+    });
   }
 
   void _updatePositionMappings() {
@@ -100,12 +108,14 @@ class _SimpleRingState extends State<SimpleRing>
       size: widget.size,
       tileSize: widget.tileSize,
       isInner: widget.isInner,
-      margin: widget.margin, // 👈 Add this
+      margin: widget.margin,
     );
 
-    // Start the animation
-    setState(() {
-      _animationController.startAnimation();
+    // Add a tiny delay before the first animation
+    Future.delayed(Duration(milliseconds: 5), () {
+      setState(() {
+        _animationController.startAnimation();
+      });
     });
   }
 
