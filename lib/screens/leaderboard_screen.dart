@@ -165,21 +165,37 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   Future<void> _loadTimeLeaderboard(String operation,
       {String? difficulty}) async {
-    final leaderboardType = _getTimeLeaderboardType(operation);
-
-    List<LeaderboardEntry> entries;
-    if (difficulty != null && difficulty != 'All') {
-      entries = await _leaderboardService.getTopEntriesForDifficulty(
-          leaderboardType, difficulty.toLowerCase(), 20);
-    } else {
-      entries = await _leaderboardService
-          .getTopLeaderboardEntries(leaderboardType, limit: 20);
-    }
-
     if (mounted) {
       setState(() {
-        _timeLeaderboards[operation] = entries;
+        _isLoading = true;
       });
+    }
+
+    try {
+      final leaderboardType = _getTimeLeaderboardType(operation);
+
+      List<LeaderboardEntry> entries;
+      if (difficulty != null && difficulty != 'All') {
+        entries = await _leaderboardService.getTopEntriesForDifficulty(
+            leaderboardType, difficulty.toLowerCase(), 20);
+      } else {
+        entries = await _leaderboardService
+            .getTopLeaderboardEntries(leaderboardType, limit: 20);
+      }
+
+      if (mounted) {
+        setState(() {
+          _timeLeaderboards[operation] = entries;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading tab data for operation $operation: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -202,74 +218,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     await _loadTabData(_tabController.index);
   }
 
-  String _formatTimestamp(DateTime? timestamp) {
-    if (timestamp == null) {
-      print('DEBUG: Timestamp is null in _formatTimestamp');
-      // Return a default message
-      return 'Not yet updated';
-    }
-
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    print(
-        'DEBUG: Formatting timestamp: $timestamp (${difference.inMinutes} minutes ago)');
-
-    if (difference.inMinutes < 0) {
-      // Handle future timestamps (server time discrepancy)
-      return 'Just updated';
-    } else if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} ${difference.inHours == 1 ? 'hour' : 'hours'} ago';
-    } else {
-      return '${difference.inDays} ${difference.inDays == 1 ? 'day' : 'days'} ago';
-    }
-  }
-
-  Widget _buildUpdateInfo() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.update, size: 14, color: Colors.grey.shade600),
-              SizedBox(width: 4),
-              Text(
-                'Last updated: ${_formatTimestamp(_lastUpdated)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 14, color: Colors.blue.shade300),
-                SizedBox(width: 4),
-                Text(
-                  'Updates every 15 minutes to optimize performance',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blue.shade300,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -278,17 +226,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           children: [
             _buildHeader(),
             _buildTabBar(),
-
-            // Only show update info for games tab
-            AnimatedBuilder(
-              animation: _tabController,
-              builder: (context, child) {
-                return _tabController.index == 0
-                    ? _buildUpdateInfo()
-                    : SizedBox.shrink();
-              },
-            ),
-
             Expanded(
               child: TabBarView(
                 controller: _tabController,

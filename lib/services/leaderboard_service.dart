@@ -422,42 +422,10 @@ class LeaderboardService {
     );
   }
 
-  // Check if an update should be allowed (throttling logic)
   Future<bool> shouldUpdateLeaderboard(String userId,
       {bool isHighScore = false}) async {
-    try {
-      // Always allow updates for high scores
-      if (isHighScore) {
-        print("Bypassing throttling for high score update");
-        return true;
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-      final lastUpdateStr =
-          prefs.getString('${LAST_LEADERBOARD_UPDATE_KEY}_$userId');
-
-      if (lastUpdateStr != null) {
-        final lastUpdate = DateTime.parse(lastUpdateStr);
-        final now = DateTime.now();
-        final minutesSinceLastUpdate = now.difference(lastUpdate).inMinutes;
-
-        // Allow immediate updates for players with fewer than 5 games
-        final userDoc = await _firestore.collection('users').doc(userId).get();
-        final userData = userDoc.data();
-        final totalGames = userData?['totalGames'] ?? 0;
-
-        if (totalGames < 5) {
-          return true;
-        }
-
-        return minutesSinceLastUpdate >= MIN_UPDATE_INTERVAL_MINUTES;
-      }
-
-      return true; // No record of previous update
-    } catch (e) {
-      print('Error checking update throttle: $e');
-      return true; // Default to allowing updates if we can't check
-    }
+    // Always allow updates (throttling disabled)
+    return true;
   }
 
   // Record a leaderboard update
@@ -471,16 +439,9 @@ class LeaderboardService {
     }
   }
 
-  // Update user in all leaderboards
   Future<void> updateUserInAllLeaderboards(String userId,
       {bool isHighScore = false}) async {
     try {
-      // Check if we need to throttle updates
-      if (!await shouldUpdateLeaderboard(userId, isHighScore: isHighScore)) {
-        print('Skipping leaderboard update due to throttling');
-        return;
-      }
-
       // Get user data
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (!userDoc.exists) return;
@@ -491,7 +452,7 @@ class LeaderboardService {
       final batch = _firestore.batch();
       int batchCount = 0;
 
-      // Process each leaderboard type - SIMPLIFIED to only use games and time
+      // Process each leaderboard type
       batchCount = await _addGamesLeaderboardToBatch(
           userId, userData, batch, batchCount);
       batchCount = await _addTimeLeaderboardsToBatch(
@@ -503,9 +464,6 @@ class LeaderboardService {
         await batch.commit();
         print(
             'Updated leaderboards for user $userId with $batchCount operations');
-
-        // Record the update time
-        await recordLeaderboardUpdate(userId);
       }
     } catch (e) {
       print('Error updating user in leaderboards: $e');

@@ -643,6 +643,12 @@ class _GameScreenState extends State<GameScreen> {
         await userService.saveLevelCompletion(userId, levelCompletion);
         print("Level completion saved successfully");
 
+        // Immediately update leaderboards
+        final leaderboardService = LeaderboardService();
+        await leaderboardService.updateUserInAllLeaderboards(userId,
+            isHighScore: true);
+        print("Leaderboard data updated successfully");
+
         try {
           final statsService = UserStatsService();
           await statsService.calculateStarsPerOperation(userId);

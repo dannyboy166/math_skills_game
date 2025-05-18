@@ -63,13 +63,32 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       final newOperation =
           _getOperationFromIndex(_operationTabController.index);
       if (newOperation != _currentOperation) {
+        // First set loading state to true BEFORE changing the operation
         setState(() {
+          _isLoading = true;
           _currentOperation = newOperation;
         });
 
-        // Add this line to reload data when operation changes
+        // Then load the data for the new operation
         if (_currentDifficulty != 'All') {
-          widget.onDifficultyChanged(_currentOperation, _currentDifficulty);
+          widget
+              .onDifficultyChanged(_currentOperation, _currentDifficulty)
+              .then((_) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
+          });
+        } else {
+          // Handle 'All' difficulty case
+          widget.onRefresh().then((_) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
+          });
         }
       }
     }
