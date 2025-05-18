@@ -66,6 +66,11 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         setState(() {
           _currentOperation = newOperation;
         });
+
+        // Add this line to reload data when operation changes
+        if (_currentDifficulty != 'All') {
+          widget.onDifficultyChanged(_currentOperation, _currentDifficulty);
+        }
       }
     }
   }
