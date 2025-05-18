@@ -941,63 +941,74 @@ class _GameScreenState extends State<GameScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
-          mainAxisSize: MainAxisSize.min, // Added to prevent overflow
+          mainAxisSize: MainAxisSize.min, // Prevent title overflow
           children: [
             Icon(Icons.info_outline, color: operation.color),
             SizedBox(width: 10),
-            Flexible(child: Text('How to Play')), // Added Flexible
+            Flexible(child: Text('How to Play')),
           ],
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHelpItem('1',
-                'Rotate the rings to form correct equations at the four corners.'),
-            _buildHelpItem('2', 'Each corner should satisfy: $equationFormat'),
-            _buildHelpItem('3',
-                'When a corner has a correct equation, tap any part of it to lock it.'),
-            _buildHelpItem('4',
-                'Locked equations stay in place while you continue rotating to solve the remaining corners.'),
-            _buildHelpItem('5', 'Complete all four corners to win!'),
-            _buildHelpItem('6', 'Complete levels faster to earn more stars!'),
-            if (additionalInfo.isNotEmpty) ...[
-              SizedBox(height: 10),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: operation.color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(additionalInfo),
-              ),
-            ],
-            SizedBox(height: 16),
-            Text('Note:', style: TextStyle(fontWeight: FontWeight.bold)),
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('• For addition and multiplication: inner → outer'),
-                  Text('• For subtraction and division: outer → inner'),
-                  Text('• Faster completion times earn more stars!'),
+        // Make the content area scrollable with SingleChildScrollView
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height *
+                0.6, // Limit height to 60% of screen height
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHelpItem('1',
+                    'Rotate the rings to form correct equations at the four corners.'),
+                _buildHelpItem(
+                    '2', 'Each corner should satisfy: $equationFormat'),
+                _buildHelpItem('3',
+                    'When a corner has a correct equation, tap any part of it to lock it.'),
+                _buildHelpItem('4',
+                    'Locked equations stay in place while you continue rotating to solve the remaining corners.'),
+                _buildHelpItem('5', 'Complete all four corners to win!'),
+                _buildHelpItem(
+                    '6', 'Complete levels faster to earn more stars!'),
+                if (additionalInfo.isNotEmpty) ...[
+                  SizedBox(height: 10),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: operation.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(additionalInfo),
+                  ),
                 ],
-              ),
+                SizedBox(height: 16),
+                Text('Note:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('• For addition and multiplication: inner → outer'),
+                      Text('• For subtraction and division: outer → inner'),
+                      Text('• Faster completion times earn more stars!'),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 10),
+                (widget.operationName == 'multiplication' ||
+                            widget.operationName == 'division') &&
+                        widget.targetNumber != null
+                    ? Text(
+                        '${widget.operationName.capitalize()} Number: ${widget.targetNumber}',
+                        style: TextStyle(fontWeight: FontWeight.bold))
+                    : Text('Difficulty: ${widget.difficultyLevel.displayName}',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
             ),
-            SizedBox(height: 10),
-            (widget.operationName == 'multiplication' ||
-                        widget.operationName == 'division') &&
-                    widget.targetNumber != null
-                ? Text(
-                    '${widget.operationName.capitalize()} Number: ${widget.targetNumber}',
-                    style: TextStyle(fontWeight: FontWeight.bold))
-                : Text('Difficulty: ${widget.difficultyLevel.displayName}',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -1076,9 +1087,7 @@ class _GameScreenState extends State<GameScreen> {
     final innerRingSize = boardSize * 0.62;
 
     // Center position adjusted for your specific layout
-    // This may need adjustment based on your actual UI
-    final centerYPosition =
-        screenHeight * 0.6; // Use 0.5 for center, higher values to move down
+    final centerYPosition = screenHeight * 0.6;
 
     overlayEntry = OverlayEntry(
       builder: (context) => TutorialOverlay(
@@ -1090,6 +1099,11 @@ class _GameScreenState extends State<GameScreen> {
         onComplete: () {
           overlayEntry?.remove();
           TutorialHelper.markTutorialAsShown();
+        },
+        // Add the rotation callback
+        onRotateRing: () {
+          // Rotate clockwise (negative step)
+          _updateOuterRing(-1);
         },
       ),
     );
