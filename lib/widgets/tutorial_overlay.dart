@@ -1,221 +1,289 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-/* 
- * Hand pointer icon by Stockio from www.flaticon.com
- * Used under Flaticon Free License
- */
+// Hand pointer icon by Stockio from www.flaticon.com
+// Used under Flaticon Free License
 
 class TutorialOverlay extends StatefulWidget {
   final VoidCallback onComplete;
   final Size gameSize;
   final double innerRingRadius;
   final double outerRingRadius;
+  final double centerX;
+  final double centerY;
 
   const TutorialOverlay({
-    Key? key,
+    Key? key, 
     required this.onComplete,
     required this.gameSize,
     required this.innerRingRadius,
     required this.outerRingRadius,
+    required this.centerX,
+    required this.centerY,
   }) : super(key: key);
 
   @override
   _TutorialOverlayState createState() => _TutorialOverlayState();
 }
 
-class _TutorialOverlayState extends State<TutorialOverlay>
-    with TickerProviderStateMixin {
+class _TutorialOverlayState extends State<TutorialOverlay> with TickerProviderStateMixin {
   late AnimationController _handController;
   late Animation<Offset> _handPositionAnimation;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-
+  
   int _currentStep = 0;
-  bool _showDragLine = false;
+  bool _showGotItButton = true;
+  String _currentText = "Drag the rings to rotate them!";
 
   @override
   void initState() {
     super.initState();
-    // Animation controller for hand movement
+    
+    // Animation controller for hand movement - slower animation (4 seconds)
     _handController = AnimationController(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 4),
       vsync: this,
     );
-
+    
     // Animation for pulsing effect on tap
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-
+    
     _pulseAnimation = Tween<double>(begin: 1.0, end: 0.8).animate(
-        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
-
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut)
+    );
+    
+    // Initial setup
     _setupStepOne();
-
+    
     // Listen for animation completion
     _handController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        Timer(Duration(milliseconds: 500), () {
-          setState(() {
-            _showDragLine = false;
-          });
-          _moveToNextStep();
+        _handController.reset();
+        Timer(Duration(milliseconds: 800), () {
+          if (mounted) {
+            _moveToNextStep();
+          }
         });
       }
     });
   }
 
   void _setupStepOne() {
-    // Center points of the game area
-    final centerX = widget.gameSize.width / 2;
-    final centerY = widget.gameSize.height / 2;
-    final radius = widget.outerRingRadius * 0.7;
-
-    // Animation for rotating the outer ring
     setState(() {
-      _showDragLine = true;
+      _currentText = "Drag the rings to rotate them!";
     });
-
+    
+    // Simple vertical drag on the right side of the ring
+    final centerX = widget.centerX;
+    final centerY = widget.centerY;
+    final radius = widget.outerRingRadius * 0.8;
+    
+    // Start at the right side and drag down vertically
     _handPositionAnimation = TweenSequence<Offset>([
-      // Move to starting position
+      // Start at the right side of the ring
       TweenSequenceItem(
         tween: Tween<Offset>(
-          begin: Offset(centerX - 20, centerY - radius),
-          end: Offset(centerX - 20, centerY - radius),
+          begin: Offset(centerX + radius, centerY), 
+          end: Offset(centerX + radius, centerY),
         ),
-        weight: 10,
+        weight: 15,
       ),
-      // Perform drag motion in a curve to simulate ring rotation
+      // Hold briefly
       TweenSequenceItem(
         tween: Tween<Offset>(
-          begin: Offset(centerX - 20, centerY - radius),
-          end: Offset(centerX + radius - 20, centerY),
+          begin: Offset(centerX + radius, centerY),
+          end: Offset(centerX + radius, centerY),
         ),
-        weight: 45,
+        weight: 5,
       ),
+      // Drag down slowly
       TweenSequenceItem(
         tween: Tween<Offset>(
-          begin: Offset(centerX + radius - 20, centerY),
-          end: Offset(centerX - 20, centerY + radius),
+          begin: Offset(centerX + radius, centerY),
+          end: Offset(centerX + radius, centerY + radius),
         ),
-        weight: 45,
+        weight: 60,
+      ),
+      // Hold at bottom
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: Offset(centerX + radius, centerY + radius),
+          end: Offset(centerX + radius, centerY + radius),
+        ),
+        weight: 20,
       ),
     ]).animate(_handController);
 
-    _handController.forward(from: 0.0);
+    _handController.forward();
   }
 
   void _setupStepTwo() {
-    // Reset controller
-    _handController.reset();
-
-    // Get corner position (top left corner)
-    final cornerX = widget.gameSize.width * 0.2;
-    final cornerY = widget.gameSize.height * 0.2;
-
-    // Animation for tapping a corner to lock an equation
-    _handPositionAnimation = TweenSequence<Offset>([
-      // Move to corner position
-      TweenSequenceItem(
-        tween: Tween<Offset>(
-          begin: Offset(cornerX + 100, cornerY + 100),
-          end: Offset(cornerX, cornerY),
-        ),
-        weight: 30,
-      ),
-      // Hold at corner
-      TweenSequenceItem(
-        tween: Tween<Offset>(
-          begin: Offset(cornerX, cornerY),
-          end: Offset(cornerX, cornerY),
-        ),
-        weight: 40,
-      ),
-      // Move down slightly to simulate tap
-      TweenSequenceItem(
-        tween: Tween<Offset>(
-          begin: Offset(cornerX, cornerY),
-          end: Offset(cornerX, cornerY),
-        ),
-        weight: 30,
-      ),
-    ]).animate(_handController);
-
-    // Add a pulsing animation for the tap
-    _handController.forward(from: 0.0);
-
-    // Add pulsing during the tap
-    Future.delayed(Duration(milliseconds: 1500), () {
-      _pulseController.forward().then((_) {
-        _pulseController.reverse();
-      });
+    setState(() {
+      _currentText = "Complete all 4 corners to win!";
     });
-  }
-
-  void _setupStepThree() {
-    // Reset controller
-    _handController.reset();
-
-    // Get center and corner positions
-    final centerX = widget.gameSize.width / 2;
-    final centerY = widget.gameSize.height / 2;
-
-    // Points to visit all four corners
-    final cornerTL =
-        Offset(widget.gameSize.width * 0.2, widget.gameSize.height * 0.2);
-    final cornerTR =
-        Offset(widget.gameSize.width * 0.8, widget.gameSize.height * 0.2);
-    final cornerBR =
-        Offset(widget.gameSize.width * 0.8, widget.gameSize.height * 0.8);
-    final cornerBL =
-        Offset(widget.gameSize.width * 0.2, widget.gameSize.height * 0.8);
-
-    // Animation to indicate completing all four corners
+    
+    final centerX = widget.centerX;
+    final centerY = widget.centerY;
+    final radius = widget.outerRingRadius * 0.7;
+    
+    // Coordinates for the four corners
+    final topLeft = Offset(centerX - radius, centerY - radius);
+    final topRight = Offset(centerX + radius, centerY - radius);
+    final bottomRight = Offset(centerX + radius, centerY + radius);
+    final bottomLeft = Offset(centerX - radius, centerY + radius);
+    
+    // Visit each corner slowly with pauses at each corner
     _handPositionAnimation = TweenSequence<Offset>([
-      // Visit top-left corner
+      // Start at top-left
       TweenSequenceItem(
-        tween: Tween<Offset>(begin: Offset(centerX, centerY), end: cornerTL),
-        weight: 15,
-      ),
-      TweenSequenceItem(
-        tween: Tween<Offset>(begin: cornerTL, end: cornerTL),
+        tween: Tween<Offset>(
+          begin: topLeft,
+          end: topLeft,
+        ),
         weight: 10,
       ),
-      // Visit top-right corner
+      // Tap at top-left
       TweenSequenceItem(
-        tween: Tween<Offset>(begin: cornerTL, end: cornerTR),
-        weight: 15,
+        tween: Tween<Offset>(
+          begin: topLeft,
+          end: Offset(topLeft.dx, topLeft.dy + 10),
+        ),
+        weight: 3,
       ),
       TweenSequenceItem(
-        tween: Tween<Offset>(begin: cornerTR, end: cornerTR),
+        tween: Tween<Offset>(
+          begin: Offset(topLeft.dx, topLeft.dy + 10),
+          end: topLeft,
+        ),
+        weight: 2,
+      ),
+      // Hold at top-left
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: topLeft,
+          end: topLeft,
+        ),
+        weight: 5,
+      ),
+      // Move to top-right
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: topLeft,
+          end: topRight,
+        ),
         weight: 10,
       ),
-      // Visit bottom-right corner
+      // Tap at top-right
       TweenSequenceItem(
-        tween: Tween<Offset>(begin: cornerTR, end: cornerBR),
-        weight: 15,
+        tween: Tween<Offset>(
+          begin: topRight,
+          end: Offset(topRight.dx, topRight.dy + 10),
+        ),
+        weight: 3,
       ),
       TweenSequenceItem(
-        tween: Tween<Offset>(begin: cornerBR, end: cornerBR),
+        tween: Tween<Offset>(
+          begin: Offset(topRight.dx, topRight.dy + 10),
+          end: topRight,
+        ),
+        weight: 2,
+      ),
+      // Hold at top-right
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: topRight,
+          end: topRight,
+        ),
+        weight: 5,
+      ),
+      // Move to bottom-right
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: topRight,
+          end: bottomRight,
+        ),
         weight: 10,
       ),
-      // Visit bottom-left corner
+      // Tap at bottom-right
       TweenSequenceItem(
-        tween: Tween<Offset>(begin: cornerBR, end: cornerBL),
-        weight: 15,
+        tween: Tween<Offset>(
+          begin: bottomRight,
+          end: Offset(bottomRight.dx, bottomRight.dy + 10),
+        ),
+        weight: 3,
       ),
       TweenSequenceItem(
-        tween: Tween<Offset>(begin: cornerBL, end: cornerBL),
+        tween: Tween<Offset>(
+          begin: Offset(bottomRight.dx, bottomRight.dy + 10),
+          end: bottomRight,
+        ),
+        weight: 2,
+      ),
+      // Hold at bottom-right
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: bottomRight,
+          end: bottomRight,
+        ),
+        weight: 5,
+      ),
+      // Move to bottom-left
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: bottomRight,
+          end: bottomLeft,
+        ),
         weight: 10,
+      ),
+      // Tap at bottom-left
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: bottomLeft,
+          end: Offset(bottomLeft.dx, bottomLeft.dy + 10),
+        ),
+        weight: 3,
+      ),
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: Offset(bottomLeft.dx, bottomLeft.dy + 10),
+          end: bottomLeft,
+        ),
+        weight: 2,
+      ),
+      // Hold at bottom-left
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: bottomLeft,
+          end: bottomLeft,
+        ),
+        weight: 5,
+      ),
+      // Move back to top-left to complete the circuit
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: bottomLeft,
+          end: topLeft,
+        ),
+        weight: 10,
+      ),
+      // Final pause
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: topLeft,
+          end: topLeft,
+        ),
+        weight: 5,
       ),
     ]).animate(_handController);
 
-    _handController.forward(from: 0.0);
-
+    _handController.forward();
+    
     // Add pulsing at each corner
-    List<int> pulseTimings = [900, 1800, 2700, 3600]; // milliseconds
+    List<int> pulseTimings = [600, 1600, 2600, 3600]; 
     for (int timing in pulseTimings) {
       Future.delayed(Duration(milliseconds: timing), () {
         if (mounted) {
@@ -232,8 +300,6 @@ class _TutorialOverlayState extends State<TutorialOverlay>
       _currentStep++;
       if (_currentStep == 1) {
         _setupStepTwo();
-      } else if (_currentStep == 2) {
-        _setupStepThree();
       } else {
         widget.onComplete();
       }
@@ -255,18 +321,17 @@ class _TutorialOverlayState extends State<TutorialOverlay>
         Container(
           color: Colors.black.withOpacity(0.2),
         ),
-
-        // Simple text hint at top
+        
+        // Tutorial step text
         Positioned(
-          top: 120,
-          left: 0,
-          right: 0,
+          top: 260,
+          left: 20,
+          right: 20,
           child: Container(
-            padding: EdgeInsets.all(12),
-            margin: EdgeInsets.symmetric(horizontal: 40),
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black26,
@@ -275,36 +340,31 @@ class _TutorialOverlayState extends State<TutorialOverlay>
                 )
               ],
             ),
-            child: Text(
-              _getStepHint(),
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _currentText,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22, 
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+                // Yellow underline
+                Container(
+                  height: 3,
+                  width: 280,
+                  color: Colors.yellow,
+                  margin: EdgeInsets.only(top: 4),
+                ),
+              ],
             ),
           ),
         ),
-
-        if (_showDragLine)
-          AnimatedBuilder(
-            animation: _handController,
-            builder: (context, child) {
-              // Only show the line during the drag part of the animation
-              if (_handController.value > 0.1 && _handController.value < 0.9) {
-                return CustomPaint(
-                  size: Size.infinite,
-                  painter: SimpleDragLinePainter(
-                    currentPoint: _handPositionAnimation.value,
-                    progress: _handController.value,
-                    radius: widget.outerRingRadius,
-                    centerX: widget.gameSize.width / 2,
-                    centerY: widget.gameSize.height / 2,
-                  ),
-                );
-              }
-              return SizedBox.shrink();
-            },
-          ),
-
-        // Animated hand cursor
+        
+        // Hand pointer
         AnimatedBuilder(
           animation: _handController,
           builder: (context, child) {
@@ -312,9 +372,8 @@ class _TutorialOverlayState extends State<TutorialOverlay>
               animation: _pulseController,
               builder: (context, _) {
                 return Positioned(
-                  left: _handPositionAnimation.value.dx -
-                      20, // Center hand on the point
-                  top: _handPositionAnimation.value.dy - 20,
+                  left: _handPositionAnimation.value.dx - 15, // Adjust for center of finger
+                  top: _handPositionAnimation.value.dy - 25,  // Adjust for tip of finger
                   child: Transform.scale(
                     scale: _pulseAnimation.value,
                     child: Image.asset(
@@ -328,124 +387,33 @@ class _TutorialOverlayState extends State<TutorialOverlay>
             );
           },
         ),
-
-        // Skip button
-        Positioned(
-          bottom: 40,
-          right: 40,
-          child: ElevatedButton(
-            onPressed: widget.onComplete,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.green,
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+        
+        // "Got it!" button
+        if (_showGotItButton)
+          Positioned(
+            bottom: 40,
+            right: 30,
+            child: ElevatedButton(
+              onPressed: widget.onComplete,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.green,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 4,
               ),
-            ),
-            child: Text(
-              'Got it!',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+              child: Text(
+                'Got it!',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
-  }
-
-  String _getStepHint() {
-    switch (_currentStep) {
-      case 0:
-        return "Drag the rings to rotate them!";
-      case 1:
-        return "Tap to lock a correct equation!";
-      case 2:
-        return "Complete all 4 corners to win!";
-      default:
-        return "";
-    }
-  }
-}
-
-// Custom painter for showing drag motion
-class DragLinePainter extends CustomPainter {
-  final Offset startPoint;
-  final List<Offset> previousPoints;
-
-  DragLinePainter({required this.startPoint, required this.previousPoints});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (previousPoints.isEmpty) return;
-
-    final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.7)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    final path = Path();
-    path.moveTo(startPoint.dx, startPoint.dy);
-
-    for (var point in previousPoints) {
-      path.lineTo(point.dx, point.dy);
-    }
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(DragLinePainter oldDelegate) {
-    return oldDelegate.startPoint != startPoint ||
-        oldDelegate.previousPoints != previousPoints;
-  }
-}
-
-class SimpleDragLinePainter extends CustomPainter {
-  final Offset currentPoint;
-  final double progress;
-  final double radius;
-  final double centerX;
-  final double centerY;
-
-  SimpleDragLinePainter({
-    required this.currentPoint,
-    required this.progress,
-    required this.radius,
-    required this.centerX,
-    required this.centerY,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.7)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    // Draw an arc instead of trying to track previous points
-    final rect = Rect.fromCenter(
-      center: Offset(centerX, centerY),
-      width: radius * 2,
-      height: radius * 2,
-    );
-
-    // Calculate the arc angle based on progress
-    // Start from top (270°) and go clockwise
-    final startAngle = 3 * 3.14159 / 2; // 270 degrees in radians
-    final sweepAngle =
-        progress * 3.14159; // Up to 180 degrees based on progress
-
-    canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
-  }
-
-  @override
-  bool shouldRepaint(SimpleDragLinePainter oldDelegate) {
-    return oldDelegate.currentPoint != currentPoint ||
-        oldDelegate.progress != progress;
   }
 }

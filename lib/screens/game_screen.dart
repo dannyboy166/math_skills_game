@@ -1058,7 +1058,7 @@ class _GameScreenState extends State<GameScreen> {
   void _checkAndShowTutorial() async {
     if (await TutorialHelper.shouldShowTutorial()) {
       // Give a slight delay to ensure the UI is fully rendered
-      Future.delayed(Duration(milliseconds: 500), () {
+      Future.delayed(Duration(milliseconds: 800), () {
         if (mounted) {
           _showTutorial();
         }
@@ -1071,14 +1071,22 @@ class _GameScreenState extends State<GameScreen> {
     OverlayEntry? overlayEntry;
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final boardSize = screenWidth * 0.9;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final boardSize = screenWidth * 1.0;
     final innerRingSize = boardSize * 0.62;
+
+    // Center position adjusted for your specific layout
+    // This may need adjustment based on your actual UI
+    final centerYPosition =
+        screenHeight * 0.6; // Use 0.5 for center, higher values to move down
 
     overlayEntry = OverlayEntry(
       builder: (context) => TutorialOverlay(
         gameSize: Size(boardSize, boardSize),
         innerRingRadius: innerRingSize / 2,
         outerRingRadius: boardSize / 2,
+        centerX: boardSize / 2,
+        centerY: centerYPosition,
         onComplete: () {
           overlayEntry?.remove();
           TutorialHelper.markTutorialAsShown();
