@@ -18,6 +18,8 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -413,7 +415,7 @@ class _RefreshableLeaderboardDetailState
     extends State<RefreshableLeaderboardDetail> {
   late LeaderboardEntry _entry;
   late int _rank;
-  bool _isLoading = false;
+  bool _isLoading = true; // Start with loading true
 
   @override
   void initState() {
@@ -421,19 +423,11 @@ class _RefreshableLeaderboardDetailState
     _entry = widget.entry;
     _rank = widget.rank;
 
-    // Refresh data after a short delay to get latest stats
-    Future.delayed(Duration(milliseconds: 500), () {
-      _refreshData();
-    });
+    // Load data immediately
+    _refreshData();
   }
 
   Future<void> _refreshData() async {
-    if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       // Fetch updated user data
       final userDoc = await FirebaseFirestore.instance
@@ -441,7 +435,7 @@ class _RefreshableLeaderboardDetailState
           .doc(_entry.userId)
           .get();
 
-      if (userDoc.exists) {
+      if (userDoc.exists && mounted) {
         setState(() {
           _entry = LeaderboardEntry.fromDocument(userDoc);
           _isLoading = false;
@@ -449,34 +443,54 @@ class _RefreshableLeaderboardDetailState
       }
     } catch (e) {
       print('Error refreshing leaderboard detail: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        LeaderboardDetailBottomSheet(
-          entry: _entry,
-          rank: _rank,
+    // Show loading spinner in center of bottom sheet if loading
+    if (_isLoading) {
+      return Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        if (_isLoading)
-          Positioned(
-            top: 16,
-            right: 16,
-            child: Container(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle indicator at top
+              Container(
+                width: 40,
+                height: 4,
+                margin: EdgeInsets.only(bottom: 30),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
+              CircularProgressIndicator(),
+              SizedBox(height: 20),
+              Text(
+                'Loading player stats...',
+                style: TextStyle(color: Colors.grey.shade700),
+              ),
+            ],
           ),
-      ],
+        ),
+      );
+    }
+
+    // Show content only when data is loaded
+    return LeaderboardDetailBottomSheet(
+      entry: _entry,
+      rank: _rank,
     );
   }
 }

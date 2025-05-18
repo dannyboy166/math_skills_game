@@ -21,6 +21,8 @@ class TimeLeaderboardDetail extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -377,7 +379,7 @@ class _RefreshableTimeLeaderboardDetailState
   late LeaderboardEntry _entry;
   late int _rank;
   late String _operation;
-  bool _isLoading = false;
+  bool _isLoading = true; // Start with loading true
 
   @override
   void initState() {
@@ -386,19 +388,11 @@ class _RefreshableTimeLeaderboardDetailState
     _rank = widget.rank;
     _operation = widget.operation;
 
-    // Refresh data after a short delay to get latest stats
-    Future.delayed(Duration(milliseconds: 500), () {
-      _refreshData();
-    });
+    // Load data immediately
+    _refreshData();
   }
 
   Future<void> _refreshData() async {
-    if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       // Fetch updated user data
       final userDoc = await FirebaseFirestore.instance
@@ -406,7 +400,7 @@ class _RefreshableTimeLeaderboardDetailState
           .doc(_entry.userId)
           .get();
 
-      if (userDoc.exists) {
+      if (userDoc.exists && mounted) {
         setState(() {
           _entry = LeaderboardEntry.fromDocument(userDoc);
           _isLoading = false;
@@ -414,36 +408,60 @@ class _RefreshableTimeLeaderboardDetailState
       }
     } catch (e) {
       print('Error refreshing time leaderboard detail: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        TimeLeaderboardDetail(
-          entry: _entry,
-          rank: _rank,
-          operation: _operation,
+    // Get operation color for the loading spinner
+    Color operationColor = _getOperationColor(_operation);
+
+    // Show loading spinner in center of bottom sheet if loading
+    if (_isLoading) {
+      return Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        if (_isLoading)
-          Positioned(
-            top: 16,
-            right: 16,
-            child: Container(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                    _getOperationColor(_operation)),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle indicator at top
+              Container(
+                width: 40,
+                height: 4,
+                margin: EdgeInsets.only(bottom: 30),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(operationColor),
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Loading ${_operation.capitalize()} stats...',
+                style: TextStyle(color: operationColor),
+              ),
+            ],
           ),
-      ],
+        ),
+      );
+    }
+
+    // Show content only when data is loaded
+    return TimeLeaderboardDetail(
+      entry: _entry,
+      rank: _rank,
+      operation: _operation,
     );
   }
 
@@ -460,5 +478,13 @@ class _RefreshableTimeLeaderboardDetailState
       default:
         return Colors.blue;
     }
+  }
+}
+
+// Add this extension for capitalizing the operation name
+extension StringExtension on String {
+  String capitalize() {
+    if (this.isEmpty) return this;
+    return this[0].toUpperCase() + this.substring(1);
   }
 }
