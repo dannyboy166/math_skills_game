@@ -11,7 +11,8 @@ class TimeLeaderboardTab extends StatefulWidget {
   final List<LeaderboardEntry> divisionLeaderboard;
   final String currentUserId;
   final Future<void> Function() onRefresh;
-  final Future<void> Function(String operation, String difficulty) onDifficultyChanged;
+  final Future<void> Function(String operation, String difficulty)
+      onDifficultyChanged;
 
   const TimeLeaderboardTab({
     Key? key,
@@ -59,7 +60,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
   void _handleOperationTabChanged() {
     if (!_operationTabController.indexIsChanging) {
-      final newOperation = _getOperationFromIndex(_operationTabController.index);
+      final newOperation =
+          _getOperationFromIndex(_operationTabController.index);
       if (newOperation != _currentOperation) {
         setState(() {
           _currentOperation = newOperation;
@@ -108,7 +110,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
     // Filter entries with valid time for this operation/difficulty
     final filtered = entries.where((entry) {
-      return entry.bestTimes.containsKey(timeKey) && entry.bestTimes[timeKey]! > 0;
+      return entry.bestTimes.containsKey(timeKey) &&
+          entry.bestTimes[timeKey]! > 0;
     }).toList();
 
     // Sort by time (lower is better)
@@ -178,7 +181,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
             child: _isLoading
                 ? Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(_getOperationColor()),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(_getOperationColor()),
                     ),
                   )
                 : _buildLeaderboardContent(),
@@ -237,8 +241,10 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                   _currentDifficulty = difficulty;
                   _isLoading = true;
                 });
-                
-                widget.onDifficultyChanged(_currentOperation, difficulty).then((_) {
+
+                widget
+                    .onDifficultyChanged(_currentOperation, difficulty)
+                    .then((_) {
                   if (mounted) {
                     setState(() {
                       _isLoading = false;
@@ -256,9 +262,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                     : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isSelected
-                      ? _getOperationColor()
-                      : Colors.grey.shade300,
+                  color:
+                      isSelected ? _getOperationColor() : Colors.grey.shade300,
                   width: 1.5,
                 ),
               ),
@@ -266,9 +271,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                 difficulty,
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected
-                      ? _getOperationColor()
-                      : Colors.grey.shade700,
+                  color:
+                      isSelected ? _getOperationColor() : Colors.grey.shade700,
                 ),
               ),
             ),
@@ -280,7 +284,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
   Widget _buildLeaderboardContent() {
     final entries = _getFilteredEntries();
-    
+
     if (entries.isEmpty) {
       return Center(
         child: Column(
@@ -304,12 +308,14 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       itemCount: entries.length + 1, // +1 for top three section
       itemBuilder: (context, index) {
         if (index == 0) {
-          return entries.length >= 3 ? _buildTopThreeSection(entries) : SizedBox.shrink();
+          return entries.length >= 3
+              ? _buildTopThreeSection(entries)
+              : SizedBox.shrink();
         }
-        
+
         final entry = entries[index - 1];
         final rank = index; // Rank starts at 1
-        
+
         return _buildLeaderboardItem(entry, rank);
       },
     );
@@ -318,7 +324,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   Widget _buildTopThreeSection(List<LeaderboardEntry> entries) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      height: 225,
+      // Remove fixed height or increase it to 240px
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -326,13 +332,14 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           Expanded(
             child: _buildTopPlaceItem(entries[1], 2, Colors.grey.shade300, 90),
           ),
-          
+
           // First place (tallest)
           Expanded(
             flex: 3,
-            child: _buildTopPlaceItem(entries[0], 1, Colors.amber.shade300, 140),
+            child:
+                _buildTopPlaceItem(entries[0], 1, Colors.amber.shade300, 140),
           ),
-          
+
           // Third place
           Expanded(
             child: _buildTopPlaceItem(entries[2], 3, Colors.brown.shade300, 60),
@@ -342,7 +349,8 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     );
   }
 
-  Widget _buildTopPlaceItem(LeaderboardEntry entry, int rank, Color color, double podiumHeight) {
+  Widget _buildTopPlaceItem(
+      LeaderboardEntry entry, int rank, Color color, double podiumHeight) {
     final bestTime = _getBestTime(entry);
     final operationColor = _getOperationColor();
     final operationIcon = _getOperationIcon(); // Now using the icon
@@ -372,7 +380,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
             ),
             child: Center(
               child: Text(
-                entry.displayName.isNotEmpty 
+                entry.displayName.isNotEmpty
                     ? entry.displayName.substring(0, 1).toUpperCase()
                     : "?",
                 style: TextStyle(
@@ -383,9 +391,9 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
               ),
             ),
           ),
-          
+
           SizedBox(height: 8),
-          
+
           // Name and time
           Text(
             entry.displayName,
@@ -412,9 +420,9 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
               ),
             ],
           ),
-          
+
           SizedBox(height: 8),
-          
+
           // Podium
           Container(
             width: double.infinity,
@@ -545,15 +553,12 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         textColor = Colors.white;
         break;
       default:
-        backgroundColor = isCurrentUser 
-            ? Colors.blue.shade100 
-            : Colors.grey.shade100;
-        textColor = isCurrentUser 
-            ? Colors.blue 
-            : Colors.grey.shade700;
+        backgroundColor =
+            isCurrentUser ? Colors.blue.shade100 : Colors.grey.shade100;
+        textColor = isCurrentUser ? Colors.blue : Colors.grey.shade700;
         break;
     }
-    
+
     return Container(
       width: 36,
       height: 36,
