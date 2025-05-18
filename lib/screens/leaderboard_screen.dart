@@ -37,7 +37,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this); // 2 tabs: Games and Time
+    _tabController =
+        TabController(length: 2, vsync: this); // 2 tabs: Games and Time
     _tabController.addListener(_handleTabChange);
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -94,9 +95,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
 
     try {
+      print('DEBUG: Loading data for tab index $tabIndex');
       switch (tabIndex) {
         case 0: // Games tab
           await _loadGamesLeaderboard();
+          // Explicitly fetch and log the timestamp
+          final timestamp =
+              await _leaderboardService.getLeaderboardLastUpdateTime(
+                  LeaderboardService.GAMES_LEADERBOARD);
+          print('DEBUG: Retrieved timestamp for Games tab: $timestamp');
+
+          if (mounted && timestamp != null) {
+            setState(() {
+              _lastUpdated = timestamp;
+              print('DEBUG: Updated _lastUpdated state to: $_lastUpdated');
+            });
+          }
           break;
         case 1: // Time tab
           await _loadAllTimeLeaderboards();
@@ -189,12 +203,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   String _formatTimestamp(DateTime? timestamp) {
-    if (timestamp == null) return 'Not yet updated';
+    if (timestamp == null) {
+      print('DEBUG: Timestamp is null in _formatTimestamp');
+      // Return a default message
+      return 'Not yet updated';
+    }
 
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
-    if (difference.inMinutes < 1) {
+    print(
+        'DEBUG: Formatting timestamp: $timestamp (${difference.inMinutes} minutes ago)');
+
+    if (difference.inMinutes < 0) {
+      // Handle future timestamps (server time discrepancy)
+      return 'Just updated';
+    } else if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';

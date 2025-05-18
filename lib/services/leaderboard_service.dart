@@ -727,13 +727,18 @@ class LeaderboardService {
     }
   }
 
-  // Update high score specifically (optimized path for game completions)
   Future<bool> updateTimeHighScore(
       String userId, String operation, String difficulty, int newTime) async {
     try {
+      print(
+          'DEBUG: Attempting to update high score: $operation/$difficulty/$newTime ms');
+
       // Get current user data
       final userDoc = await _firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) return false;
+      if (!userDoc.exists) {
+        print('DEBUG: User document not found: $userId');
+        return false;
+      }
 
       final userData = userDoc.data()!;
       final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
@@ -746,10 +751,13 @@ class LeaderboardService {
       // Get current best time
       final currentBestTime = bestTimes[timeKey] ?? 999999;
 
+      print(
+          'DEBUG: Current best time: $currentBestTime ms, New time: $newTime ms');
+
       // Only update if the new time is better (lower is better)
       if (newTime < currentBestTime) {
         print(
-            'New best time for $timeKey: $newTime ms (previous: $currentBestTime ms)');
+            'DEBUG: New best time for $timeKey: $newTime ms (previous: $currentBestTime ms)');
 
         // Update user document with the new best time
         final updates = <String, dynamic>{
@@ -761,19 +769,25 @@ class LeaderboardService {
         if (difficulty != 'All') {
           final generalOperationTime = bestTimes[operation] ?? 999999;
           if (newTime < generalOperationTime) {
+            print(
+                'DEBUG: Also updating general operation best time: $operation');
             updates['bestTimes.$operation'] = newTime;
           }
         }
 
         await _firestore.collection('users').doc(userId).update(updates);
+        print('DEBUG: Updated user document with new best time');
 
-        // Update the leaderboard entries
+        // Update the leaderboard entries with high score flag
         await updateUserInAllLeaderboards(userId, isHighScore: true);
+        print('DEBUG: Leaderboard update completed for high score');
 
         return true;
+      } else {
+        print(
+            'DEBUG: New time is not better than current best time. No update needed.');
+        return false;
       }
-
-      return false;
     } catch (e) {
       print('Error updating time high score: $e');
       return false;
@@ -787,53 +801,89 @@ class LeaderboardService {
           .doc(leaderboardType)
           .get();
 
-      if (docSnap.exists) {
-        // Try both 'lastUpdated' and 'updatedAt' fields
-        Timestamp? timestamp;
-        if (docSnap.data()!.containsKey('lastUpdated')) {
-          timestamp = docSnap.data()?['lastUpdated'] as Timestamp?;
-        } else if (docSnap.data()!.containsKey('updatedAt')) {
-          timestamp = docSnap.data()?['updatedAt'] as Timestamp?;
-        }
-        return timestamp?.toDate();
+      if (!docSnap.exists) {
+        print('DEBUG: Leaderboard document does not exist: $leaderboardType');
+        // Create the document with an initial timestamp
+        await _firestore.collection('leaderboards').doc(leaderboardType).set({
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        return DateTime.now();
       }
-      return null;
+
+      // Check multiple possible timestamp fields with clear logging
+      Timestamp? timestamp;
+      final data = docSnap.data()!;
+
+      if (data.containsKey('lastUpdated') && data['lastUpdated'] != null) {
+        timestamp = data['lastUpdated'] as Timestamp;
+        print('DEBUG: Found lastUpdated timestamp: ${timestamp.toDate()}');
+      } else if (data.containsKey('updatedAt') && data['updatedAt'] != null) {
+        timestamp = data['updatedAt'] as Timestamp;
+        print('DEBUG: Found updatedAt timestamp: ${timestamp.toDate()}');
+      } else {
+        print('DEBUG: No timestamp found in document. Setting current time.');
+        // Update the document with a current timestamp
+        await _firestore
+            .collection('leaderboards')
+            .doc(leaderboardType)
+            .update({
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+        return DateTime.now();
+      }
+
+      return timestamp.toDate();
     } catch (e) {
       print('Error getting leaderboard last update time: $e');
       return null;
     }
   }
 
-  // Refresh all leaderboards (for admin use or background task)
   Future<void> refreshAllLeaderboards() async {
     try {
-      await _refreshLeaderboard(GAMES_LEADERBOARD, 'totalGames', true);
+      print('DEBUG: Beginning refresh of all leaderboards');
+      final refreshStartTime = DateTime.now();
 
-      // Time leaderboards (lower is better)
+      await _refreshLeaderboard(GAMES_LEADERBOARD, 'totalGames', true);
       await _refreshTimeLeaderboard(ADDITION_TIME, 'addition');
       await _refreshTimeLeaderboard(SUBTRACTION_TIME, 'subtraction');
       await _refreshTimeLeaderboard(MULTIPLICATION_TIME, 'multiplication');
       await _refreshTimeLeaderboard(DIVISION_TIME, 'division');
 
-      // Update leaderboard metadata
+      // Update leaderboard metadata with server timestamp and explicitly check
       final now = FieldValue.serverTimestamp();
-
-      // Create a batch for efficiency
       final batch = _firestore.batch();
-      batch.set(_firestore.collection('leaderboards').doc(GAMES_LEADERBOARD),
-          {'lastUpdated': now}, SetOptions(merge: true));
-      batch.set(_firestore.collection('leaderboards').doc(ADDITION_TIME),
-          {'lastUpdated': now}, SetOptions(merge: true));
-      batch.set(_firestore.collection('leaderboards').doc(SUBTRACTION_TIME),
-          {'lastUpdated': now}, SetOptions(merge: true));
-      batch.set(_firestore.collection('leaderboards').doc(MULTIPLICATION_TIME),
-          {'lastUpdated': now}, SetOptions(merge: true));
-      batch.set(_firestore.collection('leaderboards').doc(DIVISION_TIME),
-          {'lastUpdated': now}, SetOptions(merge: true));
+
+      final leaderboardTypes = [
+        GAMES_LEADERBOARD,
+        ADDITION_TIME,
+        SUBTRACTION_TIME,
+        MULTIPLICATION_TIME,
+        DIVISION_TIME
+      ];
+
+      for (final type in leaderboardTypes) {
+        batch.set(
+            _firestore.collection('leaderboards').doc(type),
+            {
+              'lastUpdated': now,
+              'refreshedAt': refreshStartTime.toIso8601String()
+            },
+            SetOptions(merge: true));
+      }
 
       await batch.commit();
 
-      print('All leaderboards refreshed successfully');
+      // Verify timestamps were updated
+      for (final type in leaderboardTypes) {
+        final doc = await _firestore.collection('leaderboards').doc(type).get();
+        print(
+            'DEBUG: After refresh, $type timestamp: ${doc.data()?["lastUpdated"]}');
+      }
+
+      print(
+          'All leaderboards refreshed successfully at ${refreshStartTime.toIso8601String()}');
     } catch (e) {
       print('Error refreshing all leaderboards: $e');
     }
