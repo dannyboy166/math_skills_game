@@ -70,6 +70,9 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
 
+    print(
+        "GameScreen initialized with: operation=${widget.operationName}, difficulty=${widget.difficultyLevel.displayName}, targetNumber=${widget.targetNumber}");
+
     // Initialize the operation configuration
     operation = OperationConfig.forOperation(widget.operationName);
 

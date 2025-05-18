@@ -329,10 +329,10 @@ class _LevelsScreenState extends State<LevelsScreen> {
         difficultyEnum = DifficultyLevel.challenging;
         break;
       case 'Expert':
-        difficultyEnum = DifficultyLevel.Expert;
+        difficultyEnum = DifficultyLevel.expert;
         break;
       case 'Impossible':
-        difficultyEnum = DifficultyLevel.Impossible;
+        difficultyEnum = DifficultyLevel.impossible;
         break;
       default:
         difficultyEnum = DifficultyLevel.standard;

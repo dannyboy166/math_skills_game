@@ -561,9 +561,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 Colors.green, 'Center number: 1-5'),
             _buildDifficultyCard(DifficultyLevel.challenging, 'Challenging',
                 Colors.blue, 'Center number: 6-10'),
-            _buildDifficultyCard(DifficultyLevel.Expert, 'Expert',
+            _buildDifficultyCard(DifficultyLevel.expert, 'Expert',
                 Colors.orange, 'Center number: 11-20'),
-            _buildDifficultyCard(DifficultyLevel.Impossible, 'Impossible',
+            _buildDifficultyCard(DifficultyLevel.impossible, 'Impossible',
                 Colors.red, 'Center number: 21-50'),
           ],
         ),
@@ -831,14 +831,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTableNumberCard(int number) {
     // Determine category and color
     Color color;
+    DifficultyLevel difficulty;
+
     if ([1, 2, 5, 10].contains(number)) {
       color = Colors.green;
+      difficulty = DifficultyLevel.standard;
     } else if ([3, 4, 6, 11].contains(number)) {
       color = Colors.blue;
+      difficulty = DifficultyLevel.challenging;
     } else if ([7, 8, 9, 12].contains(number)) {
       color = Colors.orange;
+      difficulty = DifficultyLevel.expert;
     } else {
       color = Colors.red;
+      difficulty = DifficultyLevel.impossible;
     }
 
     final bool isSelected = selectedMultiplicationTable == number;
@@ -847,6 +853,8 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () {
         setState(() {
           selectedMultiplicationTable = number;
+          selectedLevel =
+              difficulty; // THIS LINE IS CRUCIAL - Update the difficulty when selecting a table
         });
       },
       child: Container(
@@ -922,12 +930,35 @@ class _HomeScreenState extends State<HomeScreen> {
         ElevatedButton(
           onPressed: canStartGame
               ? () {
+                  // For multiplication/division, determine difficulty based on the selected table
+                  DifficultyLevel difficultyToUse = selectedLevel;
+
+                  if ((selectedOperation == 'multiplication' ||
+                          selectedOperation == 'division') &&
+                      selectedMultiplicationTable != null) {
+                    // Determine proper difficulty based on the table
+                    if ([1, 2, 5, 10].contains(selectedMultiplicationTable)) {
+                      difficultyToUse = DifficultyLevel.standard;
+                    } else if ([3, 4, 6, 11]
+                        .contains(selectedMultiplicationTable)) {
+                      difficultyToUse = DifficultyLevel.challenging;
+                    } else if ([7, 8, 9, 12]
+                        .contains(selectedMultiplicationTable)) {
+                      difficultyToUse =
+                          DifficultyLevel.expert; // lowercase is correct
+                    } else {
+                      difficultyToUse =
+                          DifficultyLevel.impossible; // lowercase is correct
+                    }
+                  }
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => GameScreen(
                         operationName: selectedOperation!,
-                        difficultyLevel: selectedLevel,
+                        difficultyLevel:
+                            difficultyToUse, // ✅ Use the corrected difficulty
                         targetNumber: (selectedOperation == 'multiplication' ||
                                     selectedOperation == 'division') &&
                                 selectedMultiplicationTable != null

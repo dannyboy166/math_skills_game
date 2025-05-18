@@ -4,8 +4,8 @@ import 'dart:math';
 enum DifficultyLevel {
   standard,
   challenging,
-  Expert,
-  Impossible,
+  expert,
+  impossible,
 }
 
 extension DifficultyLevelExtension on DifficultyLevel {
@@ -13,8 +13,8 @@ extension DifficultyLevelExtension on DifficultyLevel {
     switch (this) {
       case DifficultyLevel.standard: return 'Standard';
       case DifficultyLevel.challenging: return 'Challenging';
-      case DifficultyLevel.Expert: return 'Expert';
-      case DifficultyLevel.Impossible: return 'Impossible';
+      case DifficultyLevel.expert: return 'Expert';
+      case DifficultyLevel.impossible: return 'Impossible';
     }
   }
   
@@ -23,8 +23,8 @@ extension DifficultyLevelExtension on DifficultyLevel {
     switch (this) {
       case DifficultyLevel.standard: return 1;
       case DifficultyLevel.challenging: return 6;
-      case DifficultyLevel.Expert: return 11;
-      case DifficultyLevel.Impossible: return 21;
+      case DifficultyLevel.expert: return 11;
+      case DifficultyLevel.impossible: return 21;
     }
   }
   
@@ -32,8 +32,8 @@ extension DifficultyLevelExtension on DifficultyLevel {
     switch (this) {
       case DifficultyLevel.standard: return 5;
       case DifficultyLevel.challenging: return 10;
-      case DifficultyLevel.Expert: return 20;
-      case DifficultyLevel.Impossible: return 50;
+      case DifficultyLevel.expert: return 20;
+      case DifficultyLevel.impossible: return 50;
     }
   }
   
@@ -42,8 +42,8 @@ extension DifficultyLevelExtension on DifficultyLevel {
     switch (this) {
       case DifficultyLevel.standard: return 18;
       case DifficultyLevel.challenging: return 24;
-      case DifficultyLevel.Expert: return 36;
-      case DifficultyLevel.Impossible: return 100;
+      case DifficultyLevel.expert: return 36;
+      case DifficultyLevel.impossible: return 100;
     }
   }
   
@@ -52,9 +52,9 @@ extension DifficultyLevelExtension on DifficultyLevel {
     switch (this) {
       case DifficultyLevel.standard:
       case DifficultyLevel.challenging:
-      case DifficultyLevel.Expert:
+      case DifficultyLevel.expert:
         return List.generate(12, (index) => index + 1); // 1-12
-      case DifficultyLevel.Impossible:
+      case DifficultyLevel.impossible:
         return List.generate(12, (index) => index + 13); // 13-24
     }
   }
