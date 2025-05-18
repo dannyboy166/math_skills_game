@@ -17,9 +17,8 @@ class LeaderboardService {
   static const int MIN_UPDATE_INTERVAL_MINUTES =
       15; // Minimum time between leaderboard updates
 
-  // Leaderboard types
+  // Leaderboard types - SIMPLIFIED to just the ones we want to keep
   static const String GAMES_LEADERBOARD = 'gamesPlayed';
-  static const String STARS_LEADERBOARD = 'stars';
 
   // Time-based leaderboards
   static const String ADDITION_TIME = 'additionTime';
@@ -492,10 +491,8 @@ class LeaderboardService {
       final batch = _firestore.batch();
       int batchCount = 0;
 
-      // Process each leaderboard type
+      // Process each leaderboard type - SIMPLIFIED to only use games and time
       batchCount = await _addGamesLeaderboardToBatch(
-          userId, userData, batch, batchCount);
-      batchCount = await _addStarsLeaderboardToBatch(
           userId, userData, batch, batchCount);
       batchCount = await _addTimeLeaderboardsToBatch(
           userId, userData, batch, batchCount,
@@ -557,60 +554,6 @@ class LeaderboardService {
       return batchCount;
     } catch (e) {
       print('Error adding games leaderboard to batch: $e');
-      return batchCount;
-    }
-  }
-
-  // Add stars leaderboard updates to batch
-  Future<int> _addStarsLeaderboardToBatch(String userId,
-      Map<String, dynamic> userData, WriteBatch batch, int batchCount) async {
-    try {
-      final totalStars = userData['totalStars'] ?? 0;
-
-      // Only update if the user has stars
-      if (totalStars > 0) {
-        // Get current rank
-        final rankSnapshot = await _firestore
-            .collection('leaderboards')
-            .doc(STARS_LEADERBOARD)
-            .collection('entries')
-            .where('totalStars', isGreaterThan: totalStars)
-            .count()
-            .get();
-
-        final newRank = (rankSnapshot.count ?? 0) + 1;
-
-        // Extract operation stars
-        final gameStats = userData['gameStats'] as Map<String, dynamic>? ?? {};
-
-        // Add to batch
-        batch.set(
-            _firestore
-                .collection('leaderboards')
-                .doc(STARS_LEADERBOARD)
-                .collection('entries')
-                .doc(userId),
-            {
-              'userId': userId,
-              'displayName': userData['displayName'] ?? 'Unknown',
-              'totalStars': totalStars,
-              'level': userData['level'] ?? 'Novice',
-              'operationStars': {
-                'addition': gameStats['additionStars'] ?? 0,
-                'subtraction': gameStats['subtractionStars'] ?? 0,
-                'multiplication': gameStats['multiplicationStars'] ?? 0,
-                'division': gameStats['divisionStars'] ?? 0,
-              },
-              'rank': newRank,
-              'updatedAt': FieldValue.serverTimestamp(),
-            });
-
-        return batchCount + 1;
-      }
-
-      return batchCount;
-    } catch (e) {
-      print('Error adding stars leaderboard to batch: $e');
       return batchCount;
     }
   }
@@ -865,7 +808,6 @@ class LeaderboardService {
   Future<void> refreshAllLeaderboards() async {
     try {
       await _refreshLeaderboard(GAMES_LEADERBOARD, 'totalGames', true);
-      await _refreshLeaderboard(STARS_LEADERBOARD, 'totalStars', true);
 
       // Time leaderboards (lower is better)
       await _refreshTimeLeaderboard(ADDITION_TIME, 'addition');
@@ -879,8 +821,6 @@ class LeaderboardService {
       // Create a batch for efficiency
       final batch = _firestore.batch();
       batch.set(_firestore.collection('leaderboards').doc(GAMES_LEADERBOARD),
-          {'lastUpdated': now}, SetOptions(merge: true));
-      batch.set(_firestore.collection('leaderboards').doc(STARS_LEADERBOARD),
           {'lastUpdated': now}, SetOptions(merge: true));
       batch.set(_firestore.collection('leaderboards').doc(ADDITION_TIME),
           {'lastUpdated': now}, SetOptions(merge: true));
@@ -932,17 +872,6 @@ class LeaderboardService {
         if (leaderboardType == GAMES_LEADERBOARD) {
           entryData['totalGames'] = userData['totalGames'] ?? 0;
           entryData['operationCounts'] = userData['completedGames'] ?? {};
-        } else if (leaderboardType == STARS_LEADERBOARD) {
-          entryData['totalStars'] = userData['totalStars'] ?? 0;
-
-          final gameStats =
-              userData['gameStats'] as Map<String, dynamic>? ?? {};
-          entryData['operationStars'] = {
-            'addition': gameStats['additionStars'] ?? 0,
-            'subtraction': gameStats['subtractionStars'] ?? 0,
-            'multiplication': gameStats['multiplicationStars'] ?? 0,
-            'division': gameStats['divisionStars'] ?? 0,
-          };
         }
 
         // Add to batch
@@ -1172,7 +1101,6 @@ class LeaderboardService {
 
       // If no valid cache, get fresh data from Firebase
       final gamesData = await getUserLeaderboardData(userId, GAMES_LEADERBOARD);
-      final starsData = await getUserLeaderboardData(userId, STARS_LEADERBOARD);
       final additionTimeData =
           await getUserLeaderboardData(userId, ADDITION_TIME);
       final subtractionTimeData =
@@ -1184,7 +1112,6 @@ class LeaderboardService {
 
       // Extract ranks
       result[GAMES_LEADERBOARD] = gamesData['rank'] ?? 0;
-      result[STARS_LEADERBOARD] = starsData['rank'] ?? 0;
       result[ADDITION_TIME] = additionTimeData['rank'] ?? 0;
       result[SUBTRACTION_TIME] = subtractionTimeData['rank'] ?? 0;
       result[MULTIPLICATION_TIME] = multiplicationTimeData['rank'] ?? 0;
@@ -1224,9 +1151,6 @@ class LeaderboardService {
       switch (bestCategory) {
         case GAMES_LEADERBOARD:
           categoryName = 'Games Played';
-          break;
-        case STARS_LEADERBOARD:
-          categoryName = 'Stars';
           break;
         case ADDITION_TIME:
           categoryName = 'Addition Time';

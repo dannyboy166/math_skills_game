@@ -1,4 +1,3 @@
-// lib/services/leaderboard_updater.dart
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import './leaderboard_service.dart';

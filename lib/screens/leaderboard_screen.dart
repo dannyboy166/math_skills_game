@@ -1,7 +1,7 @@
 // lib/screens/leaderboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:math_skills_game/services/leaderboard_service.dart';
+import '../services/leaderboard_service.dart';
 import '../models/leaderboard_entry.dart';
 import '../widgets/leaderboard_tab.dart';
 import '../widgets/time_leaderboard_tab.dart';
@@ -15,7 +15,7 @@ class LeaderboardScreen extends StatefulWidget {
 
 class _LeaderboardScreenState extends State<LeaderboardScreen>
     with SingleTickerProviderStateMixin {
-  // Use the consolidated leaderboard service
+  // Use the leaderboard service
   final LeaderboardService _leaderboardService = LeaderboardService();
   late TabController _tabController;
   bool _isLoading = true;
@@ -37,7 +37,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this); // Changed from 3 to 2
+    _tabController = TabController(length: 2, vsync: this); // 2 tabs: Games and Time
     _tabController.addListener(_handleTabChange);
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -259,7 +259,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             AnimatedBuilder(
               animation: _tabController,
               builder: (context, child) {
-                return _tabController.index != 1
+                return _tabController.index == 0
                     ? _buildUpdateInfo()
                     : SizedBox.shrink();
               },
