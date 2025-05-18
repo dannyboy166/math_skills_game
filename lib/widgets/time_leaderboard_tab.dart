@@ -1,3 +1,4 @@
+// lib/widgets/time_leaderboard_tab.dart
 import 'package:flutter/material.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/level_completion_model.dart';
@@ -10,8 +11,7 @@ class TimeLeaderboardTab extends StatefulWidget {
   final List<LeaderboardEntry> divisionLeaderboard;
   final String currentUserId;
   final Future<void> Function() onRefresh;
-  final Future<void> Function(String operation, String difficulty)
-      onDifficultyChanged;
+  final Future<void> Function(String operation, String difficulty) onDifficultyChanged;
 
   const TimeLeaderboardTab({
     Key? key,
@@ -31,14 +31,9 @@ class TimeLeaderboardTab extends StatefulWidget {
 class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     with SingleTickerProviderStateMixin {
   late TabController _operationTabController;
-  int _currentTabIndex = 0;
-  String _currentDifficulty = 'All';
-  bool _isLoading = true;
-
-  // Track current and pending operations/difficulties
   String _currentOperation = 'addition';
-  String _pendingOperation = '';
-  String _pendingDifficulty = '';
+  String _currentDifficulty = 'All';
+  bool _isLoading = false;
 
   // List of difficulty options
   final List<String> _difficulties = [
@@ -53,43 +48,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   void initState() {
     super.initState();
     _operationTabController = TabController(length: 4, vsync: this);
-    _operationTabController.addListener(() {
-      if (!_operationTabController.indexIsChanging) {
-        _currentTabIndex = _operationTabController.index;
-        _currentOperation = _getCurrentOperation();
-
-        // Set pending changes and trigger data loading
-        _loadData(_currentOperation, _currentDifficulty);
-      }
-    });
-
-    // Initial data load
-    _loadData('addition', 'All');
-  }
-
-  // Method to handle data loading and state changes
-  void _loadData(String operation, String difficulty) {
-    setState(() {
-      _isLoading = true;
-      _pendingOperation = operation;
-      _pendingDifficulty = difficulty;
-    });
-
-    // Call the parent's callback to load the data
-    widget.onDifficultyChanged(operation, difficulty).then((_) {
-      // Only update if this is still the pending request (prevent race conditions)
-      if (mounted &&
-          _pendingOperation == operation &&
-          _pendingDifficulty == difficulty) {
-        setState(() {
-          _currentOperation = operation;
-          _currentDifficulty = difficulty;
-          _isLoading = false;
-          _pendingOperation = '';
-          _pendingDifficulty = '';
-        });
-      }
-    });
+    _operationTabController.addListener(_handleOperationTabChanged);
   }
 
   @override
@@ -98,11 +57,112 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     super.dispose();
   }
 
+  void _handleOperationTabChanged() {
+    if (!_operationTabController.indexIsChanging) {
+      final newOperation = _getOperationFromIndex(_operationTabController.index);
+      if (newOperation != _currentOperation) {
+        setState(() {
+          _currentOperation = newOperation;
+        });
+      }
+    }
+  }
+
+  String _getOperationFromIndex(int index) {
+    switch (index) {
+      case 0:
+        return 'addition';
+      case 1:
+        return 'subtraction';
+      case 2:
+        return 'multiplication';
+      case 3:
+        return 'division';
+      default:
+        return 'addition';
+    }
+  }
+
+  List<LeaderboardEntry> _getCurrentLeaderboard() {
+    switch (_currentOperation) {
+      case 'addition':
+        return widget.additionLeaderboard;
+      case 'subtraction':
+        return widget.subtractionLeaderboard;
+      case 'multiplication':
+        return widget.multiplicationLeaderboard;
+      case 'division':
+        return widget.divisionLeaderboard;
+      default:
+        return [];
+    }
+  }
+
+  List<LeaderboardEntry> _getFilteredEntries() {
+    final entries = _getCurrentLeaderboard();
+    if (entries.isEmpty) return [];
+
+    final timeKey = _currentDifficulty == 'All'
+        ? _currentOperation
+        : '$_currentOperation-${_currentDifficulty.toLowerCase()}';
+
+    // Filter entries with valid time for this operation/difficulty
+    final filtered = entries.where((entry) {
+      return entry.bestTimes.containsKey(timeKey) && entry.bestTimes[timeKey]! > 0;
+    }).toList();
+
+    // Sort by time (lower is better)
+    filtered.sort((a, b) {
+      final timeA = a.bestTimes[timeKey] ?? 999999;
+      final timeB = b.bestTimes[timeKey] ?? 999999;
+      return timeA.compareTo(timeB);
+    });
+
+    return filtered;
+  }
+
+  Color _getOperationColor() {
+    switch (_currentOperation) {
+      case 'addition':
+        return Colors.green;
+      case 'subtraction':
+        return Colors.purple;
+      case 'multiplication':
+        return Colors.blue;
+      case 'division':
+        return Colors.orange;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  IconData _getOperationIcon() {
+    switch (_currentOperation) {
+      case 'addition':
+        return Icons.add_circle;
+      case 'subtraction':
+        return Icons.remove_circle;
+      case 'multiplication':
+        return Icons.close;
+      case 'division':
+        return Icons.pie_chart;
+      default:
+        return Icons.calculate;
+    }
+  }
+
+  int _getBestTime(LeaderboardEntry entry) {
+    final timeKey = _currentDifficulty == 'All'
+        ? _currentOperation
+        : '$_currentOperation-${_currentDifficulty.toLowerCase()}';
+    return entry.bestTimes[timeKey] ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildOperationTabBar(),
+        _buildOperationTabs(),
         _buildDifficultySelector(),
         Expanded(
           child: RefreshIndicator(
@@ -111,32 +171,30 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                 _isLoading = true;
               });
               await widget.onRefresh();
-
-              // After refresh, reload current selection
-              await widget.onDifficultyChanged(
-                  _currentOperation, _currentDifficulty);
-
-              if (mounted) {
-                setState(() {
-                  _isLoading = false;
-                });
-              }
+              setState(() {
+                _isLoading = false;
+              });
             },
-            child: _buildCurrentOperationTab(),
+            child: _isLoading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(_getOperationColor()),
+                    ),
+                  )
+                : _buildLeaderboardContent(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildOperationTabBar() {
+  Widget _buildOperationTabs() {
     return Container(
       color: Colors.white,
       child: TabBar(
         controller: _operationTabController,
-        isScrollable: true,
-        indicatorColor: _getOperationColor(_currentTabIndex),
-        labelColor: _getOperationColor(_currentTabIndex),
+        indicatorColor: _getOperationColor(),
+        labelColor: _getOperationColor(),
         unselectedLabelColor: Colors.grey[600],
         tabs: [
           Tab(
@@ -162,12 +220,12 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
 
   Widget _buildDifficultySelector() {
     return Container(
-      height: 60, // Increased height to give more vertical space
+      height: 60,
       color: Colors.grey.shade100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _difficulties.length,
-        padding: EdgeInsets.symmetric(horizontal: 8), // Add padding to the list
+        padding: EdgeInsets.symmetric(horizontal: 8),
         itemBuilder: (context, index) {
           final difficulty = _difficulties[index];
           final isSelected = difficulty == _currentDifficulty;
@@ -175,24 +233,31 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           return GestureDetector(
             onTap: () {
               if (difficulty != _currentDifficulty && !_isLoading) {
-                _loadData(_currentOperation, difficulty);
+                setState(() {
+                  _currentDifficulty = difficulty;
+                  _isLoading = true;
+                });
+                
+                widget.onDifficultyChanged(_currentOperation, difficulty).then((_) {
+                  if (mounted) {
+                    setState(() {
+                      _isLoading = false;
+                    });
+                  }
+                });
               }
             },
             child: Container(
-              padding: EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 10), // Increased padding
-              margin: EdgeInsets.symmetric(
-                  horizontal: 6, vertical: 10), // Increased margin
-              width: 120, // Set a fixed width to ensure text fits
-              alignment: Alignment.center, // Center the text
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              margin: EdgeInsets.symmetric(horizontal: 6, vertical: 10),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? _getOperationColor(_currentTabIndex).withOpacity(0.2)
+                    ? _getOperationColor().withOpacity(0.2)
                     : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isSelected
-                      ? _getOperationColor(_currentTabIndex)
+                      ? _getOperationColor()
                       : Colors.grey.shade300,
                   width: 1.5,
                 ),
@@ -202,11 +267,9 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected
-                      ? _getOperationColor(_currentTabIndex)
+                      ? _getOperationColor()
                       : Colors.grey.shade700,
                 ),
-                textAlign: TextAlign.center, // Center-align the text
-                overflow: TextOverflow.ellipsis, // Handle text overflow
               ),
             ),
           );
@@ -215,59 +278,10 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     );
   }
 
-  String _getCurrentOperation() {
-    switch (_currentTabIndex) {
-      case 0:
-        return 'addition';
-      case 1:
-        return 'subtraction';
-      case 2:
-        return 'multiplication';
-      case 3:
-        return 'division';
-      default:
-        return 'addition';
-    }
-  }
-
-  Widget _buildCurrentOperationTab() {
-    switch (_currentTabIndex) {
-      case 0:
-        return _buildTimeLeaderboard(widget.additionLeaderboard, 'addition',
-            Colors.green, Icons.add_circle);
-      case 1:
-        return _buildTimeLeaderboard(widget.subtractionLeaderboard,
-            'subtraction', Colors.purple, Icons.remove_circle);
-      case 2:
-        return _buildTimeLeaderboard(widget.multiplicationLeaderboard,
-            'multiplication', Colors.blue, Icons.close);
-      case 3:
-        return _buildTimeLeaderboard(widget.divisionLeaderboard, 'division',
-            Colors.orange, Icons.pie_chart);
-      default:
-        return Center(child: Text('No data available'));
-    }
-  }
-
-  Widget _buildTimeLeaderboard(List<LeaderboardEntry> entries, String operation,
-      Color operationColor, IconData operationIcon) {
-    print(
-        'LEADERBOARD DEBUG: build leaderboard for $operation | difficulty: $_currentDifficulty | loading: $_isLoading | entries.length: ${entries.length}');
-
-    if (_isLoading) {
-      print('LEADERBOARD DEBUG: Still loading...');
-      return Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(operationColor),
-        ),
-      );
-    }
-
-    // Only filter when not loading
-    List<LeaderboardEntry> filteredEntries =
-        _getFilteredEntries(entries, operation);
-
-    if (filteredEntries.isEmpty) {
+  Widget _buildLeaderboardContent() {
+    final entries = _getFilteredEntries();
+    
+    if (entries.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -285,274 +299,159 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       );
     }
 
-    return _buildLeaderboardList(
-        filteredEntries, operation, operationColor, operationIcon);
-  }
-
-  // Method to handle filtering of entries
-  List<LeaderboardEntry> _getFilteredEntries(
-      List<LeaderboardEntry> entries, String operation) {
-    List<LeaderboardEntry> filteredEntries = [];
-
-    if (_currentDifficulty == 'All') {
-      print('LEADERBOARD DEBUG: Filtering for general operation: $operation');
-
-      filteredEntries = entries.where((entry) {
-        final hasValidTime = entry.bestTimes.containsKey(operation) &&
-            entry.bestTimes[operation]! > 0;
-        if (!hasValidTime) {
-          print(
-              'SKIP ENTRY: ${entry.displayName} has no valid time for $operation');
-        }
-        return hasValidTime;
-      }).toList();
-
-      if (filteredEntries.isNotEmpty) {
-        print(
-            'LEADERBOARD DEBUG: First valid entry: ${filteredEntries.first.displayName}, time: ${filteredEntries.first.bestTimes[operation]}');
-      }
-
-      filteredEntries.sort((a, b) {
-        final timeA = a.bestTimes[operation]!;
-        final timeB = b.bestTimes[operation]!;
-        return timeA.compareTo(timeB);
-      });
-    } else {
-      final difficultyKey = '$operation-${_currentDifficulty.toLowerCase()}';
-      print('LEADERBOARD DEBUG: Filtering for difficulty: $difficultyKey');
-
-      filteredEntries = entries.where((entry) {
-        final hasValidTime = entry.bestTimes.containsKey(difficultyKey) &&
-            entry.bestTimes[difficultyKey]! > 0;
-        if (!hasValidTime) {
-          print(
-              'SKIP ENTRY: ${entry.displayName} has no valid time for $difficultyKey');
-        }
-        return hasValidTime;
-      }).toList();
-
-      if (filteredEntries.isNotEmpty) {
-        print(
-            'LEADERBOARD DEBUG: First valid entry: ${filteredEntries.first.displayName}, time: ${filteredEntries.first.bestTimes[difficultyKey]}');
-      }
-
-      filteredEntries.sort((a, b) {
-        final timeA = a.bestTimes[difficultyKey]!;
-        final timeB = b.bestTimes[difficultyKey]!;
-        return timeA.compareTo(timeB);
-      });
-    }
-
-    return filteredEntries;
-  }
-
-  // Method to build the leaderboard list
-  Widget _buildLeaderboardList(List<LeaderboardEntry> entries, String operation,
-      Color operationColor, IconData operationIcon) {
     return ListView.builder(
       padding: EdgeInsets.only(top: 16),
-      itemCount: entries.length + 1,
+      itemCount: entries.length + 1, // +1 for top three section
       itemBuilder: (context, index) {
         if (index == 0) {
-          return _buildTopThreeSection(
-              entries, operation, operationColor, operationIcon);
+          return entries.length >= 3 ? _buildTopThreeSection(entries) : SizedBox.shrink();
         }
-
-        final actualIndex = index - 1;
-        final entry = entries[actualIndex];
-        final rank = actualIndex + 1;
-
-        return _buildLeaderboardItem(
-            entry, rank, operation, operationColor, operationIcon);
+        
+        final entry = entries[index - 1];
+        final rank = index; // Rank starts at 1
+        
+        return _buildLeaderboardItem(entry, rank);
       },
     );
   }
 
-  Widget _buildTopThreeSection(List<LeaderboardEntry> entries, String operation,
-      Color operationColor, IconData operationIcon) {
-    if (entries.length < 3) {
-      return SizedBox.shrink();
-    }
-
-    // Ensure our top section has a fixed height with proper constraints
+  Widget _buildTopThreeSection(List<LeaderboardEntry> entries) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      height: 225, // Increased height to accommodate all elements
+      height: 225,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end, // Align items to the bottom
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // Second place
-          if (entries.length > 1)
-            Expanded(
-              child: _buildTopPlaceItem(entries[1], 2, Colors.grey.shade300, 90,
-                  operation, operationColor, operationIcon),
-            ),
-
+          Expanded(
+            child: _buildTopPlaceItem(entries[1], 2, Colors.grey.shade300, 90),
+          ),
+          
           // First place (tallest)
           Expanded(
             flex: 3,
-            child: _buildTopPlaceItem(entries[0], 1, Colors.amber.shade300, 140,
-                operation, operationColor, operationIcon),
+            child: _buildTopPlaceItem(entries[0], 1, Colors.amber.shade300, 140),
           ),
-
+          
           // Third place
-          if (entries.length > 2)
-            Expanded(
-              child: _buildTopPlaceItem(entries[2], 3, Colors.brown.shade300,
-                  60, operation, operationColor, operationIcon),
-            ),
+          Expanded(
+            child: _buildTopPlaceItem(entries[2], 3, Colors.brown.shade300, 60),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTopPlaceItem(
-      LeaderboardEntry entry,
-      int place,
-      Color color,
-      double podiumHeight,
-      String operation,
-      Color operationColor,
-      IconData operationIcon) {
-    // Get the best time for this operation and difficulty
-    int bestTime = _getBestTime(entry, operation);
+  Widget _buildTopPlaceItem(LeaderboardEntry entry, int rank, Color color, double podiumHeight) {
+    final bestTime = _getBestTime(entry);
+    final operationColor = _getOperationColor();
+    final operationIcon = _getOperationIcon(); // Now using the icon
 
-    // Calculate total height needed and ensure it fits within constraints
     return GestureDetector(
       onTap: () {
-        TimeLeaderboardDetail.show(context, entry, place, operation);
+        TimeLeaderboardDetail.show(context, entry, rank, _currentOperation);
       },
-      child: LayoutBuilder(builder: (context, constraints) {
-        // The LayoutBuilder helps us understand how much space we have
-        double availableHeight = constraints.maxHeight;
-
-        // Make sure podium doesn't exceed available space
-        double adjustedPodiumHeight = podiumHeight;
-
-        // Calculate needed height for other elements
-        double topElementsHeight = 112; // Avatar, name, score, spacing
-
-        // Adjust podium height if needed to fit everything
-        if (topElementsHeight + podiumHeight > availableHeight) {
-          adjustedPodiumHeight = availableHeight - topElementsHeight;
-          // Ensure minimum height
-          adjustedPodiumHeight = adjustedPodiumHeight.clamp(50.0, podiumHeight);
-        }
-
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min, // Use minimum space needed
-          children: [
-            // Profile circle
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Profile circle
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(color: color, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                entry.displayName.isNotEmpty 
+                    ? entry.displayName.substring(0, 1).toUpperCase()
+                    : "?",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                   color: color,
-                  width: 3,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  entry.displayName.substring(0, 1).toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
                 ),
               ),
             ),
-
-            SizedBox(height: 8),
-
-            // Name and Score - keep these components compact
-            Container(
-              height: 40, // Fixed height for name and score
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    entry.displayName,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.timer,
-                        size: 14,
-                        color: operationColor,
-                      ),
-                      SizedBox(width: 2),
-                      Text(
-                        StarRatingCalculator.formatTime(bestTime),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: operationColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          ),
+          
+          SizedBox(height: 8),
+          
+          // Name and time
+          Text(
+            entry.displayName,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
             ),
-
-            SizedBox(height: 8),
-
-            // Podium with adjusted height
-            Container(
-              width: double.infinity,
-              height: adjustedPodiumHeight,
-              margin: EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(operationIcon, size: 12, color: operationColor),
+              SizedBox(width: 2),
+              Text(
+                StarRatingCalculator.formatTime(bestTime),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: operationColor,
+                ),
               ),
-              child: Center(
-                child: Text(
-                  '#$place',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+            ],
+          ),
+          
+          SizedBox(height: 8),
+          
+          // Podium
+          Container(
+            width: double.infinity,
+            height: podiumHeight,
+            margin: EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                '#$rank',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
             ),
-          ],
-        );
-      }),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildLeaderboardItem(LeaderboardEntry entry, int rank,
-      String operation, Color operationColor, IconData operationIcon) {
+  Widget _buildLeaderboardItem(LeaderboardEntry entry, int rank) {
     final isCurrentUser = entry.userId == widget.currentUserId;
-    final bestTime = _getBestTime(entry, operation);
+    final bestTime = _getBestTime(entry);
+    final operationColor = _getOperationColor();
+    final operationIcon = _getOperationIcon(); // Now using the icon
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -573,7 +472,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
       ),
       child: ListTile(
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: _buildRank(rank, isCurrentUser),
+        leading: _buildRankBadge(rank, isCurrentUser),
         title: Text(
           entry.displayName,
           style: TextStyle(
@@ -601,7 +500,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.timer,
+                operationIcon, // Now using the icon
                 size: 16,
                 color: operationColor,
               ),
@@ -621,14 +520,14 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
             context,
             entry,
             rank,
-            operation,
+            _currentOperation,
           );
         },
       ),
     );
   }
 
-  Widget _buildRank(int rank, bool isCurrentUser) {
+  Widget _buildRankBadge(int rank, bool isCurrentUser) {
     Color backgroundColor;
     Color textColor;
 
@@ -646,12 +545,15 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         textColor = Colors.white;
         break;
       default:
-        backgroundColor =
-            isCurrentUser ? Colors.blue.shade100 : Colors.grey.shade100;
-        textColor = isCurrentUser ? Colors.blue : Colors.grey.shade700;
+        backgroundColor = isCurrentUser 
+            ? Colors.blue.shade100 
+            : Colors.grey.shade100;
+        textColor = isCurrentUser 
+            ? Colors.blue 
+            : Colors.grey.shade700;
         break;
     }
-
+    
     return Container(
       width: 36,
       height: 36,
@@ -670,32 +572,5 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         ),
       ),
     );
-  }
-
-  Color _getOperationColor(int index) {
-    switch (index) {
-      case 0:
-        return Colors.green; // Addition
-      case 1:
-        return Colors.purple; // Subtraction
-      case 2:
-        return Colors.blue; // Multiplication
-      case 3:
-        return Colors.orange; // Division
-      default:
-        return Colors.blue;
-    }
-  }
-
-  int _getBestTime(LeaderboardEntry entry, String operation) {
-    final key = _currentDifficulty == 'All'
-        ? operation
-        : '$operation-${_currentDifficulty.toLowerCase()}';
-
-    final time = entry.bestTimes[key];
-    print(
-        'DEBUG: ${entry.displayName} best time for "$key": ${time ?? 'none'}');
-
-    return time ?? 999999;
   }
 }

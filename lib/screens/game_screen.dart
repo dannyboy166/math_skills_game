@@ -7,7 +7,7 @@ import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
 import 'package:math_skills_game/services/haptic_service.dart';
-import 'package:math_skills_game/services/scalable_leaderboard_service.dart';
+import 'package:math_skills_game/services/leaderboard_service.dart';
 import 'package:math_skills_game/services/sound_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/services/user_stats_service.dart';
@@ -654,7 +654,7 @@ class _GameScreenState extends State<GameScreen> {
         // IMPROVED: Direct leaderboard update for current user
         try {
           // First update the scalable leaderboard for this user
-          final leaderboardService = ScalableLeaderboardService();
+          final leaderboardService = LeaderboardService();
           // Check if this is a new best time
 
           // Check if this is a new best time
@@ -735,8 +735,6 @@ class _GameScreenState extends State<GameScreen> {
 
 // Update leaderboards with the high score flag
           await leaderboardService.updateUserInAllLeaderboards(userId,
-              isHighScore: isHighScore);
-          await leaderboardService.updateUserInStreakLeaderboard(userId,
               isHighScore: isHighScore);
 
           print("Leaderboard data updated successfully");

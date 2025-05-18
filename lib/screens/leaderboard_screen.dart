@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:math_skills_game/services/leaderboard_updater.dart';
-import 'package:math_skills_game/services/scalable_leaderboard_service.dart';
+import 'package:math_skills_game/services/leaderboard_service.dart';
 import '../models/leaderboard_entry.dart';
 import '../widgets/leaderboard_tab.dart';
 import '../widgets/time_leaderboard_tab.dart';
@@ -15,29 +14,25 @@ class LeaderboardScreen extends StatefulWidget {
 
 class _LeaderboardScreenState extends State<LeaderboardScreen>
     with SingleTickerProviderStateMixin {
-  // Use the scalable leaderboard service
-  final ScalableLeaderboardService _leaderboardService =
-      ScalableLeaderboardService();
+  // Use the consolidated leaderboard service
+  final LeaderboardService _leaderboardService = LeaderboardService();
   late TabController _tabController;
   bool _isLoading = true;
   int _currentUserRank = 0;
   String _currentUserId = '';
 
-  // Data for each leaderboard type
-  List<LeaderboardEntry>? _streakLeaderboard;
+  // Leaderboard data
   List<LeaderboardEntry>? _gamesLeaderboard;
-  // Time-based leaderboards
-  List<LeaderboardEntry>? _additionTimeLeaderboard;
-  List<LeaderboardEntry>? _subtractionTimeLeaderboard;
-  List<LeaderboardEntry>? _multiplicationTimeLeaderboard;
-  List<LeaderboardEntry>? _divisionTimeLeaderboard;
+  List<LeaderboardEntry>? _streakLeaderboard;
+  Map<String, List<LeaderboardEntry>> _timeLeaderboards = {
+    'addition': [],
+    'subtraction': [],
+    'multiplication': [],
+    'division': [],
+  };
 
-// Add only these state variables
-  DateTime? _streakLeaderboardLastUpdated;
-  DateTime? _gamesLeaderboardLastUpdated;
-
-  // Track currently loading time leaderboards to prevent race conditions
-  final Map<String, bool> _loadingTimeLeaderboards = {};
+  // Track last updated time
+  DateTime? _lastUpdated;
 
   @override
   void initState() {
@@ -46,17 +41,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     _tabController.addListener(_handleTabChange);
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    // Initialize all leaderboard lists as null to trigger loading state
-    _streakLeaderboard = null;
-    _gamesLeaderboard = null;
-    _additionTimeLeaderboard = null;
-    _subtractionTimeLeaderboard = null;
-    _multiplicationTimeLeaderboard = null;
-    _divisionTimeLeaderboard = null;
-
-    // Start the leaderboard updater
-    LeaderboardUpdater().startUpdates();
-
+    // Load initial data
     _loadInitialData();
   }
 
@@ -78,18 +63,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     });
 
     try {
-      // First load the games leaderboard (now the default tab)
+      // Load games leaderboard (default tab)
       await _loadGamesLeaderboard();
 
-      // Get user's rank from the scalable leaderboard
+      // Get user's rank
       final userData = await _leaderboardService.getUserLeaderboardData(
-          _currentUserId, ScalableLeaderboardService.GAMES_LEADERBOARD);
-
-      final rank = userData['rank'] as int? ?? 0;
+          _currentUserId, LeaderboardService.GAMES_LEADERBOARD);
 
       if (mounted) {
         setState(() {
-          _currentUserRank = rank;
+          _currentUserRank = userData['rank'] as int? ?? 0;
           _isLoading = false;
         });
       }
@@ -103,7 +86,127 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
   }
 
-// Add this method to your LeaderboardScreen class
+  Future<void> _loadTabData(int tabIndex) async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    try {
+      switch (tabIndex) {
+        case 0: // Games tab
+          await _loadGamesLeaderboard();
+          break;
+        case 1: // Time tab
+          await _loadAllTimeLeaderboards();
+          break;
+        case 2: // Streak tab
+          await _loadStreakLeaderboard();
+          break;
+      }
+    } catch (e) {
+      print('Error loading tab data for index $tabIndex: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadGamesLeaderboard() async {
+    final entries = await _leaderboardService.getTopLeaderboardEntries(
+        LeaderboardService.GAMES_LEADERBOARD,
+        limit: 20);
+
+    final lastUpdated = await _leaderboardService
+        .getLeaderboardLastUpdateTime(LeaderboardService.GAMES_LEADERBOARD);
+
+    if (mounted) {
+      setState(() {
+        _gamesLeaderboard = entries;
+        _lastUpdated = lastUpdated;
+      });
+    }
+  }
+
+  Future<void> _loadStreakLeaderboard() async {
+    final entries = await _leaderboardService.getTopLeaderboardEntries(
+        LeaderboardService.STREAK_LEADERBOARD,
+        limit: 20);
+
+    final lastUpdated = await _leaderboardService
+        .getLeaderboardLastUpdateTime(LeaderboardService.STREAK_LEADERBOARD);
+
+    if (mounted) {
+      setState(() {
+        _streakLeaderboard = entries;
+        _lastUpdated = lastUpdated;
+      });
+    }
+  }
+
+  Future<void> _loadAllTimeLeaderboards() async {
+    try {
+      // Load all time leaderboards in parallel
+      final futures = <Future>[];
+
+      for (final operation in [
+        'addition',
+        'subtraction',
+        'multiplication',
+        'division'
+      ]) {
+        futures.add(_loadTimeLeaderboard(operation));
+      }
+
+      await Future.wait(futures);
+    } catch (e) {
+      print('Error loading time leaderboards: $e');
+    }
+  }
+
+  Future<void> _loadTimeLeaderboard(String operation,
+      {String? difficulty}) async {
+    final leaderboardType = _getTimeLeaderboardType(operation);
+
+    List<LeaderboardEntry> entries;
+    if (difficulty != null && difficulty != 'All') {
+      entries = await _leaderboardService.getTopEntriesForDifficulty(
+          leaderboardType, difficulty.toLowerCase(), 20);
+    } else {
+      entries = await _leaderboardService
+          .getTopLeaderboardEntries(leaderboardType, limit: 20);
+    }
+
+    if (mounted) {
+      setState(() {
+        _timeLeaderboards[operation] = entries;
+      });
+    }
+  }
+
+  String _getTimeLeaderboardType(String operation) {
+    switch (operation) {
+      case 'addition':
+        return LeaderboardService.ADDITION_TIME;
+      case 'subtraction':
+        return LeaderboardService.SUBTRACTION_TIME;
+      case 'multiplication':
+        return LeaderboardService.MULTIPLICATION_TIME;
+      case 'division':
+        return LeaderboardService.DIVISION_TIME;
+      default:
+        return LeaderboardService.ADDITION_TIME;
+    }
+  }
+
+  Future<void> _refreshCurrentTab() async {
+    await _loadTabData(_tabController.index);
+  }
+
   String _formatTimestamp(DateTime? timestamp) {
     if (timestamp == null) return 'Not yet updated';
 
@@ -121,209 +224,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
   }
 
-  Future<void> _loadTabData(int tabIndex) async {
-    // Time tab is now index 1
-    if (tabIndex == 1) {
-      // Always set loading state to true when entering time tab
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        // Load all operation time leaderboards
-        await Future.wait([
-          _loadTimeLeaderboard('addition'),
-          _loadTimeLeaderboard('subtraction'),
-          _loadTimeLeaderboard('multiplication'),
-          _loadTimeLeaderboard('division'),
-        ]);
-      } catch (e) {
-        print('Error loading time leaderboards: $e');
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
-      return;
-    }
-
-    // For other tabs, check if data is already loaded
-    if (tabIndex == 0 &&
-        _gamesLeaderboard != null &&
-        _gamesLeaderboard!.isNotEmpty) return;
-    if (tabIndex == 2 &&
-        _streakLeaderboard != null &&
-        _streakLeaderboard!.isNotEmpty) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      switch (tabIndex) {
-        case 0:
-          await _loadGamesLeaderboard();
-          break;
-        case 2:
-          await _loadStreakLeaderboard();
-          break;
-      }
-    } catch (e) {
-      print('Error loading tab data: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _loadStreakLeaderboard() async {
-    // Use the scalable service to get top entries
-    final leaderboard = await _leaderboardService.getTopLeaderboardEntries(
-        ScalableLeaderboardService.STREAK_LEADERBOARD,
-        limit: 20);
-
-    // Get last updated time
-    final lastUpdated = await _leaderboardService.getLeaderboardLastUpdateTime(
-        ScalableLeaderboardService.STREAK_LEADERBOARD);
-
-    if (mounted) {
-      setState(() {
-        _streakLeaderboard = leaderboard;
-        _streakLeaderboardLastUpdated = lastUpdated;
-      });
-    }
-  }
-
-  Future<void> _loadGamesLeaderboard() async {
-    // Use the scalable service to get top entries
-    final leaderboard = await _leaderboardService.getTopLeaderboardEntries(
-        ScalableLeaderboardService.GAMES_LEADERBOARD,
-        limit: 20);
-
-    // Get last updated time
-    final lastUpdated = await _leaderboardService.getLeaderboardLastUpdateTime(
-        ScalableLeaderboardService.GAMES_LEADERBOARD);
-
-    if (mounted) {
-      setState(() {
-        _gamesLeaderboard = leaderboard;
-        _gamesLeaderboardLastUpdated = lastUpdated;
-      });
-    }
-  }
-
-// Modified to track loading state and prevent race conditions
-  Future<void> _loadTimeLeaderboard(String operation,
-      {String? difficulty}) async {
-    // Create a unique key for this load operation
-    final loadKey = difficulty != null && difficulty != 'All'
-        ? '$operation-${difficulty.toLowerCase()}'
-        : operation;
-
-    // If already loading this exact combination, return the existing operation
-    if (_loadingTimeLeaderboards[loadKey] == true) {
-      print(
-          'LEADERBOARD DEBUG: Already loading $loadKey, skipping duplicate request');
-      // Wait for the existing operation to complete
-      while (_loadingTimeLeaderboards[loadKey] == true) {
-        await Future.delayed(Duration(milliseconds: 50));
-      }
-      return;
-    }
-
-    // Mark this combination as loading
-    _loadingTimeLeaderboards[loadKey] = true;
-    print('LEADERBOARD DEBUG: Started loading $loadKey');
-
-    try {
-      String leaderboardType = _getTimeLeaderboardType(operation);
-
-      if (difficulty != null && difficulty != 'All') {
-        // Load difficulty-specific leaderboard from scalable service
-        final leaderboard =
-            await _leaderboardService.getTopEntriesForDifficulty(
-                leaderboardType, difficulty.toLowerCase(), 20);
-
-        if (mounted) {
-          setState(() {
-            switch (operation) {
-              case 'addition':
-                _additionTimeLeaderboard = leaderboard;
-                break;
-              case 'subtraction':
-                _subtractionTimeLeaderboard = leaderboard;
-                break;
-              case 'multiplication':
-                _multiplicationTimeLeaderboard = leaderboard;
-                break;
-              case 'division':
-                _divisionTimeLeaderboard = leaderboard;
-                break;
-            }
-            // Use a single variable for all time leaderboard timestamps
-          });
-        }
-      } else {
-        // Load overall operation leaderboard from scalable service
-        final leaderboard = await _leaderboardService
-            .getTopLeaderboardEntries(leaderboardType, limit: 20);
-
-        if (mounted) {
-          setState(() {
-            switch (operation) {
-              case 'addition':
-                _additionTimeLeaderboard = leaderboard;
-                break;
-              case 'subtraction':
-                _subtractionTimeLeaderboard = leaderboard;
-                break;
-              case 'multiplication':
-                _multiplicationTimeLeaderboard = leaderboard;
-                break;
-              case 'division':
-                _divisionTimeLeaderboard = leaderboard;
-                break;
-            }
-            // Use a single variable for all time leaderboard timestamps
-          });
-        }
-      }
-      print('LEADERBOARD DEBUG: Finished loading $loadKey');
-    } catch (e) {
-      print('Error loading time leaderboard for $loadKey: $e');
-    } finally {
-      // Mark this combination as no longer loading
-      _loadingTimeLeaderboards[loadKey] = false;
-    }
-  }
-
-  // Helper method to get the correct leaderboard type for time leaderboards
-  String _getTimeLeaderboardType(String operation) {
-    switch (operation) {
-      case 'addition':
-        return ScalableLeaderboardService.ADDITION_TIME;
-      case 'subtraction':
-        return ScalableLeaderboardService.SUBTRACTION_TIME;
-      case 'multiplication':
-        return ScalableLeaderboardService.MULTIPLICATION_TIME;
-      case 'division':
-        return ScalableLeaderboardService.DIVISION_TIME;
-      default:
-        return ScalableLeaderboardService.ADDITION_TIME;
-    }
-  }
-
-  Future<void> _refreshCurrentTab() async {
-    await _loadTabData(_tabController.index);
-  }
-
-// Add this method to your LeaderboardScreen class
-  Widget _buildUpdateInfo(String leaderboardType, DateTime? lastUpdated) {
+  Widget _buildUpdateInfo() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -334,7 +235,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               Icon(Icons.update, size: 14, color: Colors.grey.shade600),
               SizedBox(width: 4),
               Text(
-                'Last updated: ${_formatTimestamp(lastUpdated)}',
+                'Last updated: ${_formatTimestamp(_lastUpdated)}',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade600,
@@ -343,39 +244,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               ),
             ],
           ),
-
-          // Add different messages based on leaderboard type
-          if (leaderboardType == ScalableLeaderboardService.STREAK_LEADERBOARD)
-            Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Text(
-                'Streak updates occur once per day.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            )
-          else if (leaderboardType ==
-              ScalableLeaderboardService.GAMES_LEADERBOARD)
-            Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline,
-                      size: 14, color: Colors.blue.shade300),
-                  SizedBox(width: 4),
-                  Text(
-                    'Updates every 15 minutes to optimize performance',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.blue.shade300,
-                    ),
+          Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 14, color: Colors.blue.shade300),
+                SizedBox(width: 4),
+                Text(
+                  'Updates every 15 minutes to optimize performance',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue.shade300,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -390,22 +274,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             _buildHeader(),
             _buildTabBar(),
 
-            // Add this AnimatedBuilder to detect tab changes
+            // Only show update info for games and streaks tabs
             AnimatedBuilder(
               animation: _tabController,
               builder: (context, child) {
-                // Only show update info for games and streaks tabs
-                if (_tabController.index == 0) {
-                  return _buildUpdateInfo(
-                      ScalableLeaderboardService.GAMES_LEADERBOARD,
-                      _gamesLeaderboardLastUpdated);
-                } else if (_tabController.index == 2) {
-                  return _buildUpdateInfo(
-                      ScalableLeaderboardService.STREAK_LEADERBOARD,
-                      _streakLeaderboardLastUpdated);
-                }
-                // No info for time tab
-                return SizedBox.shrink();
+                return _tabController.index != 1
+                    ? _buildUpdateInfo()
+                    : SizedBox.shrink();
               },
             ),
 
@@ -413,6 +288,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               child: TabBarView(
                 controller: _tabController,
                 children: [
+                  // Games Tab
                   LeaderboardTab(
                     leaderboardEntries: _gamesLeaderboard,
                     currentUserId: _currentUserId,
@@ -421,29 +297,26 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     valueIcon: Icons.sports_esports,
                     valueColor: Colors.blue,
                     onRefresh: _refreshCurrentTab,
-                    isLoading: _isLoading, // Pass global loading state
+                    isLoading: _isLoading,
                   ),
-                  Column(
-                    children: [
-                      Expanded(
-                        child: TimeLeaderboardTab(
-                          additionLeaderboard: _additionTimeLeaderboard ?? [],
-                          subtractionLeaderboard:
-                              _subtractionTimeLeaderboard ?? [],
-                          multiplicationLeaderboard:
-                              _multiplicationTimeLeaderboard ?? [],
-                          divisionLeaderboard: _divisionTimeLeaderboard ?? [],
-                          currentUserId: _currentUserId,
-                          onRefresh: _refreshCurrentTab,
-                          onDifficultyChanged: (operation, difficulty) async {
-                            // Now returns the Future from _loadTimeLeaderboard
-                            await _loadTimeLeaderboard(operation,
-                                difficulty: difficulty);
-                          },
-                        ),
-                      ),
-                    ],
+
+                  // Time Tab
+                  TimeLeaderboardTab(
+                    additionLeaderboard: _timeLeaderboards['addition'] ?? [],
+                    subtractionLeaderboard:
+                        _timeLeaderboards['subtraction'] ?? [],
+                    multiplicationLeaderboard:
+                        _timeLeaderboards['multiplication'] ?? [],
+                    divisionLeaderboard: _timeLeaderboards['division'] ?? [],
+                    currentUserId: _currentUserId,
+                    onRefresh: _refreshCurrentTab,
+                    onDifficultyChanged: (operation, difficulty) async {
+                      await _loadTimeLeaderboard(operation,
+                          difficulty: difficulty);
+                    },
                   ),
+
+                  // Streak Tab
                   LeaderboardTab(
                     leaderboardEntries: _streakLeaderboard,
                     currentUserId: _currentUserId,
@@ -452,7 +325,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     valueIcon: Icons.local_fire_department_rounded,
                     valueColor: Colors.deepOrange,
                     onRefresh: _refreshCurrentTab,
-                    isLoading: _isLoading, // Pass global loading state
+                    isLoading: _isLoading,
                   ),
                 ],
               ),

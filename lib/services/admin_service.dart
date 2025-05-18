@@ -1,13 +1,12 @@
 // lib/services/admin_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:math_skills_game/services/scalable_leaderboard_service.dart';
+import 'package:math_skills_game/services/leaderboard_service.dart';
 
 class AdminService {
   static const String ADMIN_USER_ID = '51xmsPQN8eNpiPVueybYjz4sqsp1';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final ScalableLeaderboardService _leaderboardService =
-      ScalableLeaderboardService();
+  final LeaderboardService _leaderboardService = LeaderboardService();
 
   // Check if the current user is an admin
   bool isCurrentUserAdmin() {

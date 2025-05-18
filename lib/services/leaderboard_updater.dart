@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import './leaderboard_service.dart';
-import './scalable_leaderboard_service.dart'; // Add this import
 
 class LeaderboardUpdater {
   static final LeaderboardUpdater _instance = LeaderboardUpdater._internal();
@@ -10,7 +9,6 @@ class LeaderboardUpdater {
   LeaderboardUpdater._internal();
 
   final LeaderboardService _leaderboardService = LeaderboardService();
-  final ScalableLeaderboardService _scalableLeaderboardService = ScalableLeaderboardService(); // Add this
   
   Timer? _updateTimer;
   bool _isUpdating = false;
@@ -40,11 +38,8 @@ class LeaderboardUpdater {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Update the user's data in the legacy leaderboard
-        await _leaderboardService.updateUserRankingData(user.uid);
-        
-        // ADDED: Also update in the scalable leaderboard system
-        await _scalableLeaderboardService.updateUserInAllLeaderboards(user.uid);
+        // Update the user in all leaderboards using our consolidated service
+        await _leaderboardService.updateUserInAllLeaderboards(user.uid);
       }
     } catch (e) {
       print('Error updating leaderboard rankings: $e');
@@ -58,17 +53,56 @@ class LeaderboardUpdater {
     return _updateCurrentUserRankings();
   }
   
-  // ADDED: Method to fully refresh all leaderboards (for admin use or scheduled task)
+  // Update a time high score (optimized path for game completions)
+  Future<bool> updateTimeHighScore(String userId, String operation, String difficulty, int newTime) async {
+    try {
+      if (_isUpdating) {
+        // If already updating, wait for completion
+        int attempts = 0;
+        while (_isUpdating && attempts < 10) {
+          await Future.delayed(Duration(milliseconds: 100));
+          attempts++;
+        }
+        if (_isUpdating) {
+          print('Warning: Update is taking too long, proceeding with high score update anyway');
+        }
+      }
+      
+      _isUpdating = true;
+      
+      // Use the optimized high score update method
+      final result = await _leaderboardService.updateTimeHighScore(
+          userId, operation, difficulty, newTime);
+          
+      return result;
+    } catch (e) {
+      print('Error updating time high score: $e');
+      return false;
+    } finally {
+      _isUpdating = false;
+    }
+  }
+  
+  // Refresh all leaderboards (for admin use or background task)
   Future<void> refreshAllLeaderboards() async {
     if (_isUpdating) return;
     _isUpdating = true;
     
     try {
-      await _scalableLeaderboardService.refreshAllLeaderboards();
+      await _leaderboardService.refreshAllLeaderboards();
     } catch (e) {
       print('Error refreshing all leaderboards: $e');
     } finally {
       _isUpdating = false;
+    }
+  }
+  
+  // Clear leaderboard cache
+  Future<void> clearLeaderboardCache() async {
+    try {
+      await _leaderboardService.clearCache();
+    } catch (e) {
+      print('Error clearing leaderboard cache: $e');
     }
   }
 }
