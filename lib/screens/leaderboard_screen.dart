@@ -74,12 +74,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     });
 
     try {
-      // First load the streaks leaderboard (now the default tab)
-      await _loadStreakLeaderboard();
+      // First load the games leaderboard (now the default tab)
+      await _loadGamesLeaderboard();
 
       // Get user's rank from the scalable leaderboard
       final userData = await _leaderboardService.getUserLeaderboardData(
-          _currentUserId, ScalableLeaderboardService.STREAK_LEADERBOARD);
+          _currentUserId, ScalableLeaderboardService.GAMES_LEADERBOARD);
 
       final rank = userData['rank'] as int? ?? 0;
 
@@ -100,8 +100,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   Future<void> _loadTabData(int tabIndex) async {
-    // Time tab is index 2
-    if (tabIndex == 2) {
+    // Time tab is now index 1
+    if (tabIndex == 1) {
       // Always set loading state to true when entering time tab
       setState(() {
         _isLoading = true;
@@ -129,11 +129,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
     // For other tabs, check if data is already loaded
     if (tabIndex == 0 &&
-        _streakLeaderboard != null &&
-        _streakLeaderboard!.isNotEmpty) return;
-    if (tabIndex == 1 &&
         _gamesLeaderboard != null &&
         _gamesLeaderboard!.isNotEmpty) return;
+    if (tabIndex == 2 &&
+        _streakLeaderboard != null &&
+        _streakLeaderboard!.isNotEmpty) return;
 
     setState(() {
       _isLoading = true;
@@ -142,10 +142,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     try {
       switch (tabIndex) {
         case 0:
-          await _loadStreakLeaderboard();
-          break;
-        case 1:
           await _loadGamesLeaderboard();
+          break;
+        case 2:
+          await _loadStreakLeaderboard();
           break;
       }
     } catch (e) {
@@ -192,28 +192,30 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     final loadKey = difficulty != null && difficulty != 'All'
         ? '$operation-${difficulty.toLowerCase()}'
         : operation;
-    
+
     // If already loading this exact combination, return the existing operation
     if (_loadingTimeLeaderboards[loadKey] == true) {
-      print('LEADERBOARD DEBUG: Already loading $loadKey, skipping duplicate request');
+      print(
+          'LEADERBOARD DEBUG: Already loading $loadKey, skipping duplicate request');
       // Wait for the existing operation to complete
       while (_loadingTimeLeaderboards[loadKey] == true) {
         await Future.delayed(Duration(milliseconds: 50));
       }
       return;
     }
-    
+
     // Mark this combination as loading
     _loadingTimeLeaderboards[loadKey] = true;
     print('LEADERBOARD DEBUG: Started loading $loadKey');
-    
+
     try {
       String leaderboardType = _getTimeLeaderboardType(operation);
 
       if (difficulty != null && difficulty != 'All') {
         // Load difficulty-specific leaderboard from scalable service
-        final leaderboard = await _leaderboardService.getTopEntriesForDifficulty(
-            leaderboardType, difficulty.toLowerCase(), 20);
+        final leaderboard =
+            await _leaderboardService.getTopEntriesForDifficulty(
+                leaderboardType, difficulty.toLowerCase(), 20);
 
         if (mounted) {
           setState(() {
@@ -299,16 +301,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                 controller: _tabController,
                 children: [
                   LeaderboardTab(
-                    leaderboardEntries: _streakLeaderboard,
-                    currentUserId: _currentUserId,
-                    valueSelector: (entry) => entry.longestStreak,
-                    valueLabel: 'days',
-                    valueIcon: Icons.local_fire_department_rounded,
-                    valueColor: Colors.deepOrange,
-                    onRefresh: _refreshCurrentTab,
-                    isLoading: _isLoading, // Pass global loading state
-                  ),
-                  LeaderboardTab(
                     leaderboardEntries: _gamesLeaderboard,
                     currentUserId: _currentUserId,
                     valueSelector: (entry) => entry.totalGames,
@@ -328,8 +320,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     onRefresh: _refreshCurrentTab,
                     onDifficultyChanged: (operation, difficulty) async {
                       // Now returns the Future from _loadTimeLeaderboard
-                      await _loadTimeLeaderboard(operation, difficulty: difficulty);
+                      await _loadTimeLeaderboard(operation,
+                          difficulty: difficulty);
                     },
+                  ),
+                  LeaderboardTab(
+                    leaderboardEntries: _streakLeaderboard,
+                    currentUserId: _currentUserId,
+                    valueSelector: (entry) => entry.longestStreak,
+                    valueLabel: 'days',
+                    valueIcon: Icons.local_fire_department_rounded,
+                    valueColor: Colors.deepOrange,
+                    onRefresh: _refreshCurrentTab,
+                    isLoading: _isLoading, // Pass global loading state
                   ),
                 ],
               ),
@@ -419,16 +422,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         unselectedLabelColor: Colors.grey[600],
         tabs: [
           Tab(
-            icon: Icon(Icons.local_fire_department_rounded),
-            text: 'Streaks',
-          ),
-          Tab(
             icon: Icon(Icons.sports_esports),
             text: 'Games',
           ),
           Tab(
             icon: Icon(Icons.timer),
             text: 'Time',
+          ),
+          Tab(
+            icon: Icon(Icons.local_fire_department_rounded),
+            text: 'Streaks',
           ),
         ],
       ),
