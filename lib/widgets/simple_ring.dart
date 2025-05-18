@@ -225,7 +225,7 @@ class _SimpleRingState extends State<SimpleRing>
     final region = _determineRegion(startPos, size);
 
     // Threshold for drag sensitivity - increased for less sensitivity
-    final dragThreshold = 65.0; // Increased from 3 to 15
+    final dragThreshold = 40.0; // Increased from 3 to 15
 
     // Determine rotation direction based on region and drag direction
     switch (region) {
