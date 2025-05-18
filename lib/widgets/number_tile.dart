@@ -6,20 +6,20 @@ class NumberTile extends StatefulWidget {
   final int number;
   final Color color;
   final bool isLocked;
-  final bool isCorner; // New parameter to indicate if it's a corner position
+  final bool isCorner; 
   final VoidCallback? onTap;
   final double size;
-  final double sizeMultiplier; // New parameter for size adjustment
+  final double sizeMultiplier;
 
   const NumberTile({
     Key? key,
     required this.number,
     required this.color,
     this.isLocked = false,
-    this.isCorner = false, // Default value
+    this.isCorner = false,
     this.onTap,
     this.size = 45,
-    this.sizeMultiplier = 1.0, // Default value (no size change)
+    this.sizeMultiplier = 1.0,
   }) : super(key: key);
 
   @override
@@ -44,6 +44,11 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
         curve: Curves.easeInOut,
       ),
     );
+
+    // Debug print on init
+    if (widget.isCorner) {
+      print("DEBUG: Corner NumberTile initialized with number ${widget.number}, onTap is ${widget.onTap != null ? 'set' : 'null'}");
+    }
   }
 
   @override
@@ -53,7 +58,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   void _handleTapDown(TapDownDetails details) {
-    if (!widget.isLocked && widget.onTap != null) {
+    if (widget.onTap != null) {
+      print("DEBUG: TapDown on NumberTile ${widget.number}, isCorner: ${widget.isCorner}");
       setState(() {
         _isPressed = true;
       });
@@ -62,7 +68,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   void _handleTapUp(TapUpDetails details) {
-    if (!widget.isLocked && widget.onTap != null) {
+    if (widget.onTap != null) {
+      print("DEBUG: TapUp on NumberTile ${widget.number}, isCorner: ${widget.isCorner}");
       setState(() {
         _isPressed = false;
       });
@@ -71,7 +78,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   void _handleTapCancel() {
-    if (!widget.isLocked && widget.onTap != null) {
+    if (widget.onTap != null) {
+      print("DEBUG: TapCancel on NumberTile ${widget.number}");
       setState(() {
         _isPressed = false;
       });
@@ -100,59 +108,72 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
     
     return Semantics(
       button: true,
-      enabled: !widget.isLocked,
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: GestureDetector(
-              onTap: widget.isLocked ? null : widget.onTap,
-              onTapDown: _handleTapDown,
-              onTapUp: _handleTapUp,
-              onTapCancel: _handleTapCancel,
-              child: AnimatedContainer(
-                duration: Duration(milliseconds: 200),
-                width: adjustedSize,
-                height: adjustedSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      lightColor,
-                      baseColor,
-                      darkColor,
-                    ],
-                    stops: const [0.1, 0.5, 0.9],
-                  ),
-                  boxShadow: widget.isLocked
-                    ? []
-                    : [
-                        // Outer shadow
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: adjustedSize * 0.1,
-                          spreadRadius: adjustedSize * 0.02,
-                          offset: Offset(adjustedSize * 0.04, adjustedSize * 0.04),
-                        ),
-                        // Inner highlight
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.3),
-                          blurRadius: adjustedSize * 0.1,
-                          spreadRadius: adjustedSize * 0.01,
-                          offset: Offset(-adjustedSize * 0.02, -adjustedSize * 0.02),
-                        ),
+      enabled: widget.onTap != null,
+      label: "Number ${widget.number} ${widget.isCorner ? 'corner' : ''} tile",
+      child: IgnorePointer(
+        // Only ignore pointer if locked
+        ignoring: widget.isLocked,
+        child: GestureDetector(
+          onTap: () {
+            print("DEBUG: TAPPED on NumberTile ${widget.number}, isCorner: ${widget.isCorner}, isLocked: ${widget.isLocked}");
+            if (widget.onTap != null) {
+              widget.onTap!();
+            }
+          },
+          onTapDown: _handleTapDown,
+          onTapUp: _handleTapUp,
+          onTapCancel: _handleTapCancel,
+          behavior: HitTestBehavior.opaque, // Important: Makes the entire area clickable
+          child: AnimatedBuilder(
+            animation: _scaleAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _isPressed ? _scaleAnimation.value : 1.0,
+                child: Container(
+                  width: adjustedSize,
+                  height: adjustedSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        lightColor,
+                        baseColor,
+                        darkColor,
                       ],
+                      stops: const [0.1, 0.5, 0.9],
+                    ),
+                    boxShadow: widget.isLocked
+                      ? []
+                      : [
+                          // Outer shadow
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: adjustedSize * 0.1,
+                            spreadRadius: adjustedSize * 0.02,
+                            offset: Offset(adjustedSize * 0.04, adjustedSize * 0.04),
+                          ),
+                          // Inner highlight
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.3),
+                            blurRadius: adjustedSize * 0.1,
+                            spreadRadius: adjustedSize * 0.01,
+                            offset: Offset(-adjustedSize * 0.02, -adjustedSize * 0.02),
+                          ),
+                        ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: _isPressed
+                      ? _buildPressedContent(adjustedSize)
+                      : _buildNormalContent(adjustedSize),
+                  ),
                 ),
-                child: _isPressed
-                  ? _buildPressedContent(adjustedSize)
-                  : _buildNormalContent(adjustedSize),
-              ),
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -218,6 +239,20 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
               ),
             ),
           ),
+          
+        // Add a subtle indicator for corner pieces to make them more visually distinct
+        if (widget.isCorner && !widget.isLocked)
+          Container(
+            width: size * 0.9,
+            height: size * 0.9,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.4),
+                width: size * 0.02,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -267,6 +302,20 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             ),
           ),
         ),
+        
+        // Add a subtle indicator for corner pieces to make them more visually distinct
+        if (widget.isCorner)
+          Container(
+            width: size * 0.9,
+            height: size * 0.9,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.25),
+                width: size * 0.015,
+              ),
+            ),
+          ),
       ],
     );
   }

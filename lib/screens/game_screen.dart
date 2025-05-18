@@ -232,10 +232,12 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  // Check if equation is correct at the given corner
   bool _checkEquation(int cornerIndex) {
+    print("DEBUG: Checking equation at cornerIndex: $cornerIndex");
+
     // If this corner is already locked, don't check it again
     if (lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
+      print("DEBUG: This corner is already locked");
       return true;
     }
 
@@ -246,7 +248,14 @@ class _GameScreenState extends State<GameScreen> {
     final outerNumber = outerRingModel.getNumberAtPosition(outerCornerPos);
     final innerNumber = innerRingModel.getNumberAtPosition(innerCornerPos);
 
-    return operation.checkEquation(innerNumber, outerNumber, targetNumber);
+    print(
+        "DEBUG: Equation values - innerNumber: $innerNumber, outerNumber: $outerNumber, target: $targetNumber");
+
+    final result =
+        operation.checkEquation(innerNumber, outerNumber, targetNumber);
+    print("DEBUG: Equation check result: $result");
+
+    return result;
   }
 
   void _updateOuterRing(int steps) {
@@ -404,8 +413,13 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _handleEquationTap(int cornerIndex) {
+    print("DEBUG: _handleEquationTap called for cornerIndex: $cornerIndex");
+
     // Check if this equation is correct
-    if (_checkEquation(cornerIndex)) {
+    final isCorrect = _checkEquation(cornerIndex);
+    print("DEBUG: Equation is correct? $isCorrect");
+
+    if (isCorrect) {
       // Play correct sound and vibration
       _soundService.playCorrect();
 
@@ -444,12 +458,15 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-// Handle tapping on a ring tile
   void _handleTileTap(int cornerIndex, int position) {
-    // Provide light haptic feedback when tapping
+    print(
+        "DEBUG: _handleTileTap called with cornerIndex: $cornerIndex, position: $position");
+
+    // Light haptic feedback when tapping
     _hapticService.lightImpact();
 
     // Same behavior as tapping on an equation element
+    print("DEBUG: About to call _handleEquationTap($cornerIndex)");
     _handleEquationTap(cornerIndex);
   }
 

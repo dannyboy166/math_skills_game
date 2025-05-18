@@ -40,6 +40,11 @@ class _SimpleRingState extends State<SimpleRing>
   // Store initial touch position
   Offset? _startPosition;
 
+  // Add to the _SimpleRingState class:
+  bool _startedOnCorner = false;
+  double _dragDistance = 0.0;
+  DateTime? _dragStartTime;
+
   // Animation controller
   late RingAnimationController _animationController;
 
@@ -109,27 +114,88 @@ class _SimpleRingState extends State<SimpleRing>
     _animationController.dispose();
     super.dispose();
   }
+// Modify the SimpleRing widget's build method:
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanStart: (details) {
-        // Don't start a pan if we tapped on a locked corner
-        if (_isPositionOnLockedCorner(details.localPosition) ||
-            _animationController.isAnimating) {
+        print("DEBUG: Pan started at ${details.localPosition}");
+
+        // Don't start a pan if animation is running
+        if (_animationController.isAnimating) {
+          print("DEBUG: Not starting pan - animation is active");
           return;
         }
 
+        // We allow starting pans on corner tiles now, but note it for later
+        bool isOnCorner = _isPositionOnAnyCorner(details.localPosition);
+        bool isOnLockedCorner =
+            _isPositionOnLockedCorner(details.localPosition);
+
+        // Don't allow panning on locked corners
+        if (isOnLockedCorner) {
+          print("DEBUG: Not starting pan - position is on locked corner");
+          return;
+        }
+
+        // Store the start position and whether it's on a corner
         setState(() {
           _startPosition = details.localPosition;
+          _startedOnCorner = isOnCorner ? true : false;
+          _dragDistance = 0.0; // Reset drag distance
+          _dragStartTime = DateTime.now(); // Track when the drag started
         });
       },
       onPanEnd: (details) {
         if (_startPosition == null) return;
 
+        print("DEBUG: Pan ended, dragDistance: $_dragDistance");
+
+        // If we started on a corner and the drag was very small, treat it as a tap
+        // Also check if the drag was quick (less than 300ms)
+        final dragDuration =
+            DateTime.now().difference(_dragStartTime!).inMilliseconds;
+        if (_startedOnCorner && _dragDistance < 10.0 && dragDuration < 300) {
+          print("DEBUG: Treating short drag as a tap on corner");
+
+          // Find which corner was tapped
+          int? cornerIndex;
+          int? position;
+
+          for (int i = 0; i < widget.ringModel.cornerIndices.length; i++) {
+            final pos = widget.ringModel.cornerIndices[i];
+            final cornerPos = widget.isInner
+                ? SquarePositionUtils.calculateInnerSquarePosition(
+                    pos, widget.size, widget.tileSize,
+                    cornerSizeMultiplier: 1.20, margin: widget.margin)
+                : SquarePositionUtils.calculateSquarePosition(
+                    pos, widget.size, widget.tileSize,
+                    cornerSizeMultiplier: 1.20, margin: widget.margin);
+
+            final tileRect = Rect.fromLTWH(cornerPos.dx, cornerPos.dy,
+                widget.tileSize * 1.20, widget.tileSize * 1.20);
+
+            if (tileRect.contains(_startPosition!)) {
+              cornerIndex = i;
+              position = pos;
+              break;
+            }
+          }
+
+          if (cornerIndex != null && position != null) {
+            print(
+                "DEBUG: Invoking onTileTap for cornerIndex: $cornerIndex, position: $position");
+            widget.onTileTap(cornerIndex, position);
+          }
+        }
+
         // Reset the start position
         setState(() {
           _startPosition = null;
+          _startedOnCorner = false;
+          _dragDistance = 0.0;
+          _dragStartTime = null;
         });
       },
       onPanUpdate: (details) {
@@ -138,20 +204,27 @@ class _SimpleRingState extends State<SimpleRing>
         // Get the drag delta
         final dragDelta = details.localPosition - _startPosition!;
 
-        // Determine which direction to rotate based on the start position and drag direction
-        int rotationStep = _determineRotationDirection(
-            _startPosition!, dragDelta, widget.size);
+        // Update the total drag distance
+        _dragDistance += dragDelta.distance;
 
-        if (rotationStep != 0) {
-          // Apply the rotation using copyWithRotation
-          widget.onRotateSteps(rotationStep);
+        // If we've dragged beyond the threshold, it's definitely a drag not a tap
+        if (_dragDistance > 20.0) {
+          // Determine which direction to rotate based on the start position and drag direction
+          int rotationStep = _determineRotationDirection(
+              _startPosition!, dragDelta, widget.size);
 
-          // Reset the start position to the current position
-          setState(() {
-            _startPosition = details.localPosition;
-          });
+          if (rotationStep != 0) {
+            // Apply the rotation using copyWithRotation
+            widget.onRotateSteps(rotationStep);
+
+            // Reset the start position to the current position
+            setState(() {
+              _startPosition = details.localPosition;
+            });
+          }
         }
       },
+      behavior: HitTestBehavior.deferToChild,
       child: Container(
         width: widget.size,
         height: widget.size,
@@ -161,6 +234,38 @@ class _SimpleRingState extends State<SimpleRing>
         ),
       ),
     );
+  }
+
+// Add this method to check if a position is on any corner
+  bool _isPositionOnAnyCorner(Offset touchPosition) {
+    for (int cornerPositionIndex in widget.ringModel.cornerIndices) {
+      // Always use the corner size multiplier since we're checking corner positions
+      final sizeMultiplier = 1.20;
+
+      // Get the position of this tile
+      final tilePosition = widget.isInner
+          ? SquarePositionUtils.calculateInnerSquarePosition(
+              cornerPositionIndex, widget.size, widget.tileSize,
+              cornerSizeMultiplier: sizeMultiplier, margin: widget.margin)
+          : SquarePositionUtils.calculateSquarePosition(
+              cornerPositionIndex, widget.size, widget.tileSize,
+              cornerSizeMultiplier: sizeMultiplier, margin: widget.margin);
+
+      // Calculate the actual size of this tile
+      final actualTileSize = widget.tileSize * sizeMultiplier;
+
+      // Check if the touch is within this tile
+      final tileRect = Rect.fromLTWH(
+          tilePosition.dx, tilePosition.dy, actualTileSize, actualTileSize);
+
+      if (tileRect.contains(touchPosition)) {
+        print(
+            "DEBUG: Position ${touchPosition} is on corner at index $cornerPositionIndex");
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // Check if the touch position is on a locked corner
@@ -370,8 +475,8 @@ class _SimpleRingState extends State<SimpleRing>
     // Default to center if not on an edge or corner
     return 'center';
   }
+// In SimpleRing widget (lib/widgets/simple_ring.dart)
 
-  // Updated _buildTiles method using the animation controller
   List<Widget> _buildTiles() {
     final itemCount = widget.ringModel.numbers.length;
     List<Widget> tiles = [];
@@ -417,16 +522,20 @@ class _SimpleRingState extends State<SimpleRing>
             return Positioned(
               left: currentPosition.dx,
               top: currentPosition.dy,
-              child: GestureDetector(
-                onTap: isCorner ? () => widget.onTileTap(cornerIndex, i) : null,
-                child: NumberTile(
-                  number: numberToDisplay,
-                  color: widget.ringModel.color.withOpacity(currentOpacity),
-                  isLocked: isLocked,
-                  isCorner: isCorner,
-                  size: widget.tileSize,
-                  sizeMultiplier: currentSize,
-                ),
+              child: NumberTile(
+                number: numberToDisplay,
+                color: widget.ringModel.color.withOpacity(currentOpacity),
+                isLocked: isLocked,
+                isCorner: isCorner,
+                onTap: isCorner
+                    ? () {
+                        print(
+                            "DEBUG: Corner tile tapped in animation, cornerIndex: $cornerIndex, position: $i");
+                        widget.onTileTap(cornerIndex, i);
+                      }
+                    : null,
+                size: widget.tileSize,
+                sizeMultiplier: currentSize,
               ),
             );
           },
@@ -440,16 +549,20 @@ class _SimpleRingState extends State<SimpleRing>
         tileWidget = Positioned(
           left: animInfo.endPosition.dx,
           top: animInfo.endPosition.dy,
-          child: GestureDetector(
-            onTap: isCorner ? () => widget.onTileTap(cornerIndex, i) : null,
-            child: NumberTile(
-              number: numberToDisplay,
-              color: widget.ringModel.color.withOpacity(animInfo.endOpacity),
-              isLocked: isLocked,
-              isCorner: isCorner,
-              size: widget.tileSize,
-              sizeMultiplier: animInfo.endSize,
-            ),
+          child: NumberTile(
+            number: numberToDisplay,
+            color: widget.ringModel.color.withOpacity(animInfo.endOpacity),
+            isLocked: isLocked,
+            isCorner: isCorner,
+            onTap: isCorner
+                ? () {
+                    print(
+                        "DEBUG: Corner tile tapped static, cornerIndex: $cornerIndex, position: $i");
+                    widget.onTileTap(cornerIndex, i);
+                  }
+                : null,
+            size: widget.tileSize,
+            sizeMultiplier: animInfo.endSize,
           ),
         );
       }
