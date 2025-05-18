@@ -12,6 +12,7 @@ import 'package:math_skills_game/services/sound_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/services/user_stats_service.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import 'dart:async'; // Add Timer import
 import '../models/ring_model.dart';
@@ -639,15 +640,30 @@ class _GameScreenState extends State<GameScreen> {
           completedAt: DateTime.now(),
         );
 
-        // Save level completion (this also updates streaks)
+        // In game_screen.dart - _showWinDialog method
+// After saving level completion:
         await userService.saveLevelCompletion(userId, levelCompletion);
         print("Level completion saved successfully");
 
-        // Immediately update leaderboards
+// Update both leaderboards
         final leaderboardService = LeaderboardService();
+
+// First update time leaderboard with high score flag
         await leaderboardService.updateUserInAllLeaderboards(userId,
             isHighScore: true);
         print("Leaderboard data updated successfully");
+
+// Explicitly handle games update to ensure cache is cleared
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          final totalGames = userDoc.data()?['totalGames'] ?? 0;
+          await leaderboardService.updateGamesHighScore(userId, totalGames);
+          print("Games leaderboard specifically updated");
+        }
+
+        // ADDED: Clear leaderboard cache to ensure fresh data on next view
+        await leaderboardService.clearCache();
+        print("Leaderboard cache cleared to show updated data");
 
         try {
           final statsService = UserStatsService();
@@ -676,30 +692,30 @@ class _GameScreenState extends State<GameScreen> {
           final currentDifficultyBestTime =
               bestTimes[difficultyKey] as int? ?? 999999;
 
-// In game_screen.dart - _showWinDialog method
+          // In game_screen.dart - _showWinDialog method
           bool isHighScore = false;
 
-// First check user data
+          // First check user data
           if (!(bestTimes.containsKey(difficultyKey) &&
               bestTimes[difficultyKey] != null)) {
             print(
                 "This is the first time for $difficultyKey in user data - treating as high score");
             isHighScore = true;
           }
-// Check if this is a better time than before
+          // Check if this is a better time than before
           else if (completionTimeMs <= currentDifficultyBestTime) {
             print(
                 "New best time for $difficultyKey: $completionTimeMs ms (previous: $currentDifficultyBestTime ms)");
             isHighScore = true;
           }
-// Also consider a new overall best time
+          // Also consider a new overall best time
           else if (completionTimeMs < currentBestTime) {
             print(
                 "New overall best time for ${widget.operationName}: $completionTimeMs ms (previous: $currentBestTime ms)");
             isHighScore = true;
           }
 
-// If not yet determined to be a high score, check if entry exists in leaderboard
+          // If not yet determined to be a high score, check if entry exists in leaderboard
           if (!isHighScore) {
             try {
               // Check if the entry exists in the main leaderboard
@@ -739,9 +755,16 @@ class _GameScreenState extends State<GameScreen> {
               "difficultyKey=$difficultyKey, " +
               "currentDifficultyBestTime=$currentDifficultyBestTime");
 
-// Update leaderboards with the high score flag
+          // Update leaderboards with the high score flag
           await leaderboardService.updateUserInAllLeaderboards(userId,
               isHighScore: isHighScore);
+
+          // ADDED: Specifically clear games leaderboard cache to ensure it shows updated count
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove(
+              '${LeaderboardService.CACHED_LEADERBOARD_KEY}.${LeaderboardService.GAMES_LEADERBOARD}_20');
+          print(
+              "Games leaderboard cache specifically cleared to show updated count");
 
           print("Leaderboard data updated successfully");
         } catch (e) {

@@ -452,9 +452,10 @@ class LeaderboardService {
       final batch = _firestore.batch();
       int batchCount = 0;
 
-      // Process each leaderboard type
+      // Process each leaderboard type - PASS isHighScore TO BOTH METHODS
       batchCount = await _addGamesLeaderboardToBatch(
-          userId, userData, batch, batchCount);
+          userId, userData, batch, batchCount,
+          isHighScore: isHighScore); // Added isHighScore param here
       batchCount = await _addTimeLeaderboardsToBatch(
           userId, userData, batch, batchCount,
           isHighScore: isHighScore);
@@ -470,14 +471,34 @@ class LeaderboardService {
     }
   }
 
-  // Add games leaderboard updates to batch
+// Update this method in LeaderboardService
   Future<int> _addGamesLeaderboardToBatch(String userId,
-      Map<String, dynamic> userData, WriteBatch batch, int batchCount) async {
+      Map<String, dynamic> userData, WriteBatch batch, int batchCount,
+      {bool isHighScore = false}) async {
     try {
       final totalGames = userData['totalGames'] ?? 0;
 
       // Only update if the user has played games
       if (totalGames > 0) {
+        // Get current leaderboard entry if exists
+        bool shouldUpdate = isHighScore; // Always update if isHighScore is true
+
+        if (!shouldUpdate) {
+          // Check if we need to update
+          final existingData =
+              await getUserLeaderboardData(userId, GAMES_LEADERBOARD);
+          final existingGames = existingData['data']?['totalGames'] ?? 0;
+
+          // Update if games count has increased
+          shouldUpdate = totalGames > existingGames;
+        }
+
+        if (!shouldUpdate) {
+          print(
+              'DEBUG: Skipping games leaderboard update - no increase in games count');
+          return batchCount;
+        }
+
         // Get current rank
         final rankSnapshot = await _firestore
             .collection('leaderboards')
@@ -505,6 +526,10 @@ class LeaderboardService {
               'rank': newRank,
               'updatedAt': FieldValue.serverTimestamp(),
             });
+
+        // Invalidate the cache for this specific leaderboard
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('$CACHED_LEADERBOARD_KEY.${GAMES_LEADERBOARD}_20');
 
         return batchCount + 1;
       }
@@ -1183,6 +1208,41 @@ class LeaderboardService {
     } catch (e) {
       print('Error getting user best rank: $e');
       return {'rank': 0, 'category': 'Overall'};
+    }
+  }
+
+  // Add this new method to LeaderboardService
+  Future<bool> updateGamesHighScore(String userId, int newTotalGames) async {
+    try {
+      print(
+          'DEBUG: Attempting to update games leaderboard: $userId with $newTotalGames games');
+
+      // Get current user data in leaderboard
+      final existingData =
+          await getUserLeaderboardData(userId, GAMES_LEADERBOARD);
+      final existingGames = existingData['data']?['totalGames'] ?? 0;
+
+      // Always update if the games count has increased
+      if (newTotalGames > existingGames) {
+        print(
+            'DEBUG: Games count increased from $existingGames to $newTotalGames - updating leaderboard');
+
+        // Force update of all leaderboards with the high score flag
+        await updateUserInAllLeaderboards(userId, isHighScore: true);
+
+        // Specifically invalidate the games leaderboard cache
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('$CACHED_LEADERBOARD_KEY.${GAMES_LEADERBOARD}_20');
+
+        print('DEBUG: Games leaderboard successfully updated');
+        return true;
+      } else {
+        print('DEBUG: No change in games count, no update needed');
+        return false;
+      }
+    } catch (e) {
+      print('Error updating games high score: $e');
+      return false;
     }
   }
 }
