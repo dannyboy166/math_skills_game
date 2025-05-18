@@ -224,7 +224,6 @@ class ScalableLeaderboardService {
     }
   }
 
-  // Cache user rank data locally
   Future<void> _cacheUserRank(String userId, String leaderboardType,
       Map<String, dynamic> rankData) async {
     try {
@@ -245,7 +244,26 @@ class ScalableLeaderboardService {
         cachedRanks[userId] = {};
       }
 
-      cachedRanks[userId][leaderboardType] = rankData;
+      // Create a sanitized copy of rankData that doesn't include Timestamp objects
+      Map<String, dynamic> sanitizedRankData = {};
+      rankData.forEach((key, value) {
+        if (key == 'data' && value != null) {
+          // Clone the data but convert Timestamp objects to ISO strings
+          Map<String, dynamic> cleanData = {};
+          (value as Map<String, dynamic>).forEach((dataKey, dataValue) {
+            if (dataValue is Timestamp) {
+              cleanData[dataKey] = dataValue.toDate().toIso8601String();
+            } else {
+              cleanData[dataKey] = dataValue;
+            }
+          });
+          sanitizedRankData[key] = cleanData;
+        } else {
+          sanitizedRankData[key] = value;
+        }
+      });
+
+      cachedRanks[userId][leaderboardType] = sanitizedRankData;
 
       await prefs.setString(CACHED_USER_RANKS_KEY, json.encode(cachedRanks));
     } catch (e) {
@@ -253,11 +271,13 @@ class ScalableLeaderboardService {
     }
   }
 
-  // Update all leaderboards for a single user - OPTIMIZED
-  Future<void> updateUserInAllLeaderboards(String userId) async {
+  Future<void> updateUserInAllLeaderboards(String userId,
+      {bool isHighScore = false}) async {
     try {
       // Check if we need to throttle updates
-      if (!await _shouldUpdateLeaderboards(userId)) {
+      print("updateUserInAllLeaderboards called with isHighScore=$isHighScore");
+
+      if (!await _shouldUpdateLeaderboards(userId, isHighScore: isHighScore)) {
         print('Skipping leaderboard update due to throttling');
         return;
       }
@@ -269,7 +289,8 @@ class ScalableLeaderboardService {
       final userData = userDoc.data()!;
 
       // Check for significant changes that warrant an update
-      if (!await _hasSignificantLeaderboardChanges(userId, userData)) {
+      if (!isHighScore &&
+          !await _hasSignificantLeaderboardChanges(userId, userData)) {
         print('Skipping leaderboard update - no significant changes');
         return;
       }
@@ -292,7 +313,8 @@ class ScalableLeaderboardService {
 
       // Process time-based leaderboards
       batchCount = await _prepareTimeLeaderboardsBatch(
-          userId, userData, batch, batchCount);
+          userId, userData, batch, batchCount,
+          isHighScore: isHighScore);
 
       // Only commit if we have operations to perform
       if (batchCount > 0) {
@@ -308,8 +330,17 @@ class ScalableLeaderboardService {
     }
   }
 
-  // Check if enough time has passed since the last update
-  Future<bool> _shouldUpdateLeaderboards(String userId) async {
+  Future<bool> _shouldUpdateLeaderboards(String userId,
+      {bool isHighScore = false}) async {
+    // Add this debug print
+    print("_shouldUpdateLeaderboards called with isHighScore=$isHighScore");
+
+    // Immediately allow updates for high scores
+    if (isHighScore) {
+      print("Bypassing throttling for high score update");
+      return true;
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final lastUpdateStr =
@@ -339,12 +370,15 @@ class ScalableLeaderboardService {
     }
   }
 
-  // Record that we've updated the leaderboards
-  Future<void> _recordLeaderboardUpdate(String userId) async {
+  Future<void> _recordLeaderboardUpdate(String userId,
+      {bool isHighScore = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('${LAST_LEADERBOARD_UPDATE_KEY}_$userId',
-          DateTime.now().toIso8601String());
+      // Only record the timestamp if it's not a high score
+      if (!isHighScore) {
+        await prefs.setString('${LAST_LEADERBOARD_UPDATE_KEY}_$userId',
+            DateTime.now().toIso8601String());
+      }
     } catch (e) {
       print('Error recording leaderboard update: $e');
     }
@@ -605,10 +639,16 @@ class ScalableLeaderboardService {
     }
   }
 
-  // Prepare time leaderboards batch operations
+// Prepare time leaderboards batch operations
   Future<int> _prepareTimeLeaderboardsBatch(String userId,
-      Map<String, dynamic> userData, WriteBatch batch, int batchCount) async {
+      Map<String, dynamic> userData, WriteBatch batch, int batchCount,
+      {bool isHighScore = false}) async {
     try {
+      // If we already know it's a high score, skip the checking
+      if (isHighScore) {
+        print("Processing confirmed high score update!");
+      }
+
       final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
       int localBatchCount = batchCount;
 
@@ -644,13 +684,21 @@ class ScalableLeaderboardService {
             continue;
         }
 
-        // Check if this is an improvement over previous time
-        final existingData =
-            await getUserLeaderboardData(userId, leaderboardType);
-        final existingTime = existingData['data']?['bestTime'] ?? 0;
+        bool shouldUpdate =
+            isHighScore; // Update if we already know it's a high score
 
-        // Skip if not an improvement (lower is better for time)
-        if (existingTime > 0 && bestTime >= existingTime) continue;
+        if (!shouldUpdate) {
+          // Check if this is an improvement over previous time
+          final existingData =
+              await getUserLeaderboardData(userId, leaderboardType);
+          final existingTime = existingData['data']?['bestTime'] ?? 0;
+
+          // Only update if it's an improvement (lower is better for time)
+          shouldUpdate = existingTime == 0 || bestTime < existingTime;
+        }
+
+        // Skip if not needed
+        if (!shouldUpdate) continue;
 
         // Get current rank
         final rankSnapshot = await _firestore
@@ -684,7 +732,8 @@ class ScalableLeaderboardService {
 
         // Only update difficulty leaderboards if we actually updated the main one
         localBatchCount = await _prepareDifficultyTimeLeaderboardsBatch(userId,
-            userData, operation, leaderboardType, batch, localBatchCount);
+            userData, operation, leaderboardType, batch, localBatchCount,
+            isHighScore: isHighScore);
       }
 
       return localBatchCount;
@@ -694,15 +743,22 @@ class ScalableLeaderboardService {
     }
   }
 
-  // Prepare difficulty-specific time leaderboards batch operations
+// Prepare difficulty-specific time leaderboards batch operations
   Future<int> _prepareDifficultyTimeLeaderboardsBatch(
       String userId,
       Map<String, dynamic> userData,
       String operation,
       String leaderboardType,
       WriteBatch batch,
-      int batchCount) async {
+      int batchCount,
+      {bool isHighScore = false}) async {
     try {
+      // If we know it's a high score, print a debug message
+      if (isHighScore) {
+        print(
+            "Processing difficulty-specific high score update for $operation");
+      }
+
       final bestTimes = userData['bestTimes'] as Map<String, dynamic>? ?? {};
       int localBatchCount = batchCount;
 
@@ -717,7 +773,7 @@ class ScalableLeaderboardService {
         final bestTime = bestTimes[difficultyKey] as int? ?? 0;
         if (bestTime <= 0) continue;
 
-        // Check if this is an improvement
+        // Define the document reference
         final docRef = _firestore
             .collection('leaderboards')
             .doc(leaderboardType)
@@ -726,11 +782,23 @@ class ScalableLeaderboardService {
             .collection('entries')
             .doc(userId);
 
-        final existingDoc = await docRef.get();
-        if (existingDoc.exists) {
-          final existingTime = existingDoc.data()?['bestTime'] ?? 0;
-          if (existingTime > 0 && bestTime >= existingTime) continue;
+        bool shouldUpdate =
+            isHighScore; // Update if we already know it's a high score
+
+        if (!shouldUpdate) {
+          // Check if this is an improvement
+          final existingDoc = await docRef.get();
+          if (existingDoc.exists) {
+            final existingTime = existingDoc.data()?['bestTime'] ?? 0;
+            shouldUpdate = existingTime == 0 || bestTime < existingTime;
+          } else {
+            // No existing entry, so this is a new best time
+            shouldUpdate = true;
+          }
         }
+
+        // Skip if not needed
+        if (!shouldUpdate) continue;
 
         // Get current rank
         final rankSnapshot = await _firestore
@@ -757,6 +825,8 @@ class ScalableLeaderboardService {
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
+        print(
+            "Adding difficulty-specific leaderboard update for $operation-$difficulty: $bestTime ms");
         localBatchCount++;
       }
 
@@ -767,11 +837,11 @@ class ScalableLeaderboardService {
     }
   }
 
-  // This modified method only updates streak leaderboard when necessary
-  Future<void> updateUserInStreakLeaderboard(String userId) async {
+  Future<void> updateUserInStreakLeaderboard(String userId,
+      {bool isHighScore = false}) async {
     try {
       // Check if we need to throttle updates
-      if (!await _shouldUpdateLeaderboards(userId)) {
+      if (!await _shouldUpdateLeaderboards(userId, isHighScore: isHighScore)) {
         print('Skipping streak leaderboard update due to throttling');
         return;
       }

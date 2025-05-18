@@ -1,4 +1,5 @@
 // lib/screens/game_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/animations/celebration_animation.dart';
@@ -61,6 +62,8 @@ class _GameScreenState extends State<GameScreen> {
 
   final HapticService _hapticService = HapticService();
   final SoundService _soundService = SoundService();
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -652,10 +655,89 @@ class _GameScreenState extends State<GameScreen> {
         try {
           // First update the scalable leaderboard for this user
           final leaderboardService = ScalableLeaderboardService();
-          await leaderboardService.updateUserInAllLeaderboards(userId);
+          // Check if this is a new best time
 
-          // Also ensure the streak leaderboard is updated
-          await leaderboardService.updateUserInStreakLeaderboard(userId);
+          // Check if this is a new best time
+          final userDoc =
+              await _firestore.collection('users').doc(userId).get();
+          final userData = userDoc.data();
+          final bestTimes =
+              userData?['bestTimes'] as Map<String, dynamic>? ?? {};
+          final currentBestTime =
+              bestTimes[widget.operationName] as int? ?? 999999;
+          final difficultyKey =
+              '${widget.operationName}-${widget.difficultyLevel.displayName.toLowerCase()}';
+          final currentDifficultyBestTime =
+              bestTimes[difficultyKey] as int? ?? 999999;
+
+// In game_screen.dart - _showWinDialog method
+          bool isHighScore = false;
+
+// First check user data
+          if (!(bestTimes.containsKey(difficultyKey) &&
+              bestTimes[difficultyKey] != null)) {
+            print(
+                "This is the first time for $difficultyKey in user data - treating as high score");
+            isHighScore = true;
+          }
+// Check if this is a better time than before
+          else if (completionTimeMs <= currentDifficultyBestTime) {
+            print(
+                "New best time for $difficultyKey: $completionTimeMs ms (previous: $currentDifficultyBestTime ms)");
+            isHighScore = true;
+          }
+// Also consider a new overall best time
+          else if (completionTimeMs < currentBestTime) {
+            print(
+                "New overall best time for ${widget.operationName}: $completionTimeMs ms (previous: $currentBestTime ms)");
+            isHighScore = true;
+          }
+
+// If not yet determined to be a high score, check if entry exists in leaderboard
+          if (!isHighScore) {
+            try {
+              // Check if the entry exists in the main leaderboard
+              final leaderboardType = widget.operationName == 'addition'
+                  ? 'additionTime'
+                  : (widget.operationName == 'subtraction'
+                      ? 'subtractionTime'
+                      : (widget.operationName == 'multiplication'
+                          ? 'multiplicationTime'
+                          : 'divisionTime'));
+
+              // Check difficulty-specific leaderboard
+              final leaderboardDoc = await _firestore
+                  .collection('leaderboards')
+                  .doc(leaderboardType)
+                  .collection('difficulties')
+                  .doc(widget.difficultyLevel.displayName.toLowerCase())
+                  .collection('entries')
+                  .doc(userId)
+                  .get();
+
+              if (!leaderboardDoc.exists) {
+                print(
+                    "Entry doesn't exist in Firebase leaderboard yet - treating as high score");
+                isHighScore = true;
+              }
+            } catch (e) {
+              print(
+                  "Error checking leaderboard: $e - treating as high score to be safe");
+              isHighScore = true;
+            }
+          }
+
+          print("High score detection: isHighScore=$isHighScore, " +
+              "completionTimeMs=$completionTimeMs, " +
+              "currentBestTime=$currentBestTime, " +
+              "difficultyKey=$difficultyKey, " +
+              "currentDifficultyBestTime=$currentDifficultyBestTime");
+
+// Update leaderboards with the high score flag
+          await leaderboardService.updateUserInAllLeaderboards(userId,
+              isHighScore: isHighScore);
+          await leaderboardService.updateUserInStreakLeaderboard(userId,
+              isHighScore: isHighScore);
 
           print("Leaderboard data updated successfully");
         } catch (e) {
