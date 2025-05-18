@@ -15,7 +15,7 @@ class LeaderboardService {
   // Constants
   static const int TOP_ENTRIES_LIMIT = 100; // Number of top entries to maintain
   static const int MIN_UPDATE_INTERVAL_MINUTES =
-      15; // Minimum time between leaderboard updates
+      5; // Minimum time between leaderboard updates
 
   // Leaderboard types - SIMPLIFIED to just the ones we want to keep
   static const String GAMES_LEADERBOARD = 'gamesPlayed';
