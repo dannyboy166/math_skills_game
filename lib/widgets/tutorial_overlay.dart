@@ -118,7 +118,7 @@ class _TutorialOverlayState extends State<TutorialOverlay>
           double progressDelta = dragProgress - _lastRotationProgress!;
 
           // Using 0.3 as the threshold as you previously set
-          if (progressDelta >= 0.3) {
+          if (progressDelta >= 0.27) {
             if (widget.onRotateRing != null) {
               widget.onRotateRing!();
             }
