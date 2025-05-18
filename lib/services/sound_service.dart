@@ -1,6 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:math_skills_game/services/haptic_service.dart'; // Add this import
+import 'package:math_skills_game/services/haptic_service.dart';
 
 class SoundService {
   static final SoundService _instance = SoundService._internal();
@@ -25,9 +25,26 @@ class SoundService {
       'sounds/3starWin.mp3',
     ];
 
+    // Try to configure audio context to respect system volume settings
+    try {
+      // Method 1: Try with newer API
+      await _configureAudioContext();
+    } catch (e) {
+      print('Error configuring audio context: $e');
+    }
+
     // Pre-create an AudioPlayer for each sound
     for (var sound in sounds) {
-      _audioPlayers[sound] = AudioPlayer();
+      final player = AudioPlayer();
+      
+      // Try individual player configuration
+      try {
+        await _configurePlayerContext(player);
+      } catch (e) {
+        print('Error configuring player context: $e');
+      }
+      
+      _audioPlayers[sound] = player;
     }
 
     // Load preferences
@@ -35,6 +52,80 @@ class SoundService {
     _soundEnabled = prefs.getBool('sound_enabled') ?? true;
   }
 
+  // Try different methods to configure audio context based on the package version
+  Future<void> _configureAudioContext() async {
+    try {
+      // Create the audio context
+      final audioContext = AudioContext(
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.ambient,
+          options: {AVAudioSessionOptions.mixWithOthers},
+        ),
+        android: AudioContextAndroid(
+          isSpeakerphoneOn: true,
+          stayAwake: true,
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.game,
+        ),
+      );
+
+      // Try different methods that might be available in different versions
+      
+      // Method 1: Try with global context setter (newer versions)
+      try {
+        final globalAudioScope = AudioPlayer.global;
+        // Use reflection to find the right method
+        final methods = globalAudioScope.runtimeType.toString();
+        print('Available methods on GlobalAudioScope: $methods');
+        
+        // Direct try
+        await AudioPlayer.global.setAudioContext(audioContext);
+        print('Set global audio context successfully');
+        return;
+      } catch (e) {
+        print('Method 1 failed: $e');
+      }
+      
+      // Method 2: Try setting on a specific player (fallback)
+      try {
+        await _audioPlayer.setAudioContext(audioContext);
+        print('Set player audio context successfully');
+        return;
+      } catch (e) {
+        print('Method 2 failed: $e');
+      }
+      
+      // Method 3: For older versions, we might not have a way to set the context globally
+      print('Could not set global audio context with available methods');
+    } catch (e) {
+      print('Error in _configureAudioContext: $e');
+    }
+  }
+
+  // Configure individual player context
+  Future<void> _configurePlayerContext(AudioPlayer player) async {
+    try {
+      final audioContext = AudioContext(
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.ambient,
+          options: {AVAudioSessionOptions.mixWithOthers},
+        ),
+        android: AudioContextAndroid(
+          isSpeakerphoneOn: true,
+          stayAwake: true,
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.game,
+        ),
+      );
+      
+      await player.setAudioContext(audioContext);
+    } catch (e) {
+      print('Error setting player context: $e');
+    }
+  }
+
+  // Rest of your methods remain the same...
+  
   // Play sound for correct equation
   void playCorrect() {
     if (_soundEnabled) {
