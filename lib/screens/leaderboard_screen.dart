@@ -32,6 +32,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   List<LeaderboardEntry>? _multiplicationTimeLeaderboard;
   List<LeaderboardEntry>? _divisionTimeLeaderboard;
 
+// Add only these state variables
+  DateTime? _streakLeaderboardLastUpdated;
+  DateTime? _gamesLeaderboardLastUpdated;
+
   // Track currently loading time leaderboards to prevent race conditions
   final Map<String, bool> _loadingTimeLeaderboards = {};
 
@@ -96,6 +100,24 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           _isLoading = false;
         });
       }
+    }
+  }
+
+// Add this method to your LeaderboardScreen class
+  String _formatTimestamp(DateTime? timestamp) {
+    if (timestamp == null) return 'Not yet updated';
+
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} ${difference.inHours == 1 ? 'hour' : 'hours'} ago';
+    } else {
+      return '${difference.inDays} ${difference.inDays == 1 ? 'day' : 'days'} ago';
     }
   }
 
@@ -165,9 +187,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         ScalableLeaderboardService.STREAK_LEADERBOARD,
         limit: 20);
 
+    // Get last updated time
+    final lastUpdated = await _leaderboardService.getLeaderboardLastUpdateTime(
+        ScalableLeaderboardService.STREAK_LEADERBOARD);
+
     if (mounted) {
       setState(() {
         _streakLeaderboard = leaderboard;
+        _streakLeaderboardLastUpdated = lastUpdated;
       });
     }
   }
@@ -178,14 +205,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         ScalableLeaderboardService.GAMES_LEADERBOARD,
         limit: 20);
 
+    // Get last updated time
+    final lastUpdated = await _leaderboardService.getLeaderboardLastUpdateTime(
+        ScalableLeaderboardService.GAMES_LEADERBOARD);
+
     if (mounted) {
       setState(() {
         _gamesLeaderboard = leaderboard;
+        _gamesLeaderboardLastUpdated = lastUpdated;
       });
     }
   }
 
-  // Modified to track loading state and prevent race conditions
+// Modified to track loading state and prevent race conditions
   Future<void> _loadTimeLeaderboard(String operation,
       {String? difficulty}) async {
     // Create a unique key for this load operation
@@ -233,6 +265,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                 _divisionTimeLeaderboard = leaderboard;
                 break;
             }
+            // Use a single variable for all time leaderboard timestamps
           });
         }
       } else {
@@ -256,6 +289,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                 _divisionTimeLeaderboard = leaderboard;
                 break;
             }
+            // Use a single variable for all time leaderboard timestamps
           });
         }
       }
@@ -288,6 +322,65 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     await _loadTabData(_tabController.index);
   }
 
+// Add this method to your LeaderboardScreen class
+  Widget _buildUpdateInfo(String leaderboardType, DateTime? lastUpdated) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.update, size: 14, color: Colors.grey.shade600),
+              SizedBox(width: 4),
+              Text(
+                'Last updated: ${_formatTimestamp(lastUpdated)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+
+          // Add different messages based on leaderboard type
+          if (leaderboardType == ScalableLeaderboardService.STREAK_LEADERBOARD)
+            Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                'Streak updates occur once per day.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else if (leaderboardType ==
+              ScalableLeaderboardService.GAMES_LEADERBOARD)
+            Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 14, color: Colors.blue.shade300),
+                  SizedBox(width: 4),
+                  Text(
+                    'Updates every 15 minutes to optimize performance',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue.shade300,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -296,6 +389,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           children: [
             _buildHeader(),
             _buildTabBar(),
+
+            // Only show update info for games and streaks tabs
+            if (_tabController.index == 0)
+              _buildUpdateInfo(ScalableLeaderboardService.GAMES_LEADERBOARD,
+                  _gamesLeaderboardLastUpdated)
+            else if (_tabController.index == 2)
+              _buildUpdateInfo(ScalableLeaderboardService.STREAK_LEADERBOARD,
+                  _streakLeaderboardLastUpdated),
+            // No message for time tab
+
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -310,19 +413,26 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     onRefresh: _refreshCurrentTab,
                     isLoading: _isLoading, // Pass global loading state
                   ),
-                  TimeLeaderboardTab(
-                    additionLeaderboard: _additionTimeLeaderboard ?? [],
-                    subtractionLeaderboard: _subtractionTimeLeaderboard ?? [],
-                    multiplicationLeaderboard:
-                        _multiplicationTimeLeaderboard ?? [],
-                    divisionLeaderboard: _divisionTimeLeaderboard ?? [],
-                    currentUserId: _currentUserId,
-                    onRefresh: _refreshCurrentTab,
-                    onDifficultyChanged: (operation, difficulty) async {
-                      // Now returns the Future from _loadTimeLeaderboard
-                      await _loadTimeLeaderboard(operation,
-                          difficulty: difficulty);
-                    },
+                  Column(
+                    children: [
+                      Expanded(
+                        child: TimeLeaderboardTab(
+                          additionLeaderboard: _additionTimeLeaderboard ?? [],
+                          subtractionLeaderboard:
+                              _subtractionTimeLeaderboard ?? [],
+                          multiplicationLeaderboard:
+                              _multiplicationTimeLeaderboard ?? [],
+                          divisionLeaderboard: _divisionTimeLeaderboard ?? [],
+                          currentUserId: _currentUserId,
+                          onRefresh: _refreshCurrentTab,
+                          onDifficultyChanged: (operation, difficulty) async {
+                            // Now returns the Future from _loadTimeLeaderboard
+                            await _loadTimeLeaderboard(operation,
+                                difficulty: difficulty);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   LeaderboardTab(
                     leaderboardEntries: _streakLeaderboard,

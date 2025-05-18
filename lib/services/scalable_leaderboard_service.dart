@@ -1112,5 +1112,30 @@ class ScalableLeaderboardService {
     await _refreshTimeLeaderboard(SUBTRACTION_TIME, 'subtraction');
     await _refreshTimeLeaderboard(MULTIPLICATION_TIME, 'multiplication');
     await _refreshTimeLeaderboard(DIVISION_TIME, 'division');
-  } // lib/services/scalable_leaderboard_service.dart
+  }
+
+  // Add this method to your ScalableLeaderboardService class
+  Future<DateTime?> getLeaderboardLastUpdateTime(String leaderboardType) async {
+    try {
+      final docSnap = await _firestore
+          .collection('leaderboards')
+          .doc(leaderboardType)
+          .get();
+
+      if (docSnap.exists) {
+        // Try both 'lastUpdated' and 'updatedAt' fields
+        Timestamp? timestamp;
+        if (docSnap.data()!.containsKey('lastUpdated')) {
+          timestamp = docSnap.data()?['lastUpdated'] as Timestamp?;
+        } else if (docSnap.data()!.containsKey('updatedAt')) {
+          timestamp = docSnap.data()?['updatedAt'] as Timestamp?;
+        }
+        return timestamp?.toDate();
+      }
+      return null;
+    } catch (e) {
+      print('Error getting leaderboard last update time: $e');
+      return null;
+    }
+  }
 }
