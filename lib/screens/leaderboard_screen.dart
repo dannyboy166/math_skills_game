@@ -1,3 +1,4 @@
+// lib/screens/leaderboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:math_skills_game/services/leaderboard_service.dart';
@@ -23,7 +24,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   // Leaderboard data
   List<LeaderboardEntry>? _gamesLeaderboard;
-  List<LeaderboardEntry>? _streakLeaderboard;
   Map<String, List<LeaderboardEntry>> _timeLeaderboards = {
     'addition': [],
     'subtraction': [],
@@ -37,7 +37,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this); // Changed from 3 to 2
     _tabController.addListener(_handleTabChange);
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -101,9 +101,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         case 1: // Time tab
           await _loadAllTimeLeaderboards();
           break;
-        case 2: // Streak tab
-          await _loadStreakLeaderboard();
-          break;
       }
     } catch (e) {
       print('Error loading tab data for index $tabIndex: $e');
@@ -127,22 +124,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     if (mounted) {
       setState(() {
         _gamesLeaderboard = entries;
-        _lastUpdated = lastUpdated;
-      });
-    }
-  }
-
-  Future<void> _loadStreakLeaderboard() async {
-    final entries = await _leaderboardService.getTopLeaderboardEntries(
-        LeaderboardService.STREAK_LEADERBOARD,
-        limit: 20);
-
-    final lastUpdated = await _leaderboardService
-        .getLeaderboardLastUpdateTime(LeaderboardService.STREAK_LEADERBOARD);
-
-    if (mounted) {
-      setState(() {
-        _streakLeaderboard = entries;
         _lastUpdated = lastUpdated;
       });
     }
@@ -274,7 +255,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             _buildHeader(),
             _buildTabBar(),
 
-            // Only show update info for games and streaks tabs
+            // Only show update info for games tab
             AnimatedBuilder(
               animation: _tabController,
               builder: (context, child) {
@@ -314,18 +295,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                       await _loadTimeLeaderboard(operation,
                           difficulty: difficulty);
                     },
-                  ),
-
-                  // Streak Tab
-                  LeaderboardTab(
-                    leaderboardEntries: _streakLeaderboard,
-                    currentUserId: _currentUserId,
-                    valueSelector: (entry) => entry.longestStreak,
-                    valueLabel: 'days',
-                    valueIcon: Icons.local_fire_department_rounded,
-                    valueColor: Colors.deepOrange,
-                    onRefresh: _refreshCurrentTab,
-                    isLoading: _isLoading,
                   ),
                 ],
               ),
@@ -421,10 +390,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           Tab(
             icon: Icon(Icons.timer),
             text: 'Time',
-          ),
-          Tab(
-            icon: Icon(Icons.local_fire_department_rounded),
-            text: 'Streaks',
           ),
         ],
       ),

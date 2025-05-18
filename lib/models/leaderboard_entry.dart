@@ -6,7 +6,6 @@ class LeaderboardEntry {
   final String displayName;
   final int totalStars;
   final int totalGames;
-  final int longestStreak;
   final Map<String, int> operationCounts;
   final Map<String, int> operationStars;
   final String level;
@@ -18,7 +17,6 @@ class LeaderboardEntry {
     required this.displayName,
     required this.totalStars,
     required this.totalGames,
-    required this.longestStreak,
     required this.operationCounts,
     this.operationStars = const {},
     this.bestTimes = const {}, // Add this line
@@ -60,10 +58,6 @@ class LeaderboardEntry {
       }
     });
 
-    // Get streak data
-    final streakData = data['streakData'] as Map<String, dynamic>? ?? {};
-    final longestStreak = streakData['longestStreak'] ?? 0;
-
     // Use the provided or calculate total games
     int totalGames = data['totalGames'] ?? 0;
     if (totalGames == 0) {
@@ -85,7 +79,6 @@ class LeaderboardEntry {
       displayName: data['displayName'] ?? 'Unknown Player',
       totalStars: data['totalStars'] ?? 0,
       totalGames: totalGames,
-      longestStreak: longestStreak,
       operationCounts: operationCounts,
       operationStars: operationStars,
       bestTimes: bestTimes, // Now includes all keys

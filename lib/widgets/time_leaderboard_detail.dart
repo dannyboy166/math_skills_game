@@ -192,8 +192,11 @@ class TimeLeaderboardDetail extends StatelessWidget {
                   operationColor),
               _buildStatCard('All Games', entry.totalGames.toString(),
                   Icons.sports_esports, Colors.blue),
-              _buildStatCard('Streak', '${entry.longestStreak} days',
-                  Icons.local_fire_department_rounded, Colors.deepOrange),
+              _buildStatCard(
+                  'Stars Earned',
+                  (entry.operationStars[operation] ?? 0).toString(),
+                  Icons.star_border_outlined,
+                  Colors.deepOrange),
             ],
           ),
 

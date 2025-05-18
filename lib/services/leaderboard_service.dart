@@ -18,7 +18,6 @@ class LeaderboardService {
       15; // Minimum time between leaderboard updates
 
   // Leaderboard types
-  static const String STREAK_LEADERBOARD = 'streaks';
   static const String GAMES_LEADERBOARD = 'gamesPlayed';
   static const String STARS_LEADERBOARD = 'stars';
 
@@ -118,7 +117,6 @@ class LeaderboardService {
           displayName: data['displayName'] ?? 'Unknown',
           totalStars: data['totalStars'] ?? 0,
           totalGames: data['totalGames'] ?? 0,
-          longestStreak: data['longestStreak'] ?? 0,
           operationCounts: Map<String, int>.from(data['operationCounts'] ?? {}),
           operationStars: Map<String, int>.from(data['operationStars'] ?? {}),
           bestTimes: bestTimes,
@@ -199,7 +197,6 @@ class LeaderboardService {
           displayName: data['displayName'] ?? 'Unknown',
           totalStars: data['totalStars'] ?? 0,
           totalGames: data['totalGames'] ?? 0,
-          longestStreak: data['longestStreak'] ?? 0,
           operationCounts: Map<String, int>.from(data['operationCounts'] ?? {}),
           operationStars: Map<String, int>.from(data['operationStars'] ?? {}),
           bestTimes: bestTimes,
@@ -381,7 +378,6 @@ class LeaderboardService {
       'displayName': entry.displayName,
       'totalStars': entry.totalStars,
       'totalGames': entry.totalGames,
-      'longestStreak': entry.longestStreak,
       'operationCounts': entry.operationCounts,
       'operationStars': entry.operationStars,
       'bestTimes': entry.bestTimes,
@@ -419,7 +415,6 @@ class LeaderboardService {
       displayName: json['displayName'],
       totalStars: json['totalStars'],
       totalGames: json['totalGames'],
-      longestStreak: json['longestStreak'],
       operationCounts: operationCounts,
       operationStars: operationStars,
       bestTimes: bestTimes,
@@ -498,8 +493,6 @@ class LeaderboardService {
       int batchCount = 0;
 
       // Process each leaderboard type
-      batchCount = await _addStreakLeaderboardToBatch(
-          userId, userData, batch, batchCount);
       batchCount = await _addGamesLeaderboardToBatch(
           userId, userData, batch, batchCount);
       batchCount = await _addStarsLeaderboardToBatch(
@@ -519,55 +512,6 @@ class LeaderboardService {
       }
     } catch (e) {
       print('Error updating user in leaderboards: $e');
-    }
-  }
-
-  // Add streak leaderboard updates to batch
-  Future<int> _addStreakLeaderboardToBatch(String userId,
-      Map<String, dynamic> userData, WriteBatch batch, int batchCount) async {
-    try {
-      final streakData = userData['streakData'] as Map<String, dynamic>? ?? {};
-      final longestStreak = streakData['longestStreak'] ?? 0;
-      final currentStreak = streakData['currentStreak'] ?? 0;
-
-      // Only update if the user has a streak
-      if (longestStreak > 0 || currentStreak > 0) {
-        // Get current rank
-        final rankSnapshot = await _firestore
-            .collection('leaderboards')
-            .doc(STREAK_LEADERBOARD)
-            .collection('entries')
-            .where('longestStreak', isGreaterThan: longestStreak)
-            .count()
-            .get();
-
-        final newRank = (rankSnapshot.count ?? 0) + 1;
-
-        // Add to batch
-        batch.set(
-            _firestore
-                .collection('leaderboards')
-                .doc(STREAK_LEADERBOARD)
-                .collection('entries')
-                .doc(userId),
-            {
-              'userId': userId,
-              'displayName': userData['displayName'] ?? 'Unknown',
-              'longestStreak': longestStreak,
-              'currentStreak': currentStreak,
-              'level': userData['level'] ?? 'Novice',
-              'rank': newRank,
-              'updatedAt': FieldValue.serverTimestamp(),
-              'operationCounts': userData['completedGames'] ?? {},
-            });
-
-        return batchCount + 1;
-      }
-
-      return batchCount;
-    } catch (e) {
-      print('Error adding streak leaderboard to batch: $e');
-      return batchCount;
     }
   }
 
@@ -893,7 +837,6 @@ class LeaderboardService {
     }
   }
 
-  // Get the last time a leaderboard was updated
   Future<DateTime?> getLeaderboardLastUpdateTime(String leaderboardType) async {
     try {
       final docSnap = await _firestore
@@ -921,8 +864,6 @@ class LeaderboardService {
   // Refresh all leaderboards (for admin use or background task)
   Future<void> refreshAllLeaderboards() async {
     try {
-      await _refreshLeaderboard(
-          STREAK_LEADERBOARD, 'streakData.longestStreak', true);
       await _refreshLeaderboard(GAMES_LEADERBOARD, 'totalGames', true);
       await _refreshLeaderboard(STARS_LEADERBOARD, 'totalStars', true);
 
@@ -937,8 +878,6 @@ class LeaderboardService {
 
       // Create a batch for efficiency
       final batch = _firestore.batch();
-      batch.set(_firestore.collection('leaderboards').doc(STREAK_LEADERBOARD),
-          {'lastUpdated': now}, SetOptions(merge: true));
       batch.set(_firestore.collection('leaderboards').doc(GAMES_LEADERBOARD),
           {'lastUpdated': now}, SetOptions(merge: true));
       batch.set(_firestore.collection('leaderboards').doc(STARS_LEADERBOARD),
@@ -990,12 +929,7 @@ class LeaderboardService {
         };
 
         // Add specific fields based on leaderboard type
-        if (leaderboardType == STREAK_LEADERBOARD) {
-          final streakData =
-              userData['streakData'] as Map<String, dynamic>? ?? {};
-          entryData['longestStreak'] = streakData['longestStreak'] ?? 0;
-          entryData['currentStreak'] = streakData['currentStreak'] ?? 0;
-        } else if (leaderboardType == GAMES_LEADERBOARD) {
+        if (leaderboardType == GAMES_LEADERBOARD) {
           entryData['totalGames'] = userData['totalGames'] ?? 0;
           entryData['operationCounts'] = userData['completedGames'] ?? {};
         } else if (leaderboardType == STARS_LEADERBOARD) {
@@ -1237,8 +1171,6 @@ class LeaderboardService {
       }
 
       // If no valid cache, get fresh data from Firebase
-      final streakData =
-          await getUserLeaderboardData(userId, STREAK_LEADERBOARD);
       final gamesData = await getUserLeaderboardData(userId, GAMES_LEADERBOARD);
       final starsData = await getUserLeaderboardData(userId, STARS_LEADERBOARD);
       final additionTimeData =
@@ -1251,7 +1183,6 @@ class LeaderboardService {
           await getUserLeaderboardData(userId, DIVISION_TIME);
 
       // Extract ranks
-      result[STREAK_LEADERBOARD] = streakData['rank'] ?? 0;
       result[GAMES_LEADERBOARD] = gamesData['rank'] ?? 0;
       result[STARS_LEADERBOARD] = starsData['rank'] ?? 0;
       result[ADDITION_TIME] = additionTimeData['rank'] ?? 0;
@@ -1291,9 +1222,6 @@ class LeaderboardService {
       // Translate category to user-friendly name
       String categoryName;
       switch (bestCategory) {
-        case STREAK_LEADERBOARD:
-          categoryName = 'Streaks';
-          break;
         case GAMES_LEADERBOARD:
           categoryName = 'Games Played';
           break;

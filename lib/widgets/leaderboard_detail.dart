@@ -98,13 +98,16 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
                     Icons.star, Colors.amber),
                 _buildStatCard('Games Played', entry.totalGames.toString(),
                     Icons.sports_esports, Colors.blue),
-                _buildStatCard('Longest Streak', '${entry.longestStreak} days',
-                    Icons.local_fire_department_rounded, Colors.deepOrange),
                 _buildStatCard(
                     'Favorite',
                     entry.favoriteOperation,
                     _getOperationIcon(entry.favoriteOperation),
                     _getOperationColor(entry.favoriteOperation)),
+                _buildStatCard(
+                    'Total Operations',
+                    entry.totalOperations.toString(),
+                    Icons.calculate,
+                    Colors.teal),
               ],
             ),
             SizedBox(height: 24),
