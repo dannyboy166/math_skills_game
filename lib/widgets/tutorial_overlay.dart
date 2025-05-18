@@ -117,7 +117,7 @@ class _TutorialOverlayState extends State<TutorialOverlay>
         if (_lastRotationProgress != null) {
           double progressDelta = dragProgress - _lastRotationProgress!;
 
-          // Using 0.6 as the threshold as you previously set
+          // Using 0.3 as the threshold as you previously set
           if (progressDelta >= 0.3) {
             if (widget.onRotateRing != null) {
               widget.onRotateRing!();
@@ -646,7 +646,7 @@ class _TutorialOverlayState extends State<TutorialOverlay>
                       ),
                       elevation: 4,
                     ),
-                    child: Text('Yes, please!'),
+                    child: Text('Repeat Tutorial!'),
                   ),
                   SizedBox(width: 20),
                   ElevatedButton(
