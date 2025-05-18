@@ -1,4 +1,5 @@
 // lib/widgets/time_leaderboard_detail.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/level_completion_model.dart';
@@ -23,7 +24,7 @@ class TimeLeaderboardDetail extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => TimeLeaderboardDetail(
+      builder: (context) => RefreshableTimeLeaderboardDetail(
         entry: entry,
         rank: rank,
         operation: operation,
@@ -350,6 +351,114 @@ class TimeLeaderboardDetail extends StatelessWidget {
         return Icons.pie_chart;
       default:
         return Icons.calculate;
+    }
+  }
+}
+
+class RefreshableTimeLeaderboardDetail extends StatefulWidget {
+  final LeaderboardEntry entry;
+  final int rank;
+  final String operation;
+
+  const RefreshableTimeLeaderboardDetail({
+    Key? key,
+    required this.entry,
+    required this.rank,
+    required this.operation,
+  }) : super(key: key);
+
+  @override
+  _RefreshableTimeLeaderboardDetailState createState() =>
+      _RefreshableTimeLeaderboardDetailState();
+}
+
+class _RefreshableTimeLeaderboardDetailState
+    extends State<RefreshableTimeLeaderboardDetail> {
+  late LeaderboardEntry _entry;
+  late int _rank;
+  late String _operation;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _entry = widget.entry;
+    _rank = widget.rank;
+    _operation = widget.operation;
+
+    // Refresh data after a short delay to get latest stats
+    Future.delayed(Duration(milliseconds: 500), () {
+      _refreshData();
+    });
+  }
+
+  Future<void> _refreshData() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Fetch updated user data
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_entry.userId)
+          .get();
+
+      if (userDoc.exists) {
+        setState(() {
+          _entry = LeaderboardEntry.fromDocument(userDoc);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error refreshing time leaderboard detail: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        TimeLeaderboardDetail(
+          entry: _entry,
+          rank: _rank,
+          operation: _operation,
+        ),
+        if (_isLoading)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    _getOperationColor(_operation)),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Color _getOperationColor(String operation) {
+    switch (operation) {
+      case 'addition':
+        return Colors.green;
+      case 'subtraction':
+        return Colors.purple;
+      case 'multiplication':
+        return Colors.blue;
+      case 'division':
+        return Colors.orange;
+      default:
+        return Colors.blue;
     }
   }
 }
