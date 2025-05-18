@@ -39,8 +39,8 @@ class _TutorialOverlayState extends State<TutorialOverlay>
   bool _showGotItButton = true;
   String _currentText = "Drag the rings to rotate them!";
 
-  // For tracking rotation timing
-  double? _prevDragPosition;
+// Replace _prevDragPosition with this
+  double? _lastRotationProgress;
   bool _isDraggingDown = false;
 
   @override
@@ -83,40 +83,46 @@ class _TutorialOverlayState extends State<TutorialOverlay>
 
   void _checkForRingRotation() {
     if (_currentStep == 0) {
-      // Get current hand position
-      final handPos = _handPositionAnimation.value;
-
-      // Track if we're in the dragging down phase (between 25% and 75% of animation)
+      // Check if we're in the dragging down phase (between 25% and 75% of animation)
       bool isDraggingDown =
           _handController.value > 0.25 && _handController.value < 0.75;
 
+      // Get animation progress within the drag phase
+      double dragProgress = 0;
       if (isDraggingDown) {
-        // If we just started dragging down
+        // Normalize the progress within the drag phase (0.25-0.75 becomes 0-1)
+        dragProgress =
+            (_handController.value - 0.25) * 2; // Scales 0.25-0.75 to 0-1
+
+        // If we weren't dragging before, but now we are
         if (!_isDraggingDown) {
           _isDraggingDown = true;
-          _prevDragPosition = handPos.dy;
+          _lastRotationProgress = dragProgress;
+
+          // Trigger first rotation right away
+          if (widget.onRotateRing != null) {
+            widget.onRotateRing!();
+          }
           return;
         }
 
-        // Check if we've moved down enough to trigger a rotation
-        if (_prevDragPosition != null) {
-          double dragDistance = handPos.dy - _prevDragPosition!;
+        // Only rotate when we've made enough progress
+        // This is a smaller increment with no minimum threshold
+        if (_lastRotationProgress != null) {
+          double progressDelta = dragProgress - _lastRotationProgress!;
 
-          // If dragged down at least 15% of the radius, trigger a rotation
-          if (dragDistance > widget.outerRingRadius * 0.15) {
-            // Call the rotation callback
+          // Rotate every ~10% of the total drag motion (0.1 out of 0-1 normalized range)
+          if (progressDelta >= 0.1) {
             if (widget.onRotateRing != null) {
               widget.onRotateRing!();
             }
-
-            // Update the previous position
-            _prevDragPosition = handPos.dy;
+            _lastRotationProgress = dragProgress;
           }
         }
       } else {
-        // Reset tracking when not in dragging phase
+        // Reset when not dragging
         _isDraggingDown = false;
-        _prevDragPosition = null;
+        _lastRotationProgress = null;
       }
     }
   }
