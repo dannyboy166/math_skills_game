@@ -79,6 +79,7 @@ flutter:
     - assets/sounds/1starWin.mp3
     - assets/sounds/2starWin.mp3
     - assets/sounds/3starWin.mp3
+    - assets/images/point.png
 
 
     

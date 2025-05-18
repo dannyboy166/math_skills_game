@@ -11,7 +11,9 @@ import 'package:math_skills_game/services/leaderboard_service.dart';
 import 'package:math_skills_game/services/sound_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/services/user_stats_service.dart';
+import 'package:math_skills_game/utils/tutorial_helper.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
+import 'package:math_skills_game/widgets/tutorial_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import 'dart:async'; // Add Timer import
@@ -92,6 +94,8 @@ class _GameScreenState extends State<GameScreen> {
 
     // Start game timer
     _startGameTimer();
+
+    _checkAndShowTutorial();
   }
 
   @override
@@ -996,6 +1000,13 @@ class _GameScreenState extends State<GameScreen> {
           ],
         ),
         actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close help dialog
+              _showTutorial(); // Show the tutorial again
+            },
+            child: Text('Show Tutorial'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text('Got it!'),
@@ -1042,6 +1053,40 @@ class _GameScreenState extends State<GameScreen> {
         ],
       ),
     );
+  }
+
+  void _checkAndShowTutorial() async {
+    if (await TutorialHelper.shouldShowTutorial()) {
+      // Give a slight delay to ensure the UI is fully rendered
+      Future.delayed(Duration(milliseconds: 500), () {
+        if (mounted) {
+          _showTutorial();
+        }
+      });
+    }
+  }
+
+  void _showTutorial() {
+    OverlayState? overlayState = Overlay.of(context);
+    OverlayEntry? overlayEntry;
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final boardSize = screenWidth * 0.9;
+    final innerRingSize = boardSize * 0.62;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => TutorialOverlay(
+        gameSize: Size(boardSize, boardSize),
+        innerRingRadius: innerRingSize / 2,
+        outerRingRadius: boardSize / 2,
+        onComplete: () {
+          overlayEntry?.remove();
+          TutorialHelper.markTutorialAsShown();
+        },
+      ),
+    );
+
+    overlayState.insert(overlayEntry);
   }
 }
 
