@@ -390,14 +390,24 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             _buildHeader(),
             _buildTabBar(),
 
-            // Only show update info for games and streaks tabs
-            if (_tabController.index == 0)
-              _buildUpdateInfo(ScalableLeaderboardService.GAMES_LEADERBOARD,
-                  _gamesLeaderboardLastUpdated)
-            else if (_tabController.index == 2)
-              _buildUpdateInfo(ScalableLeaderboardService.STREAK_LEADERBOARD,
-                  _streakLeaderboardLastUpdated),
-            // No message for time tab
+            // Add this AnimatedBuilder to detect tab changes
+            AnimatedBuilder(
+              animation: _tabController,
+              builder: (context, child) {
+                // Only show update info for games and streaks tabs
+                if (_tabController.index == 0) {
+                  return _buildUpdateInfo(
+                      ScalableLeaderboardService.GAMES_LEADERBOARD,
+                      _gamesLeaderboardLastUpdated);
+                } else if (_tabController.index == 2) {
+                  return _buildUpdateInfo(
+                      ScalableLeaderboardService.STREAK_LEADERBOARD,
+                      _streakLeaderboardLastUpdated);
+                }
+                // No info for time tab
+                return SizedBox.shrink();
+              },
+            ),
 
             Expanded(
               child: TabBarView(
