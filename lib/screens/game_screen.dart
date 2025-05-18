@@ -887,7 +887,15 @@ class _GameScreenState extends State<GameScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: operation.color,
                 ),
-                child: Text('Play Again!'),
+                child: Text(
+                  'Play Again!',
+                  style: TextStyle(
+                    color:
+                        Colors.white, // Change to white or a very light color
+                    fontWeight: FontWeight
+                        .bold, // Optional: make it bold for better visibility
+                  ),
+                ),
               ),
             ],
           );

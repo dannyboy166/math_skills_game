@@ -162,12 +162,13 @@ class GameScreenUI extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 8),
-                      
+
                       // Star rating guide
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.timer, size: 16, color: Colors.amber.shade800),
+                          Icon(Icons.timer,
+                              size: 16, color: Colors.amber.shade800),
                           SizedBox(width: 4),
                           Text(
                             'Complete faster to earn more stars!',
@@ -179,7 +180,7 @@ class GameScreenUI extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       SizedBox(height: 16),
                       // Progress stars at the top
                       ProgressStars(
@@ -233,7 +234,8 @@ class GameScreenUI extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: operation.color,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 4),
+                                border:
+                                    Border.all(color: Colors.white, width: 4),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black26,
@@ -311,7 +313,10 @@ class GameScreenUI extends StatelessWidget {
       margin: EdgeInsets.symmetric(horizontal: 60, vertical: 10),
       child: ElevatedButton.icon(
         onPressed: onShowHint,
-        icon: Icon(Icons.lightbulb_outline),
+        icon: Icon(
+          Icons.lightbulb_outline,
+          color: Colors.white, // Make the icon light colored
+        ),
         label: Text('Hint', style: TextStyle(fontSize: 16)),
         style: ElevatedButton.styleFrom(
           backgroundColor: operation.color.withOpacity(0.8),

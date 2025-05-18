@@ -984,7 +984,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.play_circle_fill_rounded, size: 24),
+              Icon(
+                Icons.play_circle_fill_rounded,
+                size: 24,
+                color: Colors.white, // Add this line to make the icon white
+              ),
               SizedBox(width: 8),
               Text(
                 'Start Game',
