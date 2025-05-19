@@ -67,30 +67,31 @@ class LevelCompletionModel {
 class StarRatingCalculator {
   // Time thresholds in milliseconds for each difficulty level
   // Format: [3-star threshold, 2-star threshold, 1-star threshold]
+  // Updated for age group 5-14
   static const Map<String, Map<String, List<int>>> _timeThresholds = {
     'addition': {
-      'Standard': [15000, 30000, 60000], // 15s, 30s, 60s
-      'Challenging': [20000, 40000, 80000], // 20s, 40s, 80s
-      'Expert': [30000, 60000, 120000], // 30s, 60s, 120s
-      'Impossible': [45000, 90000, 180000], // 45s, 90s, 180s
+      'Standard': [25000, 50000, 120000], // 25s, 50s, 120s
+      'Challenging': [35000, 70000, 150000], // 35s, 70s, 150s
+      'Expert': [45000, 90000, 180000], // 45s, 90s, 180s
+      'Impossible': [60000, 120000, 240000], // 60s, 120s, 240s
     },
     'subtraction': {
-      'Standard': [15000, 30000, 60000],
-      'Challenging': [25000, 50000, 100000],
-      'Expert': [40000, 80000, 160000],
-      'Impossible': [60000, 120000, 240000],
+      'Standard': [30000, 60000, 120000], // 30s, 60s, 120s
+      'Challenging': [40000, 80000, 160000], // 40s, 80s, 160s
+      'Expert': [55000, 110000, 220000], // 55s, 110s, 220s
+      'Impossible': [75000, 150000, 300000], // 75s, 150s, 300s
     },
     'multiplication': {
-      'Standard': [20000, 40000, 80000],
-      'Challenging': [30000, 60000, 120000],
-      'Expert': [45000, 90000, 180000],
-      'Impossible': [60000, 120000, 240000],
+      'Standard': [35000, 70000, 140000], // 35s, 70s, 140s
+      'Challenging': [45000, 90000, 180000], // 45s, 90s, 180s
+      'Expert': [60000, 120000, 240000], // 60s, 120s, 240s
+      'Impossible': [75000, 150000, 300000], // 75s, 150s, 300s
     },
     'division': {
-      'Standard': [25000, 50000, 100000],
-      'Challenging': [35000, 70000, 140000],
-      'Expert': [50000, 100000, 200000],
-      'Impossible': [70000, 140000, 280000],
+      'Standard': [40000, 80000, 160000], // 40s, 80s, 160s
+      'Challenging': [50000, 100000, 200000], // 50s, 100s, 200s
+      'Expert': [65000, 130000, 260000], // 65s, 130s, 260s
+      'Impossible': [85000, 170000, 340000], // 85s, 170s, 340s
     },
   };
 
@@ -100,7 +101,7 @@ class StarRatingCalculator {
     // Default to Standard difficulty if not found
     final thresholds = _timeThresholds[operation]?[difficulty] ??
         _timeThresholds[operation]?['Standard'] ??
-        [20000, 40000, 80000];
+        [35000, 70000, 140000];
 
     if (completionTimeMs <= thresholds[0]) {
       return 3; // Fast completion - 3 stars
@@ -121,7 +122,7 @@ class StarRatingCalculator {
 
     final thresholds = _timeThresholds[operation]?[difficulty] ??
         _timeThresholds[operation]?['Standard'] ??
-        [20000, 40000, 80000];
+        [35000, 70000, 140000];
 
     return thresholds[
         3 - stars]; // Index 0 for 3 stars, 1 for 2 stars, 2 for 1 star
