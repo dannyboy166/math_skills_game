@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:math_skills_game/screens/auth/register_screen.dart';
 import 'package:math_skills_game/screens/home_screen.dart';
 import 'package:math_skills_game/services/auth_service.dart';
-import 'package:math_skills_game/services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -12,9 +11,9 @@ class LoginScreen extends StatefulWidget {
   _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final AuthService _authService = AuthService();
-  final UserService _userService = UserService();
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -31,20 +30,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     // Check if there's a current user when the login screen initializes
     print(
         "LOGIN DEBUG: Current user on init: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
-    
+
     // Initialize animation controller
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    
+
     _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeOutBack,
       ),
     );
-    
+
     _animationController.forward();
   }
 
@@ -97,49 +96,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
         print(
             "LOGIN DEBUG: Final check - current user: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
-      }
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-
-    print("LOGIN DEBUG: Starting Google sign-in");
-
-    try {
-      final result = await _authService.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-
-      if (result.user != null) {
-        print(
-            "LOGIN DEBUG: Google sign-in successful for user: ${result.user!.uid}");
-        // Create user profile if signing in for the first time
-        await _userService.createUserProfile(result.user!);
-      } else {
-        print("LOGIN DEBUG: Google sign-in returned null result");
-      }
-
-      // Navigation happens automatically through the auth state listener
-    } catch (e) {
-      print("LOGIN DEBUG: Google sign-in failed with error: $e");
-
-      setState(() {
-        _errorMessage = _getErrorMessage(e);
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        // Final check
-        print(
-            "LOGIN DEBUG: Final check after Google sign-in - current user: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
       }
     }
   }
@@ -331,12 +287,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         },
                       ),
                     ),
-                    
+
                     SizedBox(height: 20),
-                    
+
                     // App Logo or Title
                     _buildAppLogo(),
-                    
+
                     SizedBox(height: 8),
                     Text(
                       'Welcome back!',
@@ -397,8 +353,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     SizedBox(height: 16),
 
                     // Error Message
-                    if (_errorMessage.isNotEmpty)
-                      _buildErrorMessage(),
+                    if (_errorMessage.isNotEmpty) _buildErrorMessage(),
 
                     // Sign In Button
                     _buildSignInButton(),
@@ -407,9 +362,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     // Or divider
                     _buildOrDivider(),
                     SizedBox(height: 16),
-
-                    _buildGoogleSignInButton(),
-                    SizedBox(height: 24),
 
                     // Sign Up Link
                     _buildSignUpLink(),
@@ -605,46 +557,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
         Expanded(child: Divider(thickness: 1)),
       ],
-    );
-  }
-
-  Widget _buildGoogleSignInButton() {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: OutlinedButton.icon(
-        onPressed: _isLoading ? null : _signInWithGoogle,
-        icon: Icon(
-          Icons.g_mobiledata,
-          size: 30,
-          color: Colors.red,
-        ),
-        label: Text(
-          'Sign in with Google',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          side: BorderSide(color: Colors.grey.shade300),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-          backgroundColor: Colors.white,
-        ),
-      ),
     );
   }
 

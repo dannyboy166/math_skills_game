@@ -54,7 +54,7 @@ class AuthService {
 
     return result;
   }
-
+/*
   // Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
     try {
@@ -83,6 +83,8 @@ class AuthService {
       return null;
     }
   }
+*/
+
 
 // In AuthService class
 // Enhanced sign out
