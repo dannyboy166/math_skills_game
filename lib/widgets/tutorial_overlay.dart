@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:confetti/confetti.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
-
-// Hand pointer icon by Stockio from www.flaticon.com
-// Used under Flaticon Free License
+import 'package:math_skills_game/services/sound_service.dart';
+import 'package:math_skills_game/services/haptic_service.dart';
 
 class TutorialOverlay extends StatefulWidget {
   final VoidCallback onComplete;
@@ -13,7 +12,7 @@ class TutorialOverlay extends StatefulWidget {
   final double outerRingRadius;
   final double centerX;
   final double centerY;
-  final Function()? onRotateRing; // Add callback for ring rotation
+  final Function()? onRotateRing;
 
   const TutorialOverlay({
     Key? key,
@@ -23,7 +22,7 @@ class TutorialOverlay extends StatefulWidget {
     required this.outerRingRadius,
     required this.centerX,
     required this.centerY,
-    this.onRotateRing, // Optional callback to rotate the ring
+    this.onRotateRing,
   }) : super(key: key);
 
   @override
@@ -46,11 +45,24 @@ class _TutorialOverlayState extends State<TutorialOverlay>
   // Replace _prevDragPosition with this
   double? _lastRotationProgress;
   bool _isDraggingDown = false;
+  
+  // Position tracking
+  Offset _currentPosition = Offset.zero;
+  
+  // Services
+  final SoundService _soundService = SoundService();
+  final HapticService _hapticService = HapticService();
+  
+  // Toast overlay entry
+  OverlayEntry? _toastOverlayEntry;
+  
+  // Flag to track if we're in dragging phase
+  bool _inDraggingPhase = false;
 
   @override
   void initState() {
     super.initState();
-
+    
     // Animation controller for hand movement
     _handController = AnimationController(
       duration: const Duration(seconds: 4),
@@ -75,17 +87,124 @@ class _TutorialOverlayState extends State<TutorialOverlay>
     // Listen for animation completion
     _handController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        _handController.reset();
-        Timer(Duration(milliseconds: 800), () {
+        // Don't immediately reset animation - wait until we're sure we've rendered the final frame
+        Timer(Duration(milliseconds: 100), () {
           if (mounted) {
-            _moveToNextStep();
+            // Only proceed to next step after a delay to ensure the final position is shown
+            Timer(Duration(milliseconds: 700), () {
+              if (mounted) {
+                _moveToNextStep();
+              }
+            });
           }
         });
       }
     });
 
-    // Add listener to check for ring rotation
+    // Add listener to check for ring rotation and track position
     _handController.addListener(_checkForRingRotation);
+    _handController.addListener(_checkDraggingPhase);
+    
+    // Add listener to track finger position
+    _handController.addListener(() {
+      if (_handPositionAnimation != null) {
+        _currentPosition = _handPositionAnimation.value;
+      }
+    });
+  }
+
+  // Check if we're in the dragging phase and show/hide instructions accordingly
+  void _checkDraggingPhase() {
+    if (_currentStep == 0) {
+      // For step 1, we want to show instructions only during actual dragging
+      // Check if we're in the dragging down phase (between 20% and 80% of animation)
+      bool isDraggingNow = _handController.value > 0.25 && _handController.value < 0.75;
+      
+      if (isDraggingNow && !_inDraggingPhase) {
+        // We just entered the dragging phase
+        _inDraggingPhase = true;
+        // Show the instruction
+        _showInstructionToast("Drag down like this to rotate the rings!");
+      } else if (!isDraggingNow && _inDraggingPhase) {
+        // We just exited the dragging phase
+        _inDraggingPhase = false;
+        // Hide the instruction
+        _hideInstructionToast();
+      }
+    }
+  }
+
+  // Method to show kid-friendly instruction toast
+  void _showInstructionToast(String message, {int durationMs = 5000, bool forceShow = false}) {
+    // If there's already a toast and we're not forcing a new one, don't show it
+    if (_toastOverlayEntry != null && !forceShow) {
+      return;
+    }
+    
+    // Remove existing toast if any
+    _toastOverlayEntry?.remove();
+    _toastOverlayEntry = null;
+    
+    // Get overlay state
+    final overlayState = Overlay.of(context);
+    
+    // Create new toast overlay
+    _toastOverlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 120,
+        left: 20,
+        right: 20,
+        child: Material(
+          elevation: 10,
+          borderRadius: BorderRadius.circular(25),
+          color: Colors.purple.shade100,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.lightbulb, 
+                  color: Colors.yellow.shade700, 
+                  size: 30
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.purple.shade900,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    
+    // Insert the toast
+    overlayState.insert(_toastOverlayEntry!);
+    
+    // Only auto-remove if a positive duration is provided
+    if (durationMs > 0) {
+      Future.delayed(Duration(milliseconds: durationMs), () {
+        // Only remove if this is still the current toast
+        if (_toastOverlayEntry != null) {
+          _toastOverlayEntry?.remove();
+          _toastOverlayEntry = null;
+        }
+      });
+    }
+  }
+  
+  // Method to hide the instruction toast
+  void _hideInstructionToast() {
+    _toastOverlayEntry?.remove();
+    _toastOverlayEntry = null;
   }
 
   void _checkForRingRotation() {
@@ -108,6 +227,8 @@ class _TutorialOverlayState extends State<TutorialOverlay>
 
           // Trigger first rotation right away
           if (widget.onRotateRing != null) {
+            // Light haptic impact for rotation
+            _hapticService.lightImpact();
             widget.onRotateRing!();
           }
           return;
@@ -117,9 +238,11 @@ class _TutorialOverlayState extends State<TutorialOverlay>
         if (_lastRotationProgress != null) {
           double progressDelta = dragProgress - _lastRotationProgress!;
 
-          // Using 0.3 as the threshold as you previously set
+          // Using 0.27 as the threshold as previously set
           if (progressDelta >= 0.27) {
             if (widget.onRotateRing != null) {
+              // Light haptic impact for rotation
+              _hapticService.lightImpact();
               widget.onRotateRing!();
             }
             _lastRotationProgress = dragProgress;
@@ -137,6 +260,8 @@ class _TutorialOverlayState extends State<TutorialOverlay>
     setState(() {
       _currentText = "Drag the rings to rotate them!";
       _showFinalOptions = false;
+      _showGotItButton = true; // Make sure the "Got it!" button is visible again
+      _inDraggingPhase = false; // Reset the dragging phase flag
     });
 
     // Simple vertical drag on the right side of the ring
@@ -197,6 +322,13 @@ class _TutorialOverlayState extends State<TutorialOverlay>
     ]).animate(_handController);
 
     _handController.forward();
+    
+    // Show an initial instruction just before starting, which will disappear when the dragging starts
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (mounted) {
+        _showInstructionToast("Drag the rings to rotate them.", durationMs: 2500);
+      }
+    });
   }
 
   void _setupStepTwo() {
@@ -218,10 +350,26 @@ class _TutorialOverlayState extends State<TutorialOverlay>
     // DOUBLED animation time for step two (8 seconds instead of 4)
     _handController.duration = Duration(seconds: 8);
 
+    // Save current position to ensure continuity
+    Offset currentPos = _currentPosition;
+    
+    // If the current position is not at top left, use explicit top left position
+    if ((currentPos - topLeft).distance > 20) {
+      currentPos = topLeft;
+    }
+
     // Visit each corner with MUCH slower movements
     // Start from the top-left (continuing from end of step one)
     _handPositionAnimation = TweenSequence<Offset>([
-      // Start at top-left (already there from end of step one)
+      // Start explicitly at top-left (to ensure correct starting position)
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: currentPos,
+          end: topLeft,
+        ),
+        weight: 5, // Small weight to ensure smooth transition
+      ),
+      // Hold at top-left
       TweenSequenceItem(
         tween: Tween<Offset>(
           begin: topLeft,
@@ -337,7 +485,7 @@ class _TutorialOverlayState extends State<TutorialOverlay>
         ),
         weight: 3,
       ),
-      // Hold at bottom-left - final pause (don't go back to top-left)
+      // Hold at bottom-left - final pause (don't go back to any other corner)
       TweenSequenceItem(
         tween: Tween<Offset>(
           begin: bottomLeft,
@@ -347,38 +495,27 @@ class _TutorialOverlayState extends State<TutorialOverlay>
       ),
     ]).animate(_handController);
 
-    // Reset the controller before forward to ensure smooth animation
-    _handController.reset();
-    _handController.forward();
+    // Don't reset the controller here - it causes the position to jump
+    _handController.forward(from: 0.0);
+
+    // Add just ONE instruction for the entire corner tapping phase
+    // and ensure it stays visible for most of the corner demonstration
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (mounted) {
+        _showInstructionToast("Tap on corners with correct equations to lock them in!", 
+          durationMs: 6000); // Keep visible for a longer time (6 seconds)
+      }
+    });
 
     // Calculate total weight - sum of all the weights above
-    const double totalWeight = 20 +
-        5 +
-        3 +
-        25 +
-        40 +
-        5 +
-        3 +
-        25 +
-        40 +
-        5 +
-        3 +
-        25 +
-        40 +
-        5 +
-        3 +
-        50; // = 297
+    const double totalWeight = 5 + 20 + 5 + 3 + 25 + 40 + 5 + 3 + 25 + 40 + 5 + 3 + 25 + 40 + 5 + 3 + 50; // = 302
 
     // Calculate millisecond timings for each corner tap
     // 8000ms is the total animation time
-    double topLeftTapEnd = (20 + 5 + 3) / totalWeight * 8000;
-    double topRightTapEnd = (20 + 5 + 3 + 25 + 40 + 5 + 3) / totalWeight * 8000;
-    double bottomRightTapEnd =
-        (20 + 5 + 3 + 25 + 40 + 5 + 3 + 25 + 40 + 5 + 3) / totalWeight * 8000;
-    double bottomLeftTapEnd =
-        (20 + 5 + 3 + 25 + 40 + 5 + 3 + 25 + 40 + 5 + 3 + 25 + 40 + 5 + 3) /
-            totalWeight *
-            8000;
+    double topLeftTapEnd = (5 + 20 + 5) / totalWeight * 8000;
+    double topRightTapEnd = (5 + 20 + 5 + 3 + 25 + 40 + 5) / totalWeight * 8000;
+    double bottomRightTapEnd = (5 + 20 + 5 + 3 + 25 + 40 + 5 + 3 + 25 + 40 + 5) / totalWeight * 8000;
+    double bottomLeftTapEnd = (5 + 20 + 5 + 3 + 25 + 40 + 5 + 3 + 25 + 40 + 5 + 3 + 25 + 40 + 5) / totalWeight * 8000;
 
     // Add celebrations at each corner
     List<int> celebrationTimings = [
@@ -396,8 +533,8 @@ class _TutorialOverlayState extends State<TutorialOverlay>
       (bottomLeftTapEnd - 200).round()
     ];
 
-    for (int timing in pulseTimings) {
-      Future.delayed(Duration(milliseconds: timing), () {
+    for (int i = 0; i < pulseTimings.length; i++) {
+      Future.delayed(Duration(milliseconds: pulseTimings[i]), () {
         if (mounted) {
           _pulseController.forward().then((_) {
             _pulseController.reverse();
@@ -413,16 +550,32 @@ class _TutorialOverlayState extends State<TutorialOverlay>
       Future.delayed(Duration(milliseconds: celebrationTimings[i]), () {
         if (mounted) {
           // Show celebration with confetti
-          _showFullCelebration(cornerPositions[i]);
+          _showFullCelebration(cornerPositions[i], i);
         }
       });
     }
+    
+    // Add a check at the end of animation
+    Future.delayed(Duration(milliseconds: 8000), () {
+      if (mounted) {
+        // Final celebration
+        _soundService.playCelebrationByStar(3);
+        _hapticService.celebration();
+      }
+    });
   }
 
   void _setupFinalStep() {
     setState(() {
       _currentText = "Good luck! Ready to play?";
       _showFinalOptions = true;
+    });
+    
+    // Give a friendly, encouraging message for the final step
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (mounted) {
+        _showInstructionToast("Amazing job! You're ready to play the game!");
+      }
     });
   }
 
@@ -434,12 +587,36 @@ class _TutorialOverlayState extends State<TutorialOverlay>
       } else if (_currentStep == 2) {
         _setupFinalStep();
       } else {
+        // Clean up before complete
+        _toastOverlayEntry?.remove();
+        _toastOverlayEntry = null;
         widget.onComplete();
       }
     });
   }
 
-  void _showFullCelebration(Offset cornerPosition) {
+  void _showFullCelebration(Offset cornerPosition, int cornerIndex) {
+    // Play correct sound for the corner
+    _soundService.playCorrect();
+    
+    // Add haptic feedback
+    if (cornerIndex < 3) {
+      _hapticService.success();
+      
+      // Only show message for first corner
+      if (cornerIndex == 0) {
+        _showInstructionToast("Great! Keep finding the rest of the equations!", 
+          durationMs: 2500); // Show briefly for first corner
+      }
+    } else {
+      // Final corner gets stronger haptic
+      _hapticService.celebration();
+      
+      // Special message for the final corner with longer display time
+      _showInstructionToast("Fantastic! You found all the correct equations!", 
+        durationMs: 4500, forceShow: true);
+    }
+    
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Create a star animation
@@ -514,6 +691,7 @@ class _TutorialOverlayState extends State<TutorialOverlay>
     _handController.dispose();
     _pulseController.dispose();
     _confettiController?.dispose();
+    _toastOverlayEntry?.remove();
     super.dispose();
   }
 
@@ -527,7 +705,7 @@ class _TutorialOverlayState extends State<TutorialOverlay>
         children: [
           // Semi-transparent overlay
           Container(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withOpacity(0.4),
           ),
 
           // Tutorial step text - Moved higher up and properly styled
@@ -596,7 +774,14 @@ class _TutorialOverlayState extends State<TutorialOverlay>
               bottom: 40,
               right: 30,
               child: ElevatedButton(
-                onPressed: widget.onComplete,
+                onPressed: () {
+                  // Haptic feedback
+                  _hapticService.mediumImpact();
+                  // Clean up before complete
+                  _toastOverlayEntry?.remove();
+                  _toastOverlayEntry = null;
+                  widget.onComplete();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.green,
@@ -630,9 +815,22 @@ class _TutorialOverlayState extends State<TutorialOverlay>
                 children: [
                   ElevatedButton(
                     onPressed: () {
+                      // Haptic feedback
+                      _hapticService.mediumImpact();
+                      
+                      // Clean up existing toast
+                      _toastOverlayEntry?.remove();
+                      _toastOverlayEntry = null;
+                      
                       setState(() {
                         _currentStep = 0;
                         _handController.duration = Duration(seconds: 4);
+                        
+                        // Need to stop and reset the animation controller properly
+                        _handController.stop();
+                        // Use value instead of forward(0.0) to ensure it's fully reset
+                        _handController.value = 0.0;
+                        
                         _setupStepOne();
                       });
                     },
@@ -650,7 +848,14 @@ class _TutorialOverlayState extends State<TutorialOverlay>
                   ),
                   SizedBox(width: 20),
                   ElevatedButton(
-                    onPressed: widget.onComplete,
+                    onPressed: () {
+                      // Haptic feedback
+                      _hapticService.mediumImpact();
+                      // Clean up before complete
+                      _toastOverlayEntry?.remove();
+                      _toastOverlayEntry = null;
+                      widget.onComplete();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
