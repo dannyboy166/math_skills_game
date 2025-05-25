@@ -65,7 +65,6 @@ class _GameScreenState extends State<GameScreen> {
   bool _isTimerRunning = false;
 
   int _totalPenaltyTimeMs = 0;
-  List<Widget> _penaltyAnimations = [];
   Map<String, Widget> _activePenaltyAnimations = {}; // Track by unique ID
   static const int PENALTY_SECONDS = 3;
   int _penaltyCounter = 0; // Counter for unique IDs
@@ -481,12 +480,14 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  // New method to handle time penalty
   void _addTimePenalty(int cornerIndex) {
+    print("🔴 DEBUG: _addTimePenalty called for cornerIndex: $cornerIndex");
+
     // Add penalty to total
     setState(() {
       _totalPenaltyTimeMs += PENALTY_SECONDS * 1000;
     });
+    print("🔴 DEBUG: Total penalty time now: ${_totalPenaltyTimeMs}ms");
 
     // Calculate animation position (at the corner that was tapped)
     final screenWidth = MediaQuery.of(context).size.width;
@@ -513,18 +514,38 @@ class _GameScreenState extends State<GameScreen> {
     // Create unique ID for this animation
     final animationId =
         'penalty_${_penaltyCounter++}_${DateTime.now().millisecondsSinceEpoch}';
+    print("🔴 DEBUG: Creating penalty animation with ID: $animationId");
+    print(
+        "🔴 DEBUG: Current active animations before add: ${_activePenaltyAnimations.keys.toList()}");
 
-    // Add penalty animation with unique tracking
+    // Add penalty animation with unique tracking and KEY
     final penaltyAnimation = TimePenaltyAnimation(
+      key: ValueKey(animationId), // 🔥 THIS IS THE FIX - Add unique key!
       animationId: animationId,
       startPosition: penaltyPosition,
       penaltySeconds: PENALTY_SECONDS,
       onComplete: () {
-        // Remove this specific animation when it completes
-        setState(() {
-          _activePenaltyAnimations.remove(animationId);
-          // Update the list for the UI
-          _penaltyAnimations = _activePenaltyAnimations.values.toList();
+        print("🔴 DEBUG: Animation $animationId completed, calling onComplete");
+        print(
+            "🔴 DEBUG: Active animations before removal: ${_activePenaltyAnimations.keys.toList()}");
+
+        // Use a post-frame callback to avoid setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          print("🔴 DEBUG: Post-frame callback executing for $animationId");
+          if (mounted) {
+            print(
+                "🔴 DEBUG: Widget is mounted, proceeding with setState for $animationId");
+            setState(() {
+              final removed = _activePenaltyAnimations.remove(animationId);
+              print(
+                  "🔴 DEBUG: Removed animation $animationId: ${removed != null}");
+              print(
+                  "🔴 DEBUG: Active animations after removal: ${_activePenaltyAnimations.keys.toList()}");
+            });
+          } else {
+            print(
+                "🔴 DEBUG: Widget not mounted, skipping setState for $animationId");
+          }
         });
       },
     );
@@ -532,12 +553,14 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       // Add to our tracking map
       _activePenaltyAnimations[animationId] = penaltyAnimation;
-      // Update the list for the UI
-      _penaltyAnimations = _activePenaltyAnimations.values.toList();
+      print("🔴 DEBUG: Added animation $animationId to tracking map");
+      print(
+          "🔴 DEBUG: Active animations after add: ${_activePenaltyAnimations.keys.toList()}");
     });
 
     // Also trigger stronger haptic feedback for wrong answer
     _hapticService.error();
+    print("🔴 DEBUG: _addTimePenalty completed for $animationId");
   }
 
   void _handleTileTap(int cornerIndex, int position) {
@@ -651,11 +674,11 @@ class _GameScreenState extends State<GameScreen> {
       lockedEquations: lockedEquations,
       starAnimations: [
         ...starAnimations,
-        ..._penaltyAnimations
-      ], // Include penalty animations
+        ..._activePenaltyAnimations
+            .values // 🔥 Use values directly, no separate list!
+      ],
       isGameComplete: isGameComplete,
-      elapsedTimeMs:
-          _displayedElapsedTimeMs, // Use displayed time with penalties
+      elapsedTimeMs: _displayedElapsedTimeMs,
       onUpdateInnerRing: _updateInnerRing,
       onUpdateOuterRing: _updateOuterRing,
       onTileTap: _handleTileTap,
@@ -970,10 +993,10 @@ class _GameScreenState extends State<GameScreen> {
                     lockedEquations = [];
                     isGameComplete = false;
                     starAnimations = [];
-                    _penaltyAnimations = []; // Reset penalty animations
-                    _activePenaltyAnimations.clear(); // Clear tracking map
-                    _totalPenaltyTimeMs = 0; // Reset penalty time
-                    _penaltyCounter = 0; // Reset counter
+                    _activePenaltyAnimations
+                        .clear(); // 🔥 Clear the map directly
+                    _totalPenaltyTimeMs = 0;
+                    _penaltyCounter = 0;
 
                     // Generate new game
                     if (widget.operationName == 'multiplication' ||

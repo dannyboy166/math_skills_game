@@ -1,18 +1,18 @@
-// lib/widgets/time_penalty_animation.dart
+// lib/widgets/time_penalty_animation.dart - Debug Version
 import 'package:flutter/material.dart';
 
 class TimePenaltyAnimation extends StatefulWidget {
   final VoidCallback onComplete;
   final int penaltySeconds;
   final Offset startPosition;
-  final String animationId; // Add unique ID to track animations
+  final String animationId;
 
   const TimePenaltyAnimation({
     Key? key,
     required this.onComplete,
     this.penaltySeconds = 3,
     required this.startPosition,
-    required this.animationId, // Make this required
+    required this.animationId,
   }) : super(key: key);
 
   @override
@@ -25,10 +25,12 @@ class _TimePenaltyAnimationState extends State<TimePenaltyAnimation>
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
   late Animation<Offset> _slideAnimation;
+  bool _hasCompleted = false;
 
   @override
   void initState() {
     super.initState();
+    print("🟡 DEBUG: TimePenaltyAnimation ${widget.animationId} initState called");
     
     _controller = AnimationController(
       duration: const Duration(milliseconds: 2000),
@@ -81,13 +83,32 @@ class _TimePenaltyAnimationState extends State<TimePenaltyAnimation>
       curve: Curves.easeOutQuart,
     ));
 
-    _controller.forward().then((_) {
-      widget.onComplete();
+    // Add listener to detect completion more reliably
+    _controller.addStatusListener((status) {
+      print("🟡 DEBUG: Animation ${widget.animationId} status changed to: $status");
+      if (status == AnimationStatus.completed && !_hasCompleted) {
+        print("🟡 DEBUG: Animation ${widget.animationId} completed, calling onComplete");
+        _hasCompleted = true;
+        widget.onComplete();
+      }
     });
+
+    // Also add a listener to track animation value changes
+    _controller.addListener(() {
+      if (_controller.value == 0.0) {
+        print("🟡 DEBUG: Animation ${widget.animationId} started (value: 0.0)");
+      } else if (_controller.value == 1.0 && _controller.status == AnimationStatus.completed) {
+        print("🟡 DEBUG: Animation ${widget.animationId} reached end (value: 1.0)");
+      }
+    });
+
+    print("🟡 DEBUG: Starting animation ${widget.animationId}");
+    _controller.forward();
   }
 
   @override
   void dispose() {
+    print("🟡 DEBUG: TimePenaltyAnimation ${widget.animationId} dispose called");
     _controller.dispose();
     super.dispose();
   }
@@ -97,11 +118,16 @@ class _TimePenaltyAnimationState extends State<TimePenaltyAnimation>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
+        // Only log every 10th build to avoid spam
+        if ((_controller.value * 100).round() % 10 == 0) {
+          print("🟡 DEBUG: Animation ${widget.animationId} building at value: ${_controller.value.toStringAsFixed(2)}");
+        }
+        
         // Calculate safe position to avoid clipping with top bars
         final screenHeight = MediaQuery.of(context).size.height;
         final safeAreaTop = MediaQuery.of(context).padding.top;
         final appBarHeight = kToolbarHeight;
-        final minTopPosition = safeAreaTop + appBarHeight + 80; // Extra padding for safety
+        final minTopPosition = safeAreaTop + appBarHeight + 80;
         
         // Adjust Y position if it would be clipped
         double adjustedY = widget.startPosition.dy - 80;
