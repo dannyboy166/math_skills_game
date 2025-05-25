@@ -1,4 +1,4 @@
-// lib/widgets/simple_ring.dart - Updated with swipe queuing system
+// lib/widgets/simple_ring.dart - Updated with max 2 swipe stack limit
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
@@ -47,9 +47,10 @@ class _SimpleRingState extends State<SimpleRing>
   // Animation controller
   late RingAnimationController _animationController;
   
-  // Swipe queue system
+  // Swipe queue system with maximum limit
   List<int> _pendingRotations = [];
   bool _isProcessingQueue = false;
+  static const int _maxQueueSize = 2; // Maximum number of queued moves
   
   // Swipe configuration
   static const double _swipeThreshold = 30.0; // Minimum distance for a swipe
@@ -128,12 +129,18 @@ class _SimpleRingState extends State<SimpleRing>
     });
   }
 
-  /// Add a rotation to the queue and process it
+  /// Add a rotation to the queue with maximum limit enforcement
   void _queueRotation(int rotationStep) {
-    print("DEBUG: Queueing rotation step: $rotationStep");
+    print("DEBUG: Attempting to queue rotation step: $rotationStep");
+    
+    // Check if we've reached the maximum queue size
+    if (_pendingRotations.length >= _maxQueueSize) {
+      print("DEBUG: Queue is full (${_pendingRotations.length}/$_maxQueueSize), ignoring new rotation");
+      return;
+    }
     
     _pendingRotations.add(rotationStep);
-    print("DEBUG: Queue now has ${_pendingRotations.length} pending rotations");
+    print("DEBUG: Queue now has ${_pendingRotations.length}/$_maxQueueSize pending rotations");
     
     // Start processing the queue if we're not already doing so
     if (!_isProcessingQueue) {
