@@ -871,6 +871,8 @@ class _GameScreenState extends State<GameScreen> {
                 },
                 child: Text('Return to Menu'),
               ),
+              // In game_screen.dart, replace the "Play Again" button logic in _showCompletionStatsDialog:
+
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
@@ -879,9 +881,18 @@ class _GameScreenState extends State<GameScreen> {
                     isGameComplete = false;
                     starAnimations = [];
 
-                    final random = Random();
-                    targetNumber =
-                        widget.difficultyLevel.getRandomCenterNumber(random);
+                    // ✅ FIXED: For multiplication/division, keep the same target number
+                    // For addition/subtraction, generate a new random one
+                    if (widget.operationName == 'multiplication' ||
+                        widget.operationName == 'division') {
+                      // Keep the same target number (multiplication table)
+                      targetNumber = widget.targetNumber ?? targetNumber;
+                    } else {
+                      // Generate new random target for addition/subtraction
+                      final random = Random();
+                      targetNumber =
+                          widget.difficultyLevel.getRandomCenterNumber(random);
+                    }
 
                     _generateGameNumbers();
                     _elapsedTimeMs = 0;
@@ -894,10 +905,8 @@ class _GameScreenState extends State<GameScreen> {
                 child: Text(
                   'Play Again!',
                   style: TextStyle(
-                    color:
-                        Colors.white, // Change to white or a very light color
-                    fontWeight: FontWeight
-                        .bold, // Optional: make it bold for better visibility
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
