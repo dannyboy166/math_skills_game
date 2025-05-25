@@ -13,6 +13,7 @@ import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/services/user_stats_service.dart';
 import 'package:math_skills_game/utils/tutorial_helper.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
+import 'package:math_skills_game/widgets/time_penalty_animation.dart';
 import 'package:math_skills_game/widgets/tutorial_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
@@ -62,6 +63,14 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _gameTimer;
   int _elapsedTimeMs = 0;
   bool _isTimerRunning = false;
+
+  int _totalPenaltyTimeMs = 0;
+  List<Widget> _penaltyAnimations = [];
+  Map<String, Widget> _activePenaltyAnimations = {}; // Track by unique ID
+  static const int PENALTY_SECONDS = 3;
+  int _penaltyCounter = 0; // Counter for unique IDs
+
+  int get _displayedElapsedTimeMs => _elapsedTimeMs + _totalPenaltyTimeMs;
 
   final HapticService _hapticService = HapticService();
   final SoundService _soundService = SoundService();
@@ -437,13 +446,16 @@ class _GameScreenState extends State<GameScreen> {
       // If it's correct, lock it
       _lockEquation(cornerIndex);
     } else {
+      // WRONG ANSWER - Add penalty time and show animation
+      _addTimePenalty(cornerIndex);
+
       // Play incorrect sound and vibration
       _soundService.playIncorrect();
 
       // Hide any current snackbar before showing a new one
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-      // Show the new snackbar
+      // Show updated snackbar with penalty info
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -452,7 +464,7 @@ class _GameScreenState extends State<GameScreen> {
               SizedBox(width: 10),
               Flexible(
                 child: Text(
-                  'Not quite right! Rotate the rings to make a correct equation.',
+                  'Wrong! +${PENALTY_SECONDS}s penalty. Rotate the rings to make a correct equation.',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -467,6 +479,65 @@ class _GameScreenState extends State<GameScreen> {
         ),
       );
     }
+  }
+
+  // New method to handle time penalty
+  void _addTimePenalty(int cornerIndex) {
+    // Add penalty to total
+    setState(() {
+      _totalPenaltyTimeMs += PENALTY_SECONDS * 1000;
+    });
+
+    // Calculate animation position (at the corner that was tapped)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final boardSize = screenWidth * 0.9;
+
+    Offset penaltyPosition;
+    switch (cornerIndex) {
+      case 0: // Top
+        penaltyPosition = Offset(boardSize / 2, boardSize * 0.2);
+        break;
+      case 1: // Right
+        penaltyPosition = Offset(boardSize * 0.8, boardSize / 2);
+        break;
+      case 2: // Bottom
+        penaltyPosition = Offset(boardSize / 2, boardSize * 0.8);
+        break;
+      case 3: // Left
+        penaltyPosition = Offset(boardSize * 0.2, boardSize / 2);
+        break;
+      default:
+        penaltyPosition = Offset(boardSize / 2, boardSize / 2);
+    }
+
+    // Create unique ID for this animation
+    final animationId =
+        'penalty_${_penaltyCounter++}_${DateTime.now().millisecondsSinceEpoch}';
+
+    // Add penalty animation with unique tracking
+    final penaltyAnimation = TimePenaltyAnimation(
+      animationId: animationId,
+      startPosition: penaltyPosition,
+      penaltySeconds: PENALTY_SECONDS,
+      onComplete: () {
+        // Remove this specific animation when it completes
+        setState(() {
+          _activePenaltyAnimations.remove(animationId);
+          // Update the list for the UI
+          _penaltyAnimations = _activePenaltyAnimations.values.toList();
+        });
+      },
+    );
+
+    setState(() {
+      // Add to our tracking map
+      _activePenaltyAnimations[animationId] = penaltyAnimation;
+      // Update the list for the UI
+      _penaltyAnimations = _activePenaltyAnimations.values.toList();
+    });
+
+    // Also trigger stronger haptic feedback for wrong answer
+    _hapticService.error();
   }
 
   void _handleTileTap(int cornerIndex, int position) {
@@ -578,9 +649,13 @@ class _GameScreenState extends State<GameScreen> {
       innerRingModel: innerRingModel,
       outerRingModel: outerRingModel,
       lockedEquations: lockedEquations,
-      starAnimations: starAnimations,
+      starAnimations: [
+        ...starAnimations,
+        ..._penaltyAnimations
+      ], // Include penalty animations
       isGameComplete: isGameComplete,
-      elapsedTimeMs: _elapsedTimeMs,
+      elapsedTimeMs:
+          _displayedElapsedTimeMs, // Use displayed time with penalties
       onUpdateInnerRing: _updateInnerRing,
       onUpdateOuterRing: _updateOuterRing,
       onTileTap: _handleTileTap,
@@ -599,8 +674,12 @@ class _GameScreenState extends State<GameScreen> {
         return;
       }
 
-      final completionTimeMs = _endTime!.difference(_startTime!).inMilliseconds;
-      print("Completion time calculated: $completionTimeMs ms");
+      // Use the total time including penalties for final calculation
+      final completionTimeMs =
+          _endTime!.difference(_startTime!).inMilliseconds +
+              _totalPenaltyTimeMs;
+      print(
+          "Completion time calculated: $completionTimeMs ms (including ${_totalPenaltyTimeMs}ms penalties)");
 
       final starRating = StarRatingCalculator.calculateStars(
         widget.operationName,
@@ -791,7 +870,6 @@ class _GameScreenState extends State<GameScreen> {
     if (context.mounted) {
       // Get appropriate message based on star rating
       String message;
-
       switch (starRating) {
         case 0:
           message = "Try a little faster to earn stars!";
@@ -844,9 +922,24 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds',
+                  'Total time: ${(completionTimeMs / 1000).toStringAsFixed(2)}s',
                   textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
+                if (_totalPenaltyTimeMs > 0) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    'Base time: ${((_elapsedTimeMs) / 1000).toStringAsFixed(2)}s',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  Text(
+                    'Penalties: +${(_totalPenaltyTimeMs / 1000).toStringAsFixed(1)}s',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.w500),
+                  ),
+                ],
                 SizedBox(height: 8),
                 Text(
                   message,
@@ -866,13 +959,10 @@ class _GameScreenState extends State<GameScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
-                  Navigator.of(context)
-                      .pop(true); // Pass true to indicate refreshing streaks
+                  Navigator.of(context).pop(true);
                 },
                 child: Text('Return to Menu'),
               ),
-              // In game_screen.dart, replace the "Play Again" button logic in _showCompletionStatsDialog:
-
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
@@ -880,15 +970,16 @@ class _GameScreenState extends State<GameScreen> {
                     lockedEquations = [];
                     isGameComplete = false;
                     starAnimations = [];
+                    _penaltyAnimations = []; // Reset penalty animations
+                    _activePenaltyAnimations.clear(); // Clear tracking map
+                    _totalPenaltyTimeMs = 0; // Reset penalty time
+                    _penaltyCounter = 0; // Reset counter
 
-                    // ✅ FIXED: For multiplication/division, keep the same target number
-                    // For addition/subtraction, generate a new random one
+                    // Generate new game
                     if (widget.operationName == 'multiplication' ||
                         widget.operationName == 'division') {
-                      // Keep the same target number (multiplication table)
                       targetNumber = widget.targetNumber ?? targetNumber;
                     } else {
-                      // Generate new random target for addition/subtraction
                       final random = Random();
                       targetNumber =
                           widget.difficultyLevel.getRandomCenterNumber(random);
