@@ -14,11 +14,11 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final SoundService _soundService = SoundService();
   final HapticService _hapticService = HapticService();
-  
+
   // Local state for settings
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
-  
+
   @override
   void initState() {
     super.initState();
@@ -35,15 +35,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _toggleSound() async {
     _soundService.toggleSound();
-    
+
     // Save preference
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('sound_enabled', _soundService.isSoundEnabled);
-    
+
     setState(() {
       _soundEnabled = _soundService.isSoundEnabled;
     });
-    
+
     // Play a sound for feedback if sound is enabled
     if (_soundEnabled) {
       _soundService.playCorrect();
@@ -52,11 +52,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _toggleVibration() async {
     await _hapticService.toggleVibration();
-    
+
     setState(() {
       _vibrationEnabled = _hapticService.isVibrationEnabled;
     });
-    
+
     // Provide haptic feedback if vibration is enabled
     if (_vibrationEnabled) {
       _hapticService.mediumImpact();
@@ -84,7 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: EdgeInsets.all(16),
           children: [
             _buildSectionHeader('Game Settings'),
-            
+
             // Sound Toggle
             _buildSettingSwitch(
               'Sound Effects',
@@ -94,7 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _toggleSound,
               Colors.blue,
             ),
-            
+
             // Vibration Toggle
             _buildSettingSwitch(
               'Vibration',
@@ -104,9 +104,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _toggleVibration,
               Colors.purple,
             ),
-            
+
             _buildSectionHeader('Game Modes'),
-            
+
             // Placeholder for future settings
             _buildPlaceholderSetting(
               'Dark Mode',
@@ -114,39 +114,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Icons.dark_mode,
               Colors.grey[800]!,
             ),
-            
+
             _buildPlaceholderSetting(
               'Challenge Mode',
               'Enable timed challenges',
               Icons.timer,
               Colors.orange,
             ),
-            
+
             _buildSectionHeader('Account'),
-            
+
             _buildPlaceholderSetting(
               'Notification Settings',
               'Manage game notifications',
               Icons.notifications,
               Colors.red,
             ),
-            
+
             _buildPlaceholderSetting(
               'Data & Privacy',
               'Manage your data',
               Icons.security,
               Colors.green,
             ),
-            
+
             _buildPlaceholderSetting(
               'About',
               'App information and credits',
               Icons.info,
               Colors.blue,
             ),
-            
+
             SizedBox(height: 20),
-            
+
             // Version number
             Center(
               child: Text(
@@ -277,7 +277,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           color: Colors.grey[400],
         ),
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
+          final messenger = ScaffoldMessenger.of(context);
+          messenger.hideCurrentSnackBar(); // Hide any existing one
+          messenger.showSnackBar(
             SnackBar(
               content: Text('This feature will be available soon!'),
               behavior: SnackBarBehavior.floating,

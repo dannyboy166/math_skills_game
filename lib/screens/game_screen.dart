@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:math_skills_game/animations/celebration_animation.dart';
 import 'package:math_skills_game/animations/star_animation.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
@@ -714,7 +715,65 @@ class _GameScreenState extends State<GameScreen> {
       // Play celebration sound based on star rating
       _soundService.playCelebrationByStar(starRating);
 
-      // Show celebration animation first
+      // Initialize high score tracking variables
+      bool isNewHighScore = false;
+      int? previousRank;
+      int? newRank;
+
+      // 🔥 DETECT HIGH SCORE BEFORE SHOWING DIALOG
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        try {
+          // Get current user data to check for high scores
+          final userDoc =
+              await _firestore.collection('users').doc(userId).get();
+          if (userDoc.exists) {
+            final userData = userDoc.data()!;
+            final bestTimes =
+                userData['bestTimes'] as Map<String, dynamic>? ?? {};
+            final currentBestTime =
+                bestTimes[widget.operationName] as int? ?? 999999;
+            final difficultyKey =
+                '${widget.operationName}-${widget.difficultyLevel.displayName.toLowerCase()}';
+            final currentDifficultyBestTime =
+                bestTimes[difficultyKey] as int? ?? 999999;
+
+            // Determine if this is a high score
+            if (!(bestTimes.containsKey(difficultyKey) &&
+                bestTimes[difficultyKey] != null)) {
+              print(
+                  "🏆 This is the first time for $difficultyKey - NEW HIGH SCORE!");
+              isNewHighScore = true;
+            } else if (completionTimeMs < currentDifficultyBestTime) {
+              print(
+                  "🏆 New best time for $difficultyKey: $completionTimeMs ms (previous: $currentDifficultyBestTime ms) - NEW HIGH SCORE!");
+              isNewHighScore = true;
+            } else if (completionTimeMs < currentBestTime) {
+              print(
+                  "🏆 New overall best time for ${widget.operationName}: $completionTimeMs ms (previous: $currentBestTime ms) - NEW HIGH SCORE!");
+              isNewHighScore = true;
+            }
+
+            if (isNewHighScore) {
+              try {
+                print("🏆 HIGH SCORE DETECTED! Personal best achieved!");
+              } catch (e) {
+                print("Error logging high score: $e");
+              }
+            }
+
+            print("High score detection: isNewHighScore=$isNewHighScore, " +
+                "completionTimeMs=$completionTimeMs, " +
+                "currentBestTime=$currentBestTime, " +
+                "difficultyKey=$difficultyKey, " +
+                "currentDifficultyBestTime=$currentDifficultyBestTime");
+          }
+        } catch (e) {
+          print("Error in high score detection: $e");
+        }
+      }
+
+      // Show celebration animation with high score info
       if (context.mounted) {
         showDialog(
           context: context,
@@ -724,11 +783,15 @@ class _GameScreenState extends State<GameScreen> {
               backgroundColor: Colors.transparent,
               elevation: 0,
               child: CelebrationAnimation(
-                starRating:
-                    starRating, // Pass star rating to show appropriate message
+                starRating: starRating,
                 onComplete: () {
                   Navigator.of(dialogContext).pop();
-                  _showCompletionStatsDialog(completionTimeMs, starRating);
+                  _showCompletionStatsDialog(
+                    completionTimeMs,
+                    starRating,
+                    isNewHighScore: isNewHighScore,
+                    // Remove rank parameters
+                  );
                 },
               ),
             );
@@ -737,9 +800,10 @@ class _GameScreenState extends State<GameScreen> {
       }
 
       // ✅ Firebase save in the background (doesn't block UI)
-      final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId != null) {
         final userService = UserService();
+        final leaderboardService = LeaderboardService();
+
         final levelCompletion = LevelCompletionModel(
           operationName: widget.operationName,
           difficultyName: widget.difficultyLevel.displayName,
@@ -749,20 +813,40 @@ class _GameScreenState extends State<GameScreen> {
           completedAt: DateTime.now(),
         );
 
-        // In game_screen.dart - _showWinDialog method
-// After saving level completion:
+        // Save level completion
         await userService.saveLevelCompletion(userId, levelCompletion);
         print("Level completion saved successfully");
 
-// Update both leaderboards
-        final leaderboardService = LeaderboardService();
-
-// First update time leaderboard with high score flag
+        // Update both leaderboards
         await leaderboardService.updateUserInAllLeaderboards(userId,
-            isHighScore: true);
+            isHighScore: isNewHighScore);
         print("Leaderboard data updated successfully");
 
-// Explicitly handle games update to ensure cache is cleared
+        // If it was a high score, get the new rank after updating leaderboards
+        if (isNewHighScore) {
+          try {
+            await Future.delayed(
+                Duration(milliseconds: 500)); // Wait for leaderboard update
+            final leaderboardType = leaderboardService
+                .getLeaderboardTypeFromOperation(widget.operationName);
+            final rankData = await leaderboardService.getUserLeaderboardData(
+                userId, leaderboardType);
+            newRank = rankData['rank'] as int?;
+
+            final prefs = await SharedPreferences.getInstance();
+            if (newRank != null) {
+              await prefs.setInt(
+                  'lastRank_${widget.operationName}_${widget.difficultyLevel.displayName}',
+                  newRank);
+              print(
+                  "🏆 New rank after high score: #$newRank (previous: ${previousRank ?? 'none'})");
+            }
+          } catch (e) {
+            print("Error getting new rank: $e");
+          }
+        }
+
+        // Explicitly handle games update to ensure cache is cleared
         final userDoc = await _firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
           final totalGames = userDoc.data()?['totalGames'] ?? 0;
@@ -784,90 +868,6 @@ class _GameScreenState extends State<GameScreen> {
 
         // IMPROVED: Direct leaderboard update for current user
         try {
-          // First update the scalable leaderboard for this user
-          final leaderboardService = LeaderboardService();
-          // Check if this is a new best time
-
-          // Check if this is a new best time
-          final userDoc =
-              await _firestore.collection('users').doc(userId).get();
-          final userData = userDoc.data();
-          final bestTimes =
-              userData?['bestTimes'] as Map<String, dynamic>? ?? {};
-          final currentBestTime =
-              bestTimes[widget.operationName] as int? ?? 999999;
-          final difficultyKey =
-              '${widget.operationName}-${widget.difficultyLevel.displayName.toLowerCase()}';
-          final currentDifficultyBestTime =
-              bestTimes[difficultyKey] as int? ?? 999999;
-
-          // In game_screen.dart - _showWinDialog method
-          bool isHighScore = false;
-
-          // First check user data
-          if (!(bestTimes.containsKey(difficultyKey) &&
-              bestTimes[difficultyKey] != null)) {
-            print(
-                "This is the first time for $difficultyKey in user data - treating as high score");
-            isHighScore = true;
-          }
-          // Check if this is a better time than before
-          else if (completionTimeMs <= currentDifficultyBestTime) {
-            print(
-                "New best time for $difficultyKey: $completionTimeMs ms (previous: $currentDifficultyBestTime ms)");
-            isHighScore = true;
-          }
-          // Also consider a new overall best time
-          else if (completionTimeMs < currentBestTime) {
-            print(
-                "New overall best time for ${widget.operationName}: $completionTimeMs ms (previous: $currentBestTime ms)");
-            isHighScore = true;
-          }
-
-          // If not yet determined to be a high score, check if entry exists in leaderboard
-          if (!isHighScore) {
-            try {
-              // Check if the entry exists in the main leaderboard
-              final leaderboardType = widget.operationName == 'addition'
-                  ? 'additionTime'
-                  : (widget.operationName == 'subtraction'
-                      ? 'subtractionTime'
-                      : (widget.operationName == 'multiplication'
-                          ? 'multiplicationTime'
-                          : 'divisionTime'));
-
-              // Check difficulty-specific leaderboard
-              final leaderboardDoc = await _firestore
-                  .collection('leaderboards')
-                  .doc(leaderboardType)
-                  .collection('difficulties')
-                  .doc(widget.difficultyLevel.displayName.toLowerCase())
-                  .collection('entries')
-                  .doc(userId)
-                  .get();
-
-              if (!leaderboardDoc.exists) {
-                print(
-                    "Entry doesn't exist in Firebase leaderboard yet - treating as high score");
-                isHighScore = true;
-              }
-            } catch (e) {
-              print(
-                  "Error checking leaderboard: $e - treating as high score to be safe");
-              isHighScore = true;
-            }
-          }
-
-          print("High score detection: isHighScore=$isHighScore, " +
-              "completionTimeMs=$completionTimeMs, " +
-              "currentBestTime=$currentBestTime, " +
-              "difficultyKey=$difficultyKey, " +
-              "currentDifficultyBestTime=$currentDifficultyBestTime");
-
-          // Update leaderboards with the high score flag
-          await leaderboardService.updateUserInAllLeaderboards(userId,
-              isHighScore: isHighScore);
-
           // ADDED: Specifically clear games leaderboard cache to ensure it shows updated count
           final prefs = await SharedPreferences.getInstance();
           await prefs.remove(
@@ -889,26 +889,53 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  void _showCompletionStatsDialog(int completionTimeMs, int starRating) {
+  String getAchievementMessage(int? newRank) {
+    if (newRank == null) return "🎉 Great job improving your time! 🎉";
+
+    if (newRank == 1) {
+      return "🏆 YOU'RE THE FASTEST! Amazing! 🏆";
+    } else if (newRank <= 3) {
+      return "🥇 You made the TOP 3! Incredible! 🥇";
+    } else if (newRank <= 10) {
+      return "⭐ You're in the TOP 10! Well done! ⭐";
+    } else if (newRank <= 25) {
+      return "🌟 You're in the TOP 25! Keep going! 🌟";
+    } else {
+      return "📈 You're getting faster! Nice improvement! 📈";
+    }
+  }
+
+  void _showCompletionStatsDialog(
+    int completionTimeMs,
+    int starRating, {
+    bool isNewHighScore = false,
+    // Remove rank parameters entirely
+  }) {
     if (context.mounted) {
-      // Get appropriate message based on star rating
+      // Get appropriate message based on star rating and high score status
       String message;
-      switch (starRating) {
-        case 0:
-          message = "Try a little faster to earn stars!";
-          break;
-        case 1:
-          message = "Good speed! Can you go faster?";
-          break;
-        case 2:
-          message = "Great time! Almost perfect!";
-          break;
-        case 3:
-          message = "Amazing speed! Perfect score!";
-          break;
-        default:
-          message =
-              "You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds";
+
+      if (isNewHighScore) {
+        message = "🏆 NEW PERSONAL BEST! 🏆";
+      } else {
+        // Your existing star-based messages
+        switch (starRating) {
+          case 0:
+            message = "Try a little faster to earn stars!";
+            break;
+          case 1:
+            message = "Good speed! Can you go faster?";
+            break;
+          case 2:
+            message = "Great time! Almost perfect!";
+            break;
+          case 3:
+            message = "Amazing speed! Perfect score!";
+            break;
+          default:
+            message =
+                "You completed in ${(completionTimeMs / 1000).toStringAsFixed(2)} seconds";
+        }
       }
 
       showDialog(
@@ -917,17 +944,18 @@ class _GameScreenState extends State<GameScreen> {
         builder: (dialogContext) {
           return AlertDialog(
             title: Text(
-              'Success!',
+              isNewHighScore ? '🎉 SUCCESS! 🎉' : 'Success!',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: operation.color,
+                color: isNewHighScore ? Colors.amber.shade700 : operation.color,
               ),
               textAlign: TextAlign.center,
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Stars display
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(3, (index) {
@@ -943,12 +971,44 @@ class _GameScreenState extends State<GameScreen> {
                     );
                   }),
                 ),
+
                 SizedBox(height: 16),
+
+                // High score indicator (if applicable)
+                if (isNewHighScore) ...[
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(FontAwesomeIcons.trophy,
+                            color: Colors.amber.shade700, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'PERSONAL BEST',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                ],
+
+                // Time information
                 Text(
                   'Total time: ${(completionTimeMs / 1000).toStringAsFixed(2)}s',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
+
                 if (_totalPenaltyTimeMs > 0) ...[
                   SizedBox(height: 8),
                   Text(
@@ -963,17 +1023,19 @@ class _GameScreenState extends State<GameScreen> {
                         color: Colors.red, fontWeight: FontWeight.w500),
                   ),
                 ],
-                SizedBox(height: 8),
+
+                SizedBox(height: 12),
+
+                // Main message
                 Text(
                   message,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: starRating == 3
-                        ? Colors.green
-                        : starRating == 0
-                            ? Colors.orange
-                            : operation.color,
+                    fontSize: isNewHighScore ? 16 : 14,
+                    color: isNewHighScore
+                        ? Colors.amber.shade700
+                        : (starRating == 3 ? Colors.green : operation.color),
                   ),
                 ),
               ],
@@ -989,16 +1051,15 @@ class _GameScreenState extends State<GameScreen> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
+                  // Your existing play again logic...
                   setState(() {
                     lockedEquations = [];
                     isGameComplete = false;
                     starAnimations = [];
-                    _activePenaltyAnimations
-                        .clear(); // 🔥 Clear the map directly
+                    _activePenaltyAnimations.clear();
                     _totalPenaltyTimeMs = 0;
                     _penaltyCounter = 0;
 
-                    // Generate new game
                     if (widget.operationName == 'multiplication' ||
                         widget.operationName == 'division') {
                       targetNumber = widget.targetNumber ?? targetNumber;
@@ -1014,7 +1075,8 @@ class _GameScreenState extends State<GameScreen> {
                   });
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: operation.color,
+                  backgroundColor:
+                      isNewHighScore ? Colors.amber.shade600 : operation.color,
                 ),
                 child: Text(
                   'Play Again!',
