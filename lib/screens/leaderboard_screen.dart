@@ -19,7 +19,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   final LeaderboardService _leaderboardService = LeaderboardService();
   late TabController _tabController;
   bool _isLoading = true;
-  int _currentUserRank = 0;
   String _currentUserId = '';
 
   // Leaderboard data
@@ -68,12 +67,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       await _loadGamesLeaderboard();
 
       // Get user's rank
-      final userData = await _leaderboardService.getUserLeaderboardData(
-          _currentUserId, LeaderboardService.GAMES_LEADERBOARD);
 
       if (mounted) {
         setState(() {
-          _currentUserRank = userData['rank'] as int? ?? 0;
           _isLoading = false;
         });
       }
@@ -297,29 +293,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                 ),
               ),
               Spacer(),
-              if (_currentUserRank > 0) ...[
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.blue.shade200)),
-                  child: Row(
-                    children: [
-                      Icon(Icons.emoji_events_outlined,
-                          size: 16, color: Colors.blue),
-                      SizedBox(width: 4),
-                      Text(
-                        'Rank: #$_currentUserRank',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
           SizedBox(height: 8),
