@@ -175,7 +175,6 @@ class UserService {
     return null;
   }
 
-// Replace your _updateDailyStreak method with this one
   Future<void> _updateDailyStreak(String userId) async {
     final userRef = _firestore.collection('users').doc(userId);
     final userData = await userRef.get();
@@ -183,10 +182,11 @@ class UserService {
 
     if (userDataMap == null) return;
 
+    // Use consistent date normalization
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // Get last played date
+    // Get last played date from Firestore
     Timestamp? lastPlayedTimestamp =
         userDataMap['streakData']?['lastPlayedDate'];
     DateTime? lastPlayedDate;
@@ -197,46 +197,43 @@ class UserService {
           DateTime(lastPlayed.year, lastPlayed.month, lastPlayed.day);
     }
 
-    // Get current streak
+    // Get current streak values
     int currentStreak = userDataMap['streakData']?['currentStreak'] ?? 0;
     int longestStreak = userDataMap['streakData']?['longestStreak'] ?? 0;
 
-    // Debug information
-    print('STREAK DEBUG: Current streak: $currentStreak');
-    print('STREAK DEBUG: Longest streak: $longestStreak');
+    print('STREAK DEBUG: Current date: $today');
     print('STREAK DEBUG: Last played date: $lastPlayedDate');
-    print('STREAK DEBUG: Today: $today');
+    print('STREAK DEBUG: Current streak before update: $currentStreak');
 
     bool streakUpdated = false;
 
-    // Case 1: First time player (or missing streak data)
     if (lastPlayedDate == null) {
-      print('STREAK DEBUG: First time player - setting streak to 1');
+      // First time playing
+      print('STREAK DEBUG: First time playing - setting streak to 1');
       currentStreak = 1;
       streakUpdated = true;
-    }
-    // Case 2: Playing on a new day
-    else if (lastPlayedDate.isBefore(today)) {
-      // Case 2a: Played yesterday, continuing streak
-      if (lastPlayedDate.difference(today).inDays == -1) {
-        print('STREAK DEBUG: Played yesterday - incrementing streak');
+    } else if (lastPlayedDate.isBefore(today)) {
+      // Calculate days difference
+      final daysDifference = today.difference(lastPlayedDate).inDays;
+      print('STREAK DEBUG: Days since last play: $daysDifference');
+
+      if (daysDifference == 1) {
+        // Played yesterday, continue streak
+        print('STREAK DEBUG: Continuing streak from yesterday');
         currentStreak += 1;
         streakUpdated = true;
-      }
-      // Case 2b: Didn't play yesterday, reset streak
-      else {
-        print('STREAK DEBUG: Didn\'t play yesterday - resetting streak to 1');
+      } else {
+        // Missed more than one day, reset streak
+        print('STREAK DEBUG: Missed days, resetting streak to 1');
         currentStreak = 1;
         streakUpdated = true;
       }
-    }
-    // Case 3: Already played today, don't change streak
-    else {
+    } else if (lastPlayedDate.isAtSameMomentAs(today)) {
+      // Already played today
       print(
-          'STREAK DEBUG: Already played today - keeping streak at $currentStreak');
-      // If streak is 0 but playing today, set to 1 (fix for existing users)
+          'STREAK DEBUG: Already played today, keeping streak at $currentStreak');
+      // Fix zero streak for existing users who played today
       if (currentStreak == 0) {
-        print('STREAK DEBUG: Fixing zero streak for today');
         currentStreak = 1;
         streakUpdated = true;
       }
@@ -245,13 +242,14 @@ class UserService {
     // Update longest streak if needed
     if (currentStreak > longestStreak) {
       longestStreak = currentStreak;
-      print('STREAK DEBUG: Updated longest streak to $longestStreak');
+      print('STREAK DEBUG: New longest streak: $longestStreak');
     }
 
-    // Store new streak data if changed
+    // Save updated streak data
     if (streakUpdated || currentStreak == 0) {
       print(
-          'STREAK DEBUG: Saving streak data: currentStreak=$currentStreak, longestStreak=$longestStreak');
+          'STREAK DEBUG: Saving streak data - current: $currentStreak, longest: $longestStreak');
+
       await userRef.update({
         'streakData': {
           'lastPlayedDate': Timestamp.fromDate(today),
@@ -260,66 +258,94 @@ class UserService {
         }
       });
 
-      // Also update weekly streak collection
+      // Update weekly streak with consistent date
       await _updateWeeklyStreak(userId, today);
-    } else {
-      print('STREAK DEBUG: No changes to streak data');
     }
   }
 
-  // Update weekly streak data
+// Fixed _updateWeeklyStreak method
   Future<void> _updateWeeklyStreak(String userId, DateTime today) async {
     final userRef = _firestore.collection('users').doc(userId);
 
-    // Get the current week dates
-    final startOfWeek = today.subtract(Duration(days: today.weekday % 7));
+    // FIXED: Consistent week calculation
+    final todayWeekday = today.weekday == 7 ? 0 : today.weekday; // Sunday = 0
+    final startOfWeek = today.subtract(Duration(days: todayWeekday));
     final endOfWeek = startOfWeek.add(Duration(days: 6));
 
     // Create a document ID for the current week
     final weekId =
         '${startOfWeek.year}_${startOfWeek.month}_${startOfWeek.day}';
 
+    print('WEEKLY STREAK DEBUG: Week ID: $weekId');
+    print('WEEKLY STREAK DEBUG: Start of week: $startOfWeek');
+    print('WEEKLY STREAK DEBUG: Today: $today, Day of week: $todayWeekday');
+
     // Reference to the weekly streak document
     final weekRef = userRef.collection('weeklyStreaks').doc(weekId);
 
-    // Check if we already have this week
-    final weekDoc = await weekRef.get();
+    try {
+      // Check if we already have this week
+      final weekDoc = await weekRef.get();
 
-    if (weekDoc.exists) {
-      // Update the existing week to mark today complete
-      final weekData = weekDoc.data() as Map<String, dynamic>;
-      final dayOfWeek = today.weekday % 7; // 0-based day of week
+      if (weekDoc.exists) {
+        // Update the existing week to mark today complete
+        final weekData = weekDoc.data() as Map<String, dynamic>;
+        final daysData = weekData['days'] as Map<String, dynamic>? ?? {};
 
-      // If this day is not already completed, mark it
-      if (!(weekData['days'][dayOfWeek]?['completed'] ?? false)) {
-        await weekRef.update({'days.$dayOfWeek.completed': true});
+        print(
+            'WEEKLY STREAK DEBUG: Existing week found, updating day $todayWeekday');
+
+        // Check if today is already marked complete
+        final todayData =
+            daysData['$todayWeekday'] as Map<String, dynamic>? ?? {};
+        final isAlreadyComplete = todayData['completed'] ?? false;
+
+        if (!isAlreadyComplete) {
+          await weekRef.update({
+            'days.$todayWeekday.completed': true,
+            'days.$todayWeekday.date': Timestamp.fromDate(today),
+            'days.$todayWeekday.dayOfWeek': todayWeekday,
+          });
+          print('WEEKLY STREAK DEBUG: Marked day $todayWeekday as complete');
+        } else {
+          print(
+              'WEEKLY STREAK DEBUG: Day $todayWeekday already marked complete');
+        }
+      } else {
+        // Create a new week
+        print('WEEKLY STREAK DEBUG: Creating new week');
+        final weeklyStreak = WeeklyStreak.currentWeek();
+        weeklyStreak.markDayCompleted(today);
+
+        // Convert to a format suitable for Firestore
+        final daysMap = <String, dynamic>{};
+        for (int i = 0; i < weeklyStreak.days.length; i++) {
+          final day = weeklyStreak.days[i];
+          daysMap['$i'] = day.toMap();
+        }
+
+        await weekRef.set({
+          'startDate': Timestamp.fromDate(startOfWeek),
+          'endDate': Timestamp.fromDate(endOfWeek),
+          'days': daysMap,
+          'weekNumber': _getWeekNumber(startOfWeek),
+        });
+
+        print(
+            'WEEKLY STREAK DEBUG: New week created and today marked complete');
       }
-    } else {
-      // Create a new week
-      final weeklyStreak = WeeklyStreak.currentWeek();
-      weeklyStreak.markDayCompleted(today);
-
-      // Convert to a format suitable for Firestore
-      final daysMap = <String, dynamic>{};
-      for (int i = 0; i < weeklyStreak.days.length; i++) {
-        final day = weeklyStreak.days[i];
-        daysMap['$i'] = day.toMap();
-      }
-
-      await weekRef.set({
-        'startDate': Timestamp.fromDate(startOfWeek),
-        'endDate': Timestamp.fromDate(endOfWeek),
-        'days': daysMap,
-        'weekNumber': _getWeekNumber(startOfWeek),
-      });
+    } catch (e) {
+      print('WEEKLY STREAK ERROR: $e');
     }
   }
 
-  // Get the current week's streak data
   Future<WeeklyStreak> getCurrentWeekStreak(String userId) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final startOfWeek = today.subtract(Duration(days: today.weekday % 7));
+
+    // FIXED: Consistent week calculation
+    final todayWeekday = today.weekday == 7 ? 0 : today.weekday;
+    final startOfWeek = today.subtract(Duration(days: todayWeekday));
 
     // Create the week ID
     final weekId =
@@ -336,17 +362,17 @@ class UserService {
 
       if (weekDoc.exists) {
         final data = weekDoc.data() as Map<String, dynamic>;
-        final daysData = data['days'] as Map<String, dynamic>;
+        final daysData = data['days'] as Map<String, dynamic>? ?? {};
 
-        // Initialize an empty week
+        // Initialize an empty week with correct dates
         final weeklyStreak = WeeklyStreak.currentWeek();
 
         // Populate with data from Firestore
         for (int i = 0; i < 7; i++) {
-          final dayData = daysData['$i'];
+          final dayData = daysData['$i'] as Map<String, dynamic>?;
           if (dayData != null) {
             final completed = dayData['completed'] ?? false;
-            if (completed) {
+            if (completed && i < weeklyStreak.days.length) {
               weeklyStreak.days[i] =
                   weeklyStreak.days[i].copyWith(completed: true);
             }
@@ -438,11 +464,13 @@ class UserService {
     return ((dayOfYear - date.weekday + 10) / 7).floor();
   }
 
-  // Add this to UserService class
   Stream<WeeklyStreak> weeklyStreakStream(String userId) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final startOfWeek = today.subtract(Duration(days: today.weekday % 7));
+
+    // FIXED: Consistent week calculation
+    final todayWeekday = today.weekday == 7 ? 0 : today.weekday;
+    final startOfWeek = today.subtract(Duration(days: todayWeekday));
 
     // Create the week ID
     final weekId =
@@ -460,17 +488,17 @@ class UserService {
       }
 
       final data = snapshot.data() as Map<String, dynamic>;
-      final daysData = data['days'] as Map<String, dynamic>;
+      final daysData = data['days'] as Map<String, dynamic>? ?? {};
 
-      // Initialize an empty week
+      // Initialize an empty week with correct dates
       final weeklyStreak = WeeklyStreak.currentWeek();
 
       // Populate with data from Firestore
       for (int i = 0; i < 7; i++) {
-        final dayData = daysData['$i'];
+        final dayData = daysData['$i'] as Map<String, dynamic>?;
         if (dayData != null) {
           final completed = dayData['completed'] ?? false;
-          if (completed) {
+          if (completed && i < weeklyStreak.days.length) {
             weeklyStreak.days[i] =
                 weeklyStreak.days[i].copyWith(completed: true);
           }

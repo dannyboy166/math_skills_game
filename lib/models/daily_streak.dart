@@ -19,10 +19,13 @@ class DailyStreak {
     // Normalize the date to midnight to ensure consistent comparisons
     final normalizedDate = DateTime(date.year, date.month, date.day);
     
+    // FIXED: Consistent day of week calculation (Sunday = 0)
+    int dayOfWeek = normalizedDate.weekday == 7 ? 0 : normalizedDate.weekday;
+    
     return DailyStreak(
       date: normalizedDate,
       completed: completed,
-      dayOfWeek: normalizedDate.weekday % 7, // Convert to 0-based to match our UI (0 = Sunday)
+      dayOfWeek: dayOfWeek,
     );
   }
 
@@ -37,19 +40,24 @@ class DailyStreak {
 
   // Create from Firestore document
   factory DailyStreak.fromMap(Map<String, dynamic> map) {
+    final date = (map['date'] as Timestamp).toDate();
+    // Ensure consistent day of week calculation when reading from Firestore
+    int dayOfWeek = date.weekday == 7 ? 0 : date.weekday;
+    
     return DailyStreak(
-      date: (map['date'] as Timestamp).toDate(),
+      date: date,
       completed: map['completed'] ?? false,
-      dayOfWeek: map['dayOfWeek'] ?? 0,
+      dayOfWeek: dayOfWeek, // Use calculated value, not stored value for consistency
     );
   }
 
   // Helper to check if this streak is for today
   bool get isToday {
     final now = DateTime.now();
-    return date.year == now.year && 
-           date.month == now.month && 
-           date.day == now.day;
+    final today = DateTime(now.year, now.month, now.day);
+    return date.year == today.year && 
+           date.month == today.month && 
+           date.day == today.day;
   }
   
   // Copy with new values
@@ -72,15 +80,17 @@ class WeeklyStreak {
   
   WeeklyStreak(this.days);
   
-  // Initialize an empty week starting from today
+  // FIXED: Initialize an empty week starting from Sunday of current week
   factory WeeklyStreak.currentWeek() {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final days = <DailyStreak>[];
     
-    // Find the start of the week (Sunday)
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
+    // Find the start of the week (Sunday) - FIXED calculation
+    final todayWeekday = today.weekday == 7 ? 0 : today.weekday; // Sunday = 0
+    final startOfWeek = today.subtract(Duration(days: todayWeekday));
     
-    // Create streak entries for each day of the week
+    // Create streak entries for each day of the week (Sunday to Saturday)
     for (int i = 0; i < 7; i++) {
       final date = startOfWeek.add(Duration(days: i));
       days.add(DailyStreak.fromDate(date));
@@ -106,39 +116,47 @@ class WeeklyStreak {
   
   // Get the streak for a specific day of week (0 = Sunday, 1 = Monday, etc.)
   DailyStreak? getDayStreak(int dayOfWeek) {
-    return days.firstWhere(
-      (day) => day.dayOfWeek == dayOfWeek,
-      orElse: () => DailyStreak.fromDate(
-        DateTime.now().subtract(Duration(days: DateTime.now().weekday - dayOfWeek)),
-      ),
-    );
+    if (dayOfWeek < 0 || dayOfWeek > 6) return null;
+    
+    for (final day in days) {
+      if (day.dayOfWeek == dayOfWeek) {
+        return day;
+      }
+    }
+    
+    // If not found, create a default one (shouldn't happen with proper initialization)
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayWeekday = today.weekday == 7 ? 0 : today.weekday;
+    final targetDate = today.subtract(Duration(days: todayWeekday - dayOfWeek));
+    
+    return DailyStreak.fromDate(targetDate);
   }
   
   // Check if today's streak is completed
   bool get isTodayCompleted {
     final now = DateTime.now();
-    final todayDayOfWeek = now.weekday % 7; // 0-based day of week
+    final today = DateTime(now.year, now.month, now.day);
+    final todayDayOfWeek = today.weekday == 7 ? 0 : today.weekday; // Sunday = 0
     
-    final today = getDayStreak(todayDayOfWeek);
-    return today?.completed ?? false;
+    final todayStreak = getDayStreak(todayDayOfWeek);
+    return todayStreak?.completed ?? false;
   }
   
-  // Get the current streak length (consecutive days up to today)
+  // FIXED: Get the current streak length (consecutive days up to today)
   int get currentStreakLength {
-    int streak = 0;
-    
-    // Go backwards from today's weekday
     final now = DateTime.now();
-    final todayDayOfWeek = now.weekday % 7; // 0-based 
+    final today = DateTime(now.year, now.month, now.day);
+    final todayDayOfWeek = today.weekday == 7 ? 0 : today.weekday;
     
-    // Check today first
+    // Check if today is completed first
     if (!isTodayCompleted) {
-      return 0; // No streak today
+      return 0; // No streak if today isn't completed
     }
     
-    streak = 1; // Today is completed
+    int streak = 1; // Today is completed
     
-    // Check previous days
+    // Check previous days in reverse order
     for (int i = 1; i <= 6; i++) {
       final checkDay = (todayDayOfWeek - i + 7) % 7; // Ensure positive index
       final dayStreak = getDayStreak(checkDay);
@@ -151,5 +169,11 @@ class WeeklyStreak {
     }
     
     return streak;
+  }
+  
+  // Helper method to get today's day of week index
+  static int getTodayDayOfWeek() {
+    final now = DateTime.now();
+    return now.weekday == 7 ? 0 : now.weekday; // Sunday = 0
   }
 }

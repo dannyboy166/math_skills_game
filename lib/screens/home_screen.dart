@@ -353,20 +353,32 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+// REPLACE the _buildStreakRow method in your home_screen.dart with this fixed version
 
   Widget _buildStreakRow() {
-    // Day abbreviations
+    // Day abbreviations (Sunday to Saturday)
     final dayAbbreviations = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    // Get today's info for comparison
+    final now = DateTime.now();
+    final todayWeekday = now.weekday == 7 ? 0 : now.weekday; // Sunday = 0
 
     return Row(
       children: List.generate(7, (index) {
-        // Get the streak status for this day
+        // Get the streak status for this day of week
         final dayStreak = _weeklyStreak.getDayStreak(index);
         final bool completed = dayStreak?.completed ?? false;
 
-        // Check if this is today
-        final now = DateTime.now();
-        final isToday = index == now.weekday % 7;
+        // Check if this day represents today
+        final isToday = index == todayWeekday;
+
+        // Debug information
+        if (isToday) {
+          print(
+              'STREAK ROW DEBUG: Today is day $index ($dayAbbreviations[index])');
+          print('STREAK ROW DEBUG: Today completed: $completed');
+          print('STREAK ROW DEBUG: Current streak count: $_currentStreak');
+        }
 
         return Expanded(
           child: Padding(
@@ -398,7 +410,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.white,
                           size: 16,
                         )
-                      : null,
+                      : (isToday
+                          ? Icon(
+                              Icons.today,
+                              color: Colors.white.withOpacity(0.8),
+                              size: 12,
+                            )
+                          : null),
                 ),
                 SizedBox(height: 4),
                 Text(
@@ -406,7 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
