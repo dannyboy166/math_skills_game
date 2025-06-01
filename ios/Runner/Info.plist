@@ -54,10 +54,13 @@
 			<string>com.sasco.mathskills</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.1234567890-abc123def456</string>
+				<string>com.googleusercontent.apps.595215428527-i1bdi8vmqk6hqp3gual84vq6a9usgngn</string>
 			</array>
 		</dict>
 	</array>
+
+	<key>GIDClientID</key>
+	<string>595215428527-i1bdi8vmqk6hqp3gual84vq6a9usgngn.apps.googleusercontent.com</string>
 
 	<key>com.apple.developer.applesignin</key>
 	<array>

@@ -12,7 +12,28 @@
           "package_name": "com.sasco.mathskills"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "595215428527-8fodmoblkg6ah8hmkjtul1g4o5s2rg9l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sasco.mathskills",
+            "certificate_hash": "d05d8762a6f8e0bfd39e974775cb4670c9949337"
+          }
+        },
+        {
+          "client_id": "595215428527-qeoovlk64idi5qsnsflebcep73uhntvm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sasco.mathskills",
+            "certificate_hash": "f7700660045eb6b48dd9c28e788f87860019f575"
+          }
+        },
+        {
+          "client_id": "595215428527-bb3lfd7hdkkngs0hnlu4skdg3r61arkj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCdYhufVmmCrl0i6LHgW9CGwkrab5Ru5UY"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "595215428527-bb3lfd7hdkkngs0hnlu4skdg3r61arkj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "595215428527-i1bdi8vmqk6hqp3gual84vq6a9usgngn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sasco.mathskills"
+              }
+            }
+          ]
         }
       }
     }
