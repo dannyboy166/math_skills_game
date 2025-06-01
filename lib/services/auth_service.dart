@@ -1,7 +1,10 @@
 // lib/services/auth_service.dart
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+import 'dart:math';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -54,22 +57,28 @@ class AuthService {
 
     return result;
   }
-/*
+
   // Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
     try {
+      // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
-      if (googleUser == null) return null;
+      if (googleUser == null) {
+        // The user canceled the sign-in
+        return null;
+      }
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
+      // Create a new credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
+      // Once signed in, return the UserCredential
       final result = await _auth.signInWithCredential(credential);
 
       // Force token refresh here too
@@ -80,14 +89,56 @@ class AuthService {
       return result;
     } catch (e) {
       print("Error signing in with Google: $e");
-      return null;
+      throw e;
     }
   }
-*/
 
+  // Sign in with Apple
+  Future<UserCredential?> signInWithApple() async {
+    try {
+      // Generate a random nonce for security
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
 
-// In AuthService class
-// Enhanced sign out
+      // Request credential for the currently signed in Apple account
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      // Create an `OAuthCredential` from the credential returned by Apple
+      final oauthCredential = OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      // Sign in the user with Firebase
+      final result = await _auth.signInWithCredential(oauthCredential);
+
+      // If the user's name is available and not already set, update it
+      if (result.user != null && 
+          result.user!.displayName == null && 
+          appleCredential.givenName != null) {
+        final displayName = '${appleCredential.givenName} ${appleCredential.familyName ?? ''}'.trim();
+        await result.user!.updateDisplayName(displayName);
+      }
+
+      // Force token refresh
+      if (result.user != null) {
+        await result.user!.getIdTokenResult(true);
+      }
+
+      return result;
+    } catch (e) {
+      print("Error signing in with Apple: $e");
+      throw e;
+    }
+  }
+
+  // Enhanced sign out
   Future<void> signOut() async {
     try {
       // Capture user ID for logging before signing out
@@ -123,5 +174,19 @@ class AuthService {
   // Reset password
   Future<void> resetPassword(String email) {
     return _auth.sendPasswordResetEmail(email: email);
+  }
+
+  // Helper method to generate a cryptographically secure random nonce
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  // Helper method to generate SHA256 hash of a string
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
   }
 }

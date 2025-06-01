@@ -1,8 +1,11 @@
+// lib/screens/auth/register_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/screens/home_screen.dart';
 import 'package:math_skills_game/services/auth_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'dart:io' show Platform;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -22,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _isSocialLoading = false;
   String _errorMessage = '';
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
@@ -113,6 +117,96 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isSocialLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final result = await _authService.signInWithGoogle();
+      
+      if (result != null && result.user != null) {
+        // Create user profile if it doesn't exist
+        try {
+          await _userService.createUserProfile(
+            result.user!,
+            displayName: result.user!.displayName ?? 'Player',
+          );
+        } catch (profileError) {
+          print("Error creating user profile: $profileError");
+        }
+
+        if (mounted) {
+          _showSuccessDialog();
+          Future.delayed(Duration(seconds: 2), () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen()),
+            );
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = _getErrorMessage(e);
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSocialLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() {
+      _isSocialLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final result = await _authService.signInWithApple();
+      
+      if (result != null && result.user != null) {
+        // Create user profile if it doesn't exist
+        try {
+          await _userService.createUserProfile(
+            result.user!,
+            displayName: result.user!.displayName ?? 'Player',
+          );
+        } catch (profileError) {
+          print("Error creating user profile: $profileError");
+        }
+
+        if (mounted) {
+          _showSuccessDialog();
+          Future.delayed(Duration(seconds: 2), () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen()),
+            );
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = _getErrorMessage(e);
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSocialLoading = false;
+        });
+      }
+    }
+  }
+
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -187,6 +281,10 @@ class _RegisterScreenState extends State<RegisterScreen>
           return 'Invalid email address';
         case 'weak-password':
           return 'Password is too weak';
+        case 'account-exists-with-different-credential':
+          return 'An account already exists with this email using a different sign-in method';
+        case 'sign_in_canceled':
+          return 'Sign in was canceled';
         default:
           return 'An error occurred: ${e.message}';
       }
@@ -239,6 +337,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                     _buildWelcomeText(),
                     SizedBox(height: 32),
 
+                    // Social Sign-In Buttons
+                    _buildSocialSignInButtons(),
+
+                    SizedBox(height: 24),
+
+                    // Or divider
+                    _buildOrDivider(),
+
+                    SizedBox(height: 24),
+
                     // Form Fields
                     _buildNameField(),
                     SizedBox(height: 16),
@@ -269,6 +377,122 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSocialSignInButtons() {
+    return Column(
+      children: [
+        // Google Sign In Button
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ElevatedButton(
+            onPressed: _isSocialLoading ? null : _signInWithGoogle,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+                side: BorderSide(color: Colors.grey.shade300),
+              ),
+              padding: EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: _isSocialLoading
+                ? SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.blue,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FaIcon(
+                        FontAwesomeIcons.google,
+                        size: 20,
+                        color: Colors.red,
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Continue with Google',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+
+        SizedBox(height: 16),
+
+        // Apple Sign In Button (only show on iOS)
+        if (Platform.isIOS)
+          Container(
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: _isSocialLoading ? null : _signInWithApple,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                padding: EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: _isSocialLoading
+                  ? SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        FaIcon(
+                          FontAwesomeIcons.apple,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Continue with Apple',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -354,6 +578,25 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
           textAlign: TextAlign.center,
         ),
+      ],
+    );
+  }
+
+  Widget _buildOrDivider() {
+    return Row(
+      children: [
+        Expanded(child: Divider(thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Text(
+            'OR',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(thickness: 1)),
       ],
     );
   }
