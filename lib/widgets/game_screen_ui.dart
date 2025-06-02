@@ -1,4 +1,4 @@
-// lib/widgets/game_screen_ui.dart
+// lib/widgets/game_screen_ui.dart - Enhanced with swipe/drag toggle
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
 import 'package:math_skills_game/widgets/progress_stars.dart';
@@ -22,7 +22,11 @@ class GameScreenUI extends StatelessWidget {
   final List<LockedEquation> lockedEquations;
   final List<Widget> starAnimations;
   final bool isGameComplete;
-  final int elapsedTimeMs; // Added for timer display
+  final int elapsedTimeMs;
+  
+  // NEW: Control mode toggle
+  final bool isDragMode;
+  final VoidCallback onToggleMode;
 
   // Callback functions for interactions
   final Function(int) onUpdateInnerRing;
@@ -44,7 +48,9 @@ class GameScreenUI extends StatelessWidget {
     required this.lockedEquations,
     required this.starAnimations,
     required this.isGameComplete,
-    required this.elapsedTimeMs, // Added
+    required this.elapsedTimeMs,
+    required this.isDragMode, // NEW
+    required this.onToggleMode, // NEW
     required this.onUpdateInnerRing,
     required this.onUpdateOuterRing,
     required this.onTileTap,
@@ -163,6 +169,11 @@ class GameScreenUI extends StatelessWidget {
                       ),
                       SizedBox(height: 8),
 
+                      // Control mode toggle - NEW!
+                      _buildControlModeToggle(),
+
+                      SizedBox(height: 8),
+
                       // Star rating guide
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -201,8 +212,9 @@ class GameScreenUI extends StatelessWidget {
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // Outer ring
+                            // Outer ring - UPDATED to use mode toggle
                             SimpleRing(
+                              key: ValueKey('outer_${isDragMode ? 'drag' : 'swipe'}'), // Force rebuild when mode changes
                               ringModel: outerRingModel,
                               size: boardSize,
                               tileSize: outerTileSize,
@@ -212,10 +224,12 @@ class GameScreenUI extends StatelessWidget {
                               onTileTap: onTileTap,
                               transitionRate: 1.0,
                               margin: margin,
+                              isDragMode: isDragMode, // NEW parameter
                             ),
 
-                            // Inner ring
+                            // Inner ring - UPDATED to use mode toggle
                             SimpleRing(
+                              key: ValueKey('inner_${isDragMode ? 'drag' : 'swipe'}'), // Force rebuild when mode changes
                               ringModel: innerRingModel,
                               size: innerRingSize,
                               tileSize: innerTileSize,
@@ -225,6 +239,7 @@ class GameScreenUI extends StatelessWidget {
                               onTileTap: onTileTap,
                               transitionRate: 1.0,
                               margin: margin,
+                              isDragMode: isDragMode, // NEW parameter
                             ),
 
                             // Center target number with enhanced styling
@@ -303,6 +318,69 @@ class GameScreenUI extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // NEW: Build the control mode toggle widget
+  Widget _buildControlModeToggle() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: operation.color.withOpacity(0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isDragMode ? Icons.drag_indicator : Icons.swipe,
+            size: 18,
+            color: operation.color,
+          ),
+          SizedBox(width: 8),
+          Text(
+            isDragMode ? 'Drag Mode' : 'Swipe Mode',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: operation.color,
+            ),
+          ),
+          SizedBox(width: 8),
+          GestureDetector(
+            onTap: onToggleMode,
+            child: Container(
+              width: 40,
+              height: 20,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: isDragMode ? operation.color : Colors.grey.shade300,
+              ),
+              child: AnimatedAlign(
+                duration: Duration(milliseconds: 200),
+                alignment: isDragMode ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  margin: EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

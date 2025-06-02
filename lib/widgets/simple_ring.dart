@@ -1,4 +1,4 @@
-// lib/widgets/simple_ring.dart - Updated with max 2 swipe stack limit
+// lib/widgets/simple_ring.dart - Unified with swipe/drag toggle
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
 import '../utils/position_utils.dart';
@@ -14,9 +14,10 @@ class SimpleRing extends StatefulWidget {
   final bool isInner;
   final ValueChanged<int> onRotateSteps;
   final List<LockedEquation> lockedEquations;
-  final Function(int, int) onTileTap; // (cornerIndex, position)
-  final double transitionRate; // Control how quickly transitions happen
+  final Function(int, int) onTileTap;
+  final double transitionRate;
   final double margin;
+  final bool isDragMode; // NEW: Controls whether to use drag or swipe
 
   const SimpleRing({
     Key? key,
@@ -27,8 +28,9 @@ class SimpleRing extends StatefulWidget {
     required this.onRotateSteps,
     required this.lockedEquations,
     required this.onTileTap,
-    this.transitionRate = 1.0, // Default to 1.0 (normal speed)
+    this.transitionRate = 1.0,
     required this.margin,
+    this.isDragMode = false, // NEW: Default to swipe mode
   }) : super(key: key);
 
   @override
@@ -37,42 +39,32 @@ class SimpleRing extends StatefulWidget {
 
 class _SimpleRingState extends State<SimpleRing>
     with SingleTickerProviderStateMixin {
-  // Store initial touch position for swipe detection
+  // Common state variables
   Offset? _startPosition;
-  
-  // Swipe detection variables
   bool _startedOnCorner = false;
-  DateTime? _swipeStartTime;
-  
-  // Animation controller
-  late RingAnimationController _animationController;
-  
-  // Swipe queue system with maximum limit
+  DateTime? _startTime;
+
+  // Drag-specific variables
+  double _dragDistance = 0.0;
+
+  // Swipe-specific variables
   List<int> _pendingRotations = [];
   bool _isProcessingQueue = false;
-  static const int _maxQueueSize = 2; // Maximum number of queued moves
-  
-  // Swipe configuration
-  static const double _swipeThreshold = 30.0; // Minimum distance for a swipe
-  static const int _maxSwipeTimeMs = 400; // Maximum time for a swipe gesture
-  static const double _velocityThreshold = 100.0; // Minimum velocity for swipe detection
+  static const int _maxQueueSize = 2;
+
+  // Animation controller
+  late RingAnimationController _animationController;
+
+  // Configuration constants
+  static const double _swipeThreshold = 30.0;
+  static const int _maxSwipeTimeMs = 400;
+  static const double _velocityThreshold = 100.0;
+  static const double _dragThreshold = 40.0;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize animation controller
-    _animationController =
-        RingAnimationController(this, transitionRate: widget.transitionRate);
-
-    // Set callback for when animation completes
-    _animationController.setOnAnimationComplete(() {
-      setState(() {});
-      // Process next queued rotation when current animation completes
-      _processNextQueuedRotation();
-    });
-
-    // Initialize position mappings
+    _initializeAnimationController();
     _updatePositionMappings();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -80,6 +72,20 @@ class _SimpleRingState extends State<SimpleRing>
       Future.delayed(Duration(milliseconds: 10), () {
         _animationController.animationController.value = 0;
       });
+    });
+  }
+
+  void _initializeAnimationController() {
+    _animationController =
+        RingAnimationController(this, transitionRate: widget.transitionRate);
+    _animationController.setOnAnimationComplete(() {
+      setState(() {});
+      if (widget.isDragMode) {
+        // For drag mode, no queue processing needed
+      } else {
+        // For swipe mode, process next queued rotation
+        _processNextQueuedRotation();
+      }
     });
   }
 
@@ -97,14 +103,17 @@ class _SimpleRingState extends State<SimpleRing>
   void didUpdateWidget(SimpleRing oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Update transition rate if it changed
     if (widget.transitionRate != oldWidget.transitionRate) {
       _animationController.updateTransitionRate(widget.transitionRate);
     }
 
-    // Check if the ring model has changed
+    // Clear queue when switching modes
+    if (widget.isDragMode != oldWidget.isDragMode) {
+      _pendingRotations.clear();
+      _isProcessingQueue = false;
+    }
+
     if (widget.ringModel != oldWidget.ringModel) {
-      // Prepare and start animation
       if (!_animationController.isAnimating) {
         _animateRotation();
       }
@@ -112,7 +121,6 @@ class _SimpleRingState extends State<SimpleRing>
   }
 
   void _animateRotation() {
-    // Prepare the animation
     _animationController.prepareAnimation(
       ringModel: widget.ringModel,
       size: widget.size,
@@ -121,55 +129,11 @@ class _SimpleRingState extends State<SimpleRing>
       margin: widget.margin,
     );
 
-    // Add a tiny delay before the first animation
     Future.delayed(Duration(milliseconds: 5), () {
       setState(() {
         _animationController.startAnimation();
       });
     });
-  }
-
-  /// Add a rotation to the queue with maximum limit enforcement
-  void _queueRotation(int rotationStep) {
-    print("DEBUG: Attempting to queue rotation step: $rotationStep");
-    
-    // Check if we've reached the maximum queue size
-    if (_pendingRotations.length >= _maxQueueSize) {
-      print("DEBUG: Queue is full (${_pendingRotations.length}/$_maxQueueSize), ignoring new rotation");
-      return;
-    }
-    
-    _pendingRotations.add(rotationStep);
-    print("DEBUG: Queue now has ${_pendingRotations.length}/$_maxQueueSize pending rotations");
-    
-    // Start processing the queue if we're not already doing so
-    if (!_isProcessingQueue) {
-      _processNextQueuedRotation();
-    }
-  }
-
-  /// Process the next rotation in the queue
-  void _processNextQueuedRotation() {
-    if (_pendingRotations.isEmpty || _isProcessingQueue) {
-      return;
-    }
-
-    // Don't process if animation is still running
-    if (_animationController.isAnimating) {
-      print("DEBUG: Animation still running, waiting to process next rotation");
-      return;
-    }
-
-    _isProcessingQueue = true;
-    final nextRotation = _pendingRotations.removeAt(0);
-    
-    print("DEBUG: Processing rotation step: $nextRotation, ${_pendingRotations.length} remaining in queue");
-    
-    // Apply the rotation
-    widget.onRotateSteps(nextRotation);
-    
-    // The animation completion callback will call this method again for the next item
-    _isProcessingQueue = false;
   }
 
   @override
@@ -181,69 +145,9 @@ class _SimpleRingState extends State<SimpleRing>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onPanStart: (details) {
-        print("DEBUG: Pan started at ${details.localPosition}");
-
-        // Check if starting on a corner or locked position
-        bool isOnCorner = _isPositionOnAnyCorner(details.localPosition);
-        bool isOnLockedCorner = _isPositionOnLockedCorner(details.localPosition);
-
-        // Don't allow interaction on locked corners
-        if (isOnLockedCorner) {
-          print("DEBUG: Not starting pan - position is on locked corner");
-          return;
-        }
-
-        // Store the start position and timing
-        setState(() {
-          _startPosition = details.localPosition;
-          _startedOnCorner = isOnCorner;
-          _swipeStartTime = DateTime.now();
-        });
-      },
-      onPanEnd: (details) {
-        if (_startPosition == null || _swipeStartTime == null) return;
-
-        final endTime = DateTime.now();
-        final swipeDuration = endTime.difference(_swipeStartTime!).inMilliseconds;
-        final swipeVector = details.localPosition - _startPosition!;
-        final swipeDistance = swipeVector.distance;
-        
-        print("DEBUG: Pan ended - duration: ${swipeDuration}ms, distance: $swipeDistance");
-
-        // If it was a very quick interaction on a corner with minimal movement, treat as tap
-        if (_startedOnCorner && swipeDuration < 200 && swipeDistance < 20.0) {
-          print("DEBUG: Treating quick short interaction as corner tap");
-          _handleCornerTap(_startPosition!);
-        } 
-        // Check if this qualifies as a swipe
-        else if (swipeDistance >= _swipeThreshold && swipeDuration <= _maxSwipeTimeMs) {
-          final velocity = swipeDuration > 0 ? (swipeDistance / swipeDuration) * 1000 : 0.0;
-          
-          if (velocity >= _velocityThreshold) {
-            print("DEBUG: Valid swipe detected - distance: $swipeDistance, velocity: $velocity");
-            
-            // Determine swipe direction (always 1 step)
-            final rotationStep = _getRotationDirectionFromSwipe(_startPosition!, swipeVector);
-            
-            if (rotationStep != 0) {
-              print("DEBUG: Adding rotation step to queue: $rotationStep");
-              _queueRotation(rotationStep);
-            }
-          }
-        }
-
-        // Reset state
-        setState(() {
-          _startPosition = null;
-          _startedOnCorner = false;
-          _swipeStartTime = null;
-        });
-      },
-      onPanUpdate: (details) {
-        // We don't need to do anything during pan update for swipe gestures
-        // All the logic happens in onPanEnd
-      },
+      onPanStart: _handlePanStart,
+      onPanUpdate: widget.isDragMode ? _handleDragUpdate : null,
+      onPanEnd: _handlePanEnd,
       behavior: HitTestBehavior.deferToChild,
       child: Container(
         width: widget.size,
@@ -256,79 +160,294 @@ class _SimpleRingState extends State<SimpleRing>
     );
   }
 
-  /// Get rotation direction from swipe (always returns -1, 0, or 1)
-  int _getRotationDirectionFromSwipe(Offset startPos, Offset swipeVector) {
-    final size = widget.size;
-    
-    // Determine which region the swipe started in
-    final region = _determineRegion(startPos, size);
-    
-    // Get the single rotation direction based on swipe
-    return _getRotationDirection(region, swipeVector);
+  void _handlePanStart(DragStartDetails details) {
+    print(
+        "DEBUG: Pan started at ${details.localPosition} (${widget.isDragMode ? 'DRAG' : 'SWIPE'} mode)");
+
+    if (widget.isDragMode && _animationController.isAnimating) {
+      print("DEBUG: Not starting pan - animation is active in drag mode");
+      return;
+    }
+
+    bool isOnCorner = _isPositionOnAnyCorner(details.localPosition);
+    bool isOnLockedCorner = _isPositionOnLockedCorner(details.localPosition);
+
+    if (isOnLockedCorner) {
+      print("DEBUG: Not starting pan - position is on locked corner");
+      return;
+    }
+
+    setState(() {
+      _startPosition = details.localPosition;
+      _startedOnCorner = isOnCorner;
+      _startTime = DateTime.now();
+      if (widget.isDragMode) {
+        _dragDistance = 0.0;
+      }
+    });
   }
 
-  /// Get rotation direction based on region and swipe vector (always returns -1, 0, or 1)
-  int _getRotationDirection(String region, Offset swipeVector) {
-    final dx = swipeVector.dx;
-    final dy = swipeVector.dy;
-    
-    // Use the stronger component of the swipe
-    final isHorizontalDominant = dx.abs() > dy.abs();
-    
-    switch (region) {
-      case 'top':
-        return isHorizontalDominant 
-          ? (dx > 0 ? -1 : 1)  // Right = clockwise, Left = counterclockwise
-          : 0;
-          
-      case 'right':
-        return !isHorizontalDominant 
-          ? (dy > 0 ? -1 : 1)  // Down = clockwise, Up = counterclockwise  
-          : 0;
-          
-      case 'bottom':
-        return isHorizontalDominant 
-          ? (dx > 0 ? 1 : -1)  // Right = counterclockwise, Left = clockwise
-          : 0;
-          
-      case 'left':
-        return !isHorizontalDominant 
-          ? (dy > 0 ? 1 : -1)  // Down = counterclockwise, Up = clockwise
-          : 0;
-          
-      case 'topLeft':
-        if (dx > 0 && dx.abs() > dy.abs()) return -1; // Right
-        if (dy > 0 && dy.abs() > dx.abs()) return 1;  // Down
-        return 0;
-        
-      case 'topRight':
-        if (dx < 0 && dx.abs() > dy.abs()) return 1;  // Left
-        if (dy > 0 && dy.abs() > dx.abs()) return -1; // Down
-        return 0;
-        
-      case 'bottomRight':
-        if (dx < 0 && dx.abs() > dy.abs()) return -1; // Left
-        if (dy < 0 && dy.abs() > dx.abs()) return 1;  // Up
-        return 0;
-        
-      case 'bottomLeft':
-        if (dx > 0 && dx.abs() > dy.abs()) return 1;  // Right
-        if (dy < 0 && dy.abs() > dx.abs()) return -1; // Up
-        return 0;
-        
-      default:
-        // Center area - use circular motion logic
-        final angle = math.atan2(dy, dx);
-        final normalizedAngle = (angle + 2 * math.pi) % (2 * math.pi);
-        
-        // Determine if motion is generally clockwise or counterclockwise
-        return normalizedAngle > math.pi ? 1 : -1;
+  void _handleDragUpdate(DragUpdateDetails details) {
+    // DRAG MODE ONLY
+    if (_startPosition == null || _animationController.isAnimating) return;
+
+    final dragDelta = details.localPosition - _startPosition!;
+    _dragDistance += dragDelta.distance;
+
+    if (_dragDistance > 20.0) {
+      int rotationStep =
+          _determineRotationDirection(_startPosition!, dragDelta, widget.size);
+
+      if (rotationStep != 0) {
+        widget.onRotateSteps(rotationStep);
+        setState(() {
+          _startPosition =
+              details.localPosition; // Reset for continuous dragging
+        });
+      }
     }
   }
 
-  /// Handle corner tap
+  void _handlePanEnd(DragEndDetails details) {
+    if (_startPosition == null || _startTime == null) return;
+
+    final endTime = DateTime.now();
+    final duration = endTime.difference(_startTime!).inMilliseconds;
+
+    if (widget.isDragMode) {
+      _handleDragEnd(details, duration);
+    } else {
+      _handleSwipeEnd(details, duration);
+    }
+
+    // Reset state
+    setState(() {
+      _startPosition = null;
+      _startedOnCorner = false;
+      _startTime = null;
+      if (widget.isDragMode) {
+        _dragDistance = 0.0;
+      }
+    });
+  }
+
+  void _handleDragEnd(DragEndDetails details, int duration) {
+    // Handle corner taps in drag mode
+    if (_startedOnCorner && _dragDistance < 10.0 && duration < 300) {
+      print("DEBUG: Treating short drag as corner tap");
+      _handleCornerTap(_startPosition!);
+    }
+  }
+
+  void _handleSwipeEnd(DragEndDetails details, int duration) {
+    final swipeVector = details.localPosition - _startPosition!;
+    final swipeDistance = swipeVector.distance;
+
+    print(
+        "DEBUG: Pan ended - duration: ${duration}ms, distance: $swipeDistance");
+
+    // Handle corner taps in swipe mode
+    if (_startedOnCorner && duration < 200 && swipeDistance < 20.0) {
+      print("DEBUG: Treating quick short interaction as corner tap");
+      _handleCornerTap(_startPosition!);
+      return;
+    }
+
+    // Handle swipes
+    if (swipeDistance >= _swipeThreshold && duration <= _maxSwipeTimeMs) {
+      final velocity = duration > 0 ? (swipeDistance / duration) * 1000 : 0.0;
+
+      if (velocity >= _velocityThreshold) {
+        print(
+            "DEBUG: Valid swipe detected - distance: $swipeDistance, velocity: $velocity");
+
+        final rotationStep =
+            _getRotationDirectionFromSwipe(_startPosition!, swipeVector);
+
+        if (rotationStep != 0) {
+          print("DEBUG: Adding rotation step to queue: $rotationStep");
+          _queueRotation(rotationStep);
+        }
+      }
+    }
+  }
+
+  // SWIPE MODE: Queue management
+  void _queueRotation(int rotationStep) {
+    if (_pendingRotations.length >= _maxQueueSize) {
+      print("DEBUG: Queue is full, ignoring new rotation");
+      return;
+    }
+
+    _pendingRotations.add(rotationStep);
+    print("DEBUG: Queue now has ${_pendingRotations.length} pending rotations");
+
+    if (!_isProcessingQueue) {
+      _processNextQueuedRotation();
+    }
+  }
+
+  void _processNextQueuedRotation() {
+    if (_pendingRotations.isEmpty ||
+        _isProcessingQueue ||
+        _animationController.isAnimating) {
+      return;
+    }
+
+    _isProcessingQueue = true;
+    final nextRotation = _pendingRotations.removeAt(0);
+
+    print("DEBUG: Processing rotation step: $nextRotation");
+    widget.onRotateSteps(nextRotation);
+    _isProcessingQueue = false;
+  }
+
+  // SWIPE MODE: Direction calculation
+  int _getRotationDirectionFromSwipe(Offset startPos, Offset swipeVector) {
+    final region = _determineRegion(startPos, widget.size);
+    return _getRotationDirection(region, swipeVector);
+  }
+
+// Add these missing corner cases to your _getRotationDirection method in simple_ring.dart
+// Updated _getRotationDirection for intuitive swipe behavior
+  int _getRotationDirection(String region, Offset swipeVector) {
+    final dx = swipeVector.dx;
+    final dy = swipeVector.dy;
+    final isHorizontalDominant = dx.abs() > dy.abs();
+
+    switch (region) {
+      case 'top':
+        return isHorizontalDominant ? (dx > 0 ? -1 : 1) : 0;
+      case 'right':
+        return !isHorizontalDominant ? (dy > 0 ? -1 : 1) : 0;
+      case 'bottom':
+        return isHorizontalDominant ? (dx > 0 ? 1 : -1) : 0;
+      case 'left':
+        return !isHorizontalDominant ? (dy > 0 ? 1 : -1) : 0;
+
+      // 🔄 UPDATED: Intuitive corner logic
+      case 'topLeft':
+        if (dx > 0 && dx.abs() > dy.abs()) return -1; // Right = CLOCKWISE ✅
+        if (dy < 0 && dy.abs() > dx.abs()) return -1; // Up = CLOCKWISE ✅
+        if (dx < 0 && dx.abs() > dy.abs()) return 1; // Left = ANTI-CLOCKWISE ✅
+        if (dy > 0 && dy.abs() > dx.abs()) return 1; // Down = ANTI-CLOCKWISE ✅
+        return 0;
+
+      case 'topRight':
+        if (dx > 0 && dx.abs() > dy.abs()) return -1; // Right = CLOCKWISE ✅
+        if (dy > 0 && dy.abs() > dx.abs()) return -1; // Down = CLOCKWISE ✅
+        if (dx < 0 && dx.abs() > dy.abs()) return 1; // Left = ANTI-CLOCKWISE ✅
+        if (dy < 0 && dy.abs() > dx.abs()) return 1; // Up = ANTI-CLOCKWISE ✅
+        return 0;
+
+      case 'bottomRight':
+        if (dx < 0 && dx.abs() > dy.abs()) return -1; // Left = CLOCKWISE ✅
+        if (dy < 0 && dy.abs() > dx.abs()) return 1; // Up = CLOCKWISE ✅
+        if (dx > 0 && dx.abs() > dy.abs()) return 1; // Right = ANTI-CLOCKWISE ✅
+        if (dy > 0 && dy.abs() > dx.abs()) return -1; // Down = CLOCKWISE ✅
+        return 0;
+
+      case 'bottomLeft':
+        if (dx < 0 && dx.abs() > dy.abs()) return -1; // Left = CLOCKWISE ✅
+        if (dy > 0 && dy.abs() > dx.abs()) return 1; // Down = ANTICLOCKWISE ✅
+        if (dx > 0 && dx.abs() > dy.abs()) return 1; // Right = ANTI-CLOCKWISE ✅
+        if (dy < 0 && dy.abs() > dx.abs()) return -1; // Up = CLOCKWISE ✅
+        return 0;
+
+      default:
+        final angle = math.atan2(dy, dx);
+        final normalizedAngle = (angle + 2 * math.pi) % (2 * math.pi);
+        return normalizedAngle > math.pi ? 1 : -1;
+    }
+  }
+// Add these missing corner cases to your _determineRotationDirection method in simple_ring.dart
+
+  int _determineRotationDirection(
+      Offset startPos, Offset dragDelta, double size) {
+    final region = _determineRegion(startPos, size);
+
+    switch (region) {
+      case 'top':
+        return dragDelta.dx < -_dragThreshold
+            ? 1
+            : (dragDelta.dx > _dragThreshold ? -1 : 0);
+      case 'right':
+        return dragDelta.dy < -_dragThreshold
+            ? 1
+            : (dragDelta.dy > _dragThreshold ? -1 : 0);
+      case 'bottom':
+        return dragDelta.dx > _dragThreshold
+            ? 1
+            : (dragDelta.dx < -_dragThreshold ? -1 : 0);
+      case 'left':
+        return dragDelta.dy > _dragThreshold
+            ? 1
+            : (dragDelta.dy < -_dragThreshold ? -1 : 0);
+
+      // 🔥 ADD THESE MISSING CORNER CASES FOR DRAG MODE:
+      case 'topLeft':
+        if (dragDelta.dx > _dragThreshold) {
+          return -1; // Moving right → counterclockwise
+        } else if (dragDelta.dx < -_dragThreshold) {
+          return 1; // Moving left → clockwise
+        } else if (dragDelta.dy < -_dragThreshold) {
+          return -1; // Moving up → clockwise (reversed)
+        } else if (dragDelta.dy > _dragThreshold) {
+          return 1; // Moving down → counterclockwise (reversed)
+        }
+        return 0;
+
+      case 'topRight':
+        if (dragDelta.dx < -_dragThreshold) {
+          return 1; // Moving left → counterclockwise
+        } else if (dragDelta.dx > _dragThreshold) {
+          return -1; // Moving right → clockwise
+        } else if (dragDelta.dy > _dragThreshold) {
+          return -1; // Moving down → counterclockwise
+        } else if (dragDelta.dy < -_dragThreshold) {
+          return 1; // Moving up → clockwise
+        }
+        return 0;
+
+      case 'bottomRight':
+        if (dragDelta.dx < -_dragThreshold) {
+          return -1; // Moving left → counterclockwise
+        } else if (dragDelta.dx > _dragThreshold) {
+          return 1; // Moving right → clockwise
+        } else if (dragDelta.dy < -_dragThreshold) {
+          return 1; // Moving up → counterclockwise (reversed)
+        } else if (dragDelta.dy > _dragThreshold) {
+          return -1; // Moving down → clockwise (reversed)
+        }
+        return 0;
+
+      case 'bottomLeft':
+        if (dragDelta.dx > _dragThreshold) {
+          return 1; // Moving right → counterclockwise
+        } else if (dragDelta.dx < -_dragThreshold) {
+          return -1; // Moving left → clockwise
+        } else if (dragDelta.dy > _dragThreshold) {
+          return 1; // Moving down → clockwise
+        } else if (dragDelta.dy < -_dragThreshold) {
+          return -1; // Moving up → counterclockwise
+        }
+        return 0;
+
+      default:
+        final center = Offset(size / 2, size / 2);
+        final dragAngle = math.atan2(dragDelta.dy, dragDelta.dx);
+        final touchAngle =
+            math.atan2(startPos.dy - center.dy, startPos.dx - center.dx);
+        final angleDiff = (dragAngle - touchAngle) % (2 * math.pi);
+
+        if (dragDelta.distance > _dragThreshold) {
+          return (angleDiff > 0 && angleDiff < math.pi) ? 1 : -1;
+        }
+        return 0;
+    }
+  }
+
   void _handleCornerTap(Offset tapPosition) {
-    // Find which corner was tapped
     int? cornerIndex;
     int? position;
 
@@ -353,12 +472,12 @@ class _SimpleRingState extends State<SimpleRing>
     }
 
     if (cornerIndex != null && position != null) {
-      print("DEBUG: Corner tap detected - cornerIndex: $cornerIndex, position: $position");
+      print(
+          "DEBUG: Corner tap detected - cornerIndex: $cornerIndex, position: $position");
       widget.onTileTap(cornerIndex, position);
     }
   }
 
-  // Check if a position is on any corner
   bool _isPositionOnAnyCorner(Offset touchPosition) {
     for (int cornerPositionIndex in widget.ringModel.cornerIndices) {
       final sizeMultiplier = 1.20;
@@ -376,14 +495,14 @@ class _SimpleRingState extends State<SimpleRing>
           tilePosition.dx, tilePosition.dy, actualTileSize, actualTileSize);
 
       if (tileRect.contains(touchPosition)) {
-        print("DEBUG: Position ${touchPosition} is on corner at index $cornerPositionIndex");
+        print(
+            "DEBUG: Position ${touchPosition} is on corner at index $cornerPositionIndex");
         return true;
       }
     }
     return false;
   }
 
-  // Check if the touch position is on a locked corner
   bool _isPositionOnLockedCorner(Offset touchPosition) {
     final lockedPositions = _getLockedPositionsForRing();
 
@@ -394,10 +513,10 @@ class _SimpleRingState extends State<SimpleRing>
       final tilePosition = widget.isInner
           ? SquarePositionUtils.calculateInnerSquarePosition(
               positionIndex, widget.size, widget.tileSize,
-              cornerSizeMultiplier: sizeMultiplier)
+              cornerSizeMultiplier: sizeMultiplier, margin: widget.margin)
           : SquarePositionUtils.calculateSquarePosition(
               positionIndex, widget.size, widget.tileSize,
-              cornerSizeMultiplier: sizeMultiplier);
+              cornerSizeMultiplier: sizeMultiplier, margin: widget.margin);
 
       final actualTileSize = widget.tileSize * sizeMultiplier;
       final tileRect = Rect.fromLTWH(
@@ -410,7 +529,6 @@ class _SimpleRingState extends State<SimpleRing>
     return false;
   }
 
-  // Get all locked positions for this ring
   List<int> _getLockedPositionsForRing() {
     List<int> lockedPositions = [];
     for (final equation in widget.lockedEquations) {
@@ -422,16 +540,19 @@ class _SimpleRingState extends State<SimpleRing>
   }
 
   String _determineRegion(Offset position, double size) {
-    final edgeThreshold = size * 0.2; // 20% of the size for edge detection
+    final edgeThreshold = size * 0.2;
 
     // Check corners first
     if (position.dx < edgeThreshold && position.dy < edgeThreshold) {
       return 'topLeft';
-    } else if (position.dx > size - edgeThreshold && position.dy < edgeThreshold) {
+    } else if (position.dx > size - edgeThreshold &&
+        position.dy < edgeThreshold) {
       return 'topRight';
-    } else if (position.dx > size - edgeThreshold && position.dy > size - edgeThreshold) {
+    } else if (position.dx > size - edgeThreshold &&
+        position.dy > size - edgeThreshold) {
       return 'bottomRight';
-    } else if (position.dx < edgeThreshold && position.dy > size - edgeThreshold) {
+    } else if (position.dx < edgeThreshold &&
+        position.dy > size - edgeThreshold) {
       return 'bottomLeft';
     }
 
@@ -452,42 +573,27 @@ class _SimpleRingState extends State<SimpleRing>
   List<Widget> _buildTiles() {
     final itemCount = widget.ringModel.numbers.length;
     List<Widget> tiles = [];
-
-    // Get locked positions for this ring
     final lockedPositions = _getLockedPositionsForRing();
 
     for (int i = 0; i < itemCount; i++) {
-      // Is this a corner?
       final cornerIndex = widget.ringModel.cornerIndices.indexOf(i);
       final isCorner = cornerIndex != -1;
-
-      // Is this corner locked?
       final isLocked = lockedPositions.contains(i);
-
-      // Get the number to display
       int numberToDisplay = widget.ringModel.getNumberAtPosition(i);
 
-      // Create animation for this tile
       Widget tileWidget;
 
       if (_animationController.shouldAnimate() && !isLocked) {
-        // Get animation info for this tile
         final animInfo =
             _animationController.getAnimatedTileInfo(i, isCorner, isLocked);
 
-        // Animated position and size for unlocked tiles
         tileWidget = AnimatedBuilder(
           animation: animInfo.animationController,
           builder: (context, child) {
-            // Get the current position based on animation progress
             final currentPosition = animInfo
                 .calculateCurrentPosition(animInfo.animationController.value);
-
-            // Get the current size
             final currentSize = animInfo
                 .calculateCurrentSize(animInfo.animationController.value);
-
-            // Get the current opacity
             final currentOpacity = animInfo
                 .calculateCurrentOpacity(animInfo.animationController.value);
 
@@ -501,7 +607,8 @@ class _SimpleRingState extends State<SimpleRing>
                 isCorner: isCorner,
                 onTap: isCorner
                     ? () {
-                        print("DEBUG: Corner tile tapped in animation, cornerIndex: $cornerIndex, position: $i");
+                        print(
+                            "DEBUG: Corner tile tapped in animation, cornerIndex: $cornerIndex, position: $i");
                         widget.onTileTap(cornerIndex, i);
                       }
                     : null,
@@ -512,11 +619,9 @@ class _SimpleRingState extends State<SimpleRing>
           },
         );
       } else {
-        // Get static position and appearance for this tile
         final animInfo =
             _animationController.getAnimatedTileInfo(i, isCorner, isLocked);
 
-        // Static position for locked tiles or when not animating
         tileWidget = Positioned(
           left: animInfo.endPosition.dx,
           top: animInfo.endPosition.dy,
@@ -527,7 +632,8 @@ class _SimpleRingState extends State<SimpleRing>
             isCorner: isCorner,
             onTap: isCorner
                 ? () {
-                    print("DEBUG: Corner tile tapped static, cornerIndex: $cornerIndex, position: $i");
+                    print(
+                        "DEBUG: Corner tile tapped static, cornerIndex: $cornerIndex, position: $i");
                     widget.onTileTap(cornerIndex, i);
                   }
                 : null,

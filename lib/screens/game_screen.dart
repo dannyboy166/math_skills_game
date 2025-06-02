@@ -77,6 +77,8 @@ class _GameScreenState extends State<GameScreen> {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  bool _isDragMode = false; // Default to swipe mode
+
   @override
   void initState() {
     super.initState();
@@ -105,6 +107,8 @@ class _GameScreenState extends State<GameScreen> {
     _startGameTimer();
 
     _checkAndShowTutorial();
+
+    _loadControlModePreference();
   }
 
   @override
@@ -114,6 +118,44 @@ class _GameScreenState extends State<GameScreen> {
     // Clean up animations
     starAnimations.clear();
     super.dispose();
+  }
+
+  void _toggleControlMode() {
+    setState(() {
+      _isDragMode = !_isDragMode;
+    });
+
+    // Optional: Save preference to SharedPreferences
+    _saveControlModePreference();
+
+    // Optional: Show feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isDragMode ? 'Switched to Drag Mode' : 'Switched to Swipe Mode',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        duration: Duration(seconds: 1),
+        backgroundColor: operation.color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  // Optional: Save/load preference
+  void _saveControlModePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('drag_mode', _isDragMode);
+  }
+
+  void _loadControlModePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDragMode = prefs.getBool('drag_mode') ?? false; // Default to swipe
+    });
   }
 
   void _startGameTimer() {
@@ -686,6 +728,8 @@ class _GameScreenState extends State<GameScreen> {
       onEquationTap: _handleEquationTap,
       onShowHint: _showHint,
       onShowHelp: _showHelpDialog,
+      isDragMode: _isDragMode,
+      onToggleMode: _toggleControlMode,
     );
   }
 
