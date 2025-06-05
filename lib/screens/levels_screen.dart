@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
 import 'package:math_skills_game/models/level_completion_model.dart';
+import 'package:math_skills_game/models/game_mode.dart';
 import 'package:math_skills_game/screens/game_screen.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'dart:math';
@@ -26,6 +27,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
   bool _isLoading = true;
   List<LevelCompletionModel> _completedLevels = [];
   late String _currentOperation;
+  GameMode _selectedGameMode = GameMode.standard;
 
   @override
   void initState() {
@@ -359,6 +361,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
           operationName: _currentOperation,
           difficultyLevel: difficultyEnum,
           targetNumber: targetToUse,
+          gameMode: _selectedGameMode,
         ),
       ),
     ).then((_) {
@@ -504,6 +507,46 @@ class _LevelsScreenState extends State<LevelsScreen> {
                     color: Colors.grey[600],
                   ),
                 ),
+                // Add game mode toggle for multiplication and division
+                if (_currentOperation == 'multiplication' || _currentOperation == 'division') ...[
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Text(
+                        'Mode: ',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      Expanded(
+                        child: SegmentedButton<GameMode>(
+                          segments: [
+                            ButtonSegment<GameMode>(
+                              value: GameMode.standard,
+                              label: Text('Standard', style: TextStyle(fontSize: 12)),
+                            ),
+                            ButtonSegment<GameMode>(
+                              value: GameMode.timesTableRing,
+                              label: Text('Times Table Ring', style: TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                          selected: {_selectedGameMode},
+                          onSelectionChanged: (Set<GameMode> newSelection) {
+                            setState(() {
+                              _selectedGameMode = newSelection.first;
+                            });
+                          },
+                          style: SegmentedButton.styleFrom(
+                            selectedBackgroundColor: operationColor.withOpacity(0.2),
+                            selectedForegroundColor: operationColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

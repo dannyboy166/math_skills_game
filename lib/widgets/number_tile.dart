@@ -7,6 +7,7 @@ class NumberTile extends StatefulWidget {
   final Color color;
   final bool isLocked;
   final bool isCorner; 
+  final bool isGreyedOut;
   final VoidCallback? onTap;
   final double size;
   final double sizeMultiplier;
@@ -17,6 +18,7 @@ class NumberTile extends StatefulWidget {
     required this.color,
     this.isLocked = false,
     this.isCorner = false,
+    this.isGreyedOut = false,
     this.onTap,
     this.size = 45,
     this.sizeMultiplier = 1.0,
@@ -89,12 +91,12 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    // Determine the base color - if locked, use a gray version
+    // Determine the base color - if locked or greyed out, use a gray version
     Color baseColor;
-    if (widget.isLocked) {
+    if (widget.isLocked || widget.isGreyedOut) {
       // Convert to grayscale with reduced opacity
       final grayValue = _getGrayscaleValue(widget.color);
-      baseColor = Color.fromRGBO(grayValue, grayValue, grayValue, 0.7);
+      baseColor = Color.fromRGBO(grayValue, grayValue, grayValue, widget.isGreyedOut ? 0.5 : 0.7);
     } else {
       baseColor = widget.color;
     }
@@ -111,7 +113,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
       enabled: widget.onTap != null,
       label: "Number ${widget.number} ${widget.isCorner ? 'corner' : ''} tile",
       child: IgnorePointer(
-        // Only ignore pointer if locked
+        // Only ignore pointer if locked (greyed out should still be interactive)
         ignoring: widget.isLocked,
         child: GestureDetector(
           onTap: () {
@@ -144,7 +146,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
                       ],
                       stops: const [0.1, 0.5, 0.9],
                     ),
-                    boxShadow: widget.isLocked
+                    boxShadow: (widget.isLocked || widget.isGreyedOut)
                       ? []
                       : [
                           // Outer shadow
@@ -179,8 +181,10 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   Widget _buildNormalContent(double size) {
-    // Adjust the text color based on locked state
-    final textColor = widget.isLocked ? Colors.white.withOpacity(0.7) : Colors.white;
+    // Adjust the text color based on locked or greyed out state
+    final textColor = (widget.isLocked || widget.isGreyedOut) 
+        ? Colors.white.withOpacity(widget.isGreyedOut ? 0.6 : 0.7) 
+        : Colors.white;
     
     return Stack(
       alignment: Alignment.center,
@@ -193,7 +197,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             shape: BoxShape.circle,
             color: Colors.transparent,
             border: Border.all(
-              color: Colors.white.withOpacity(widget.isLocked ? 0.1 : 0.15),
+              color: Colors.white.withOpacity((widget.isLocked || widget.isGreyedOut) ? 0.1 : 0.15),
               width: size * 0.03,
             ),
           ),
@@ -225,8 +229,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
           ),
         ),
         
-        // Shine effect (subtle arc at top-left) - only if not locked
-        if (!widget.isLocked)
+        // Shine effect (subtle arc at top-left) - only if not locked or greyed out
+        if (!widget.isLocked && !widget.isGreyedOut)
           Positioned(
             top: size * 0.15,
             left: size * 0.15,
@@ -241,7 +245,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
           ),
           
         // Add a subtle indicator for corner pieces to make them more visually distinct
-        if (widget.isCorner && !widget.isLocked)
+        if (widget.isCorner && !widget.isLocked && !widget.isGreyedOut)
           Container(
             width: size * 0.9,
             height: size * 0.9,
@@ -258,7 +262,9 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   Widget _buildPressedContent(double size) {
-    final textColor = widget.isLocked ? Colors.white.withOpacity(0.6) : Colors.white.withOpacity(0.9);
+    final textColor = (widget.isLocked || widget.isGreyedOut) 
+        ? Colors.white.withOpacity(0.6) 
+        : Colors.white.withOpacity(0.9);
     
     return Stack(
       alignment: Alignment.center,

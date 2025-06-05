@@ -196,4 +196,37 @@ class GameGenerator {
 
     return outerNumbers;
   }
+
+  /// Generate numbers for times table ring mode
+  static List<int> generateTimesTableRingNumbers(
+      int targetNumber, Random random) {
+    // Generate all 12 correct answers: 1×target, 2×target, ..., 12×target
+    List<int> correctAnswers = [];
+    for (int i = 1; i <= 12; i++) {
+      correctAnswers.add(i * targetNumber);
+    }
+    
+    // Generate 4 distractor numbers
+    List<int> distractors = [];
+    Set<int> usedNumbers = Set.from(correctAnswers);
+    
+    int minRange = targetNumber;
+    int maxRange = targetNumber * 12;
+    
+    while (distractors.length < 4) {
+      int candidate = random.nextInt(maxRange - minRange + 1) + minRange;
+      
+      // Check if it's not a multiple of targetNumber and not already used
+      if (candidate % targetNumber != 0 && !usedNumbers.contains(candidate)) {
+        distractors.add(candidate);
+        usedNumbers.add(candidate);
+      }
+    }
+    
+    // Combine and shuffle all 16 numbers
+    List<int> allNumbers = [...correctAnswers, ...distractors];
+    allNumbers.shuffle(random);
+    
+    return allNumbers;
+  }
 }

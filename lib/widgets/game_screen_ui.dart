@@ -6,6 +6,7 @@ import '../models/difficulty_level.dart';
 import '../models/operation_config.dart';
 import '../models/ring_model.dart';
 import '../models/locked_equation.dart';
+import '../models/game_mode.dart';
 import 'simple_ring.dart';
 import 'equation_layout.dart';
 
@@ -20,6 +21,8 @@ class GameScreenUI extends StatelessWidget {
   final RingModel innerRingModel;
   final RingModel outerRingModel;
   final List<LockedEquation> lockedEquations;
+  final Set<String> greyedOutNumbers;
+  final GameMode gameMode;
   final List<Widget> starAnimations;
   final bool isGameComplete;
   final int elapsedTimeMs;
@@ -46,6 +49,8 @@ class GameScreenUI extends StatelessWidget {
     required this.innerRingModel,
     required this.outerRingModel,
     required this.lockedEquations,
+    required this.greyedOutNumbers,
+    required this.gameMode,
     required this.starAnimations,
     required this.isGameComplete,
     required this.elapsedTimeMs,
@@ -195,7 +200,7 @@ class GameScreenUI extends StatelessWidget {
                       SizedBox(height: 16),
                       // Progress stars at the top
                       ProgressStars(
-                        total: 4,
+                        total: gameMode == GameMode.timesTableRing ? 12 : 4,
                         completed: lockedEquations.length,
                       ),
                     ],
@@ -221,10 +226,12 @@ class GameScreenUI extends StatelessWidget {
                               isInner: false,
                               onRotateSteps: onUpdateOuterRing,
                               lockedEquations: lockedEquations,
+                              greyedOutNumbers: greyedOutNumbers,
                               onTileTap: onTileTap,
                               transitionRate: 1.0,
                               margin: margin,
                               isDragMode: isDragMode, // NEW parameter
+                              gameMode: gameMode, // NEW parameter
                             ),
 
                             // Inner ring - UPDATED to use mode toggle
@@ -236,10 +243,12 @@ class GameScreenUI extends StatelessWidget {
                               isInner: true,
                               onRotateSteps: onUpdateInnerRing,
                               lockedEquations: lockedEquations,
+                              greyedOutNumbers: greyedOutNumbers,
                               onTileTap: onTileTap,
                               transitionRate: 1.0,
                               margin: margin,
                               isDragMode: isDragMode, // NEW parameter
+                              gameMode: gameMode, // NEW parameter
                             ),
 
                             // Center target number with enhanced styling

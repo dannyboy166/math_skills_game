@@ -22,18 +22,21 @@ import 'dart:async'; // Add Timer import
 import '../models/ring_model.dart';
 import '../models/operation_config.dart';
 import '../models/locked_equation.dart';
+import '../models/game_mode.dart';
 import '../utils/game_utils.dart';
 
 class GameScreen extends StatefulWidget {
   final String operationName;
   final DifficultyLevel difficultyLevel;
   final int? targetNumber;
+  final GameMode gameMode;
 
   const GameScreen({
     Key? key,
     required this.operationName,
     required this.difficultyLevel,
     this.targetNumber,
+    this.gameMode = GameMode.standard,
   }) : super(key: key);
 
   @override
@@ -48,6 +51,12 @@ class _GameScreenState extends State<GameScreen> {
 
   // Track locked equations
   List<LockedEquation> lockedEquations = [];
+  
+  // Track greyed out number pairs for times table mode  
+  Set<String> greyedOutPairs = {};
+  
+  // Track solved equations by value (not position) for times table mode
+  Set<String> solvedEquations = {};
 
   // List to keep track of active star animations
   List<Widget> starAnimations = [];
@@ -115,8 +124,12 @@ class _GameScreenState extends State<GameScreen> {
   void dispose() {
     // Cancel any pending operations
     _gameTimer?.cancel();
-    // Clean up animations
+    _isTimerRunning = false;
+    
+    // Clean up animations and prevent further setState calls
     starAnimations.clear();
+    _activePenaltyAnimations.clear();
+    
     super.dispose();
   }
 
@@ -153,9 +166,11 @@ class _GameScreenState extends State<GameScreen> {
 
   void _loadControlModePreference() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _isDragMode = prefs.getBool('drag_mode') ?? false; // Default to swipe
-    });
+    if (mounted) {
+      setState(() {
+        _isDragMode = prefs.getBool('drag_mode') ?? false; // Default to swipe
+      });
+    }
   }
 
   void _startGameTimer() {
@@ -164,7 +179,7 @@ class _GameScreenState extends State<GameScreen> {
 
     // Update timer every 100ms
     _gameTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-      if (_isTimerRunning) {
+      if (_isTimerRunning && mounted) {
         setState(() {
           _elapsedTimeMs =
               DateTime.now().difference(_startTime!).inMilliseconds;
@@ -220,7 +235,12 @@ class _GameScreenState extends State<GameScreen> {
     List<int> innerNumbers;
     List<int> outerNumbers;
 
-    if (widget.operationName == 'multiplication') {
+    if (widget.gameMode == GameMode.timesTableRing && 
+        (widget.operationName == 'multiplication' || widget.operationName == 'division')) {
+      // Times Table Ring Mode: inner ring 1-12, outer ring has all 12 correct answers + 4 distractors
+      innerNumbers = List.generate(12, (index) => index + 1); // 1-12
+      outerNumbers = GameGenerator.generateTimesTableRingNumbers(targetNumber, random);
+    } else if (widget.operationName == 'multiplication') {
       innerNumbers = List.generate(12, (index) => index + 1); // 1-12
       outerNumbers = GameGenerator.generateMultiplicationNumbers(
           targetNumber, random); // ✅ removed maxOuterNumber
@@ -297,9 +317,11 @@ class _GameScreenState extends State<GameScreen> {
   bool _checkEquation(int cornerIndex) {
     print("DEBUG: Checking equation at cornerIndex: $cornerIndex");
 
-    // If this corner is already locked, don't check it again
-    if (lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
-      print("DEBUG: This corner is already locked");
+    // In standard mode, if this corner is already locked, don't check it again
+    // In times table ring mode, always validate the equation regardless of previous solutions
+    if (widget.gameMode == GameMode.standard && 
+        lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
+      print("DEBUG: This corner is already locked in standard mode");
       return true;
     }
 
@@ -392,7 +414,9 @@ class _GameScreenState extends State<GameScreen> {
         isGameComplete = true;
         _stopGameTimer(); // Stop timer when game is complete
         Future.delayed(Duration(milliseconds: 1000), () {
-          _showWinDialog();
+          if (mounted) {
+            _showWinDialog();
+          }
         });
       }
     });
@@ -485,8 +509,8 @@ class _GameScreenState extends State<GameScreen> {
       // Play correct sound and vibration
       _soundService.playCorrect();
 
-      // If it's correct, lock it
-      _lockEquation(cornerIndex);
+      // Handle the number drop based on game mode
+      _onNumberDrop(cornerIndex);
     } else {
       // WRONG ANSWER - Add penalty time and show animation
       _addTimePenalty(cornerIndex);
@@ -521,6 +545,102 @@ class _GameScreenState extends State<GameScreen> {
         ),
       );
     }
+  }
+
+  /// Handle number drop - supports both locking (standard mode) and greying out (times table ring mode)
+  void _onNumberDrop(int cornerIndex) {
+    if (widget.gameMode == GameMode.timesTableRing && 
+        (widget.operationName == 'multiplication' || widget.operationName == 'division')) {
+      // In times table ring mode, grey out the numbers instead of locking
+      _greyOutNumbers(cornerIndex);
+    } else {
+      // In standard mode, lock the equation as before
+      _lockEquation(cornerIndex);
+    }
+  }
+
+  /// Grey out numbers in times table ring mode instead of locking them
+  void _greyOutNumbers(int cornerIndex) {
+    // Get current numbers at these positions
+    final outerNumber = outerRingModel.getNumberAtPosition(outerRingModel.cornerIndices[cornerIndex]);
+    final innerNumber = innerRingModel.getNumberAtPosition(innerRingModel.cornerIndices[cornerIndex]);
+
+    // Create equation key to track unique equations solved
+    final equationKey = '$innerNumber×$targetNumber=$outerNumber';
+    
+    // If this exact equation was already solved, don't count it again
+    if (solvedEquations.contains(equationKey)) {
+      return;
+    }
+
+    // Get corner positions
+    final outerCornerPos = outerRingModel.cornerIndices[cornerIndex];
+    final innerCornerPos = innerRingModel.cornerIndices[cornerIndex];
+
+    // Create a locked equation object (for tracking purposes)
+    final lockedEquation = LockedEquation(
+      cornerIndex: cornerIndex,
+      innerNumber: innerNumber,
+      targetNumber: targetNumber,
+      outerNumber: outerNumber,
+      innerPosition: innerCornerPos,
+      outerPosition: outerCornerPos,
+      operation: widget.operationName,
+      equationString:
+          operation.getEquationString(innerNumber, targetNumber, outerNumber),
+    );
+
+    // Provide haptic feedback for success
+    _hapticService.success();
+
+    // Update state - grey out instead of lock
+    setState(() {
+      // Track this specific equation as solved
+      solvedEquations.add(equationKey);
+      
+      // Add to locked equations list for tracking progress only
+      lockedEquations.add(lockedEquation);
+
+      // Add number pairs to greyed out set (track the actual numbers)
+      greyedOutPairs.add('inner_$innerNumber');
+      greyedOutPairs.add('outer_$outerNumber');
+
+      // Add star animation
+      _showStarAnimation(cornerIndex);
+
+      // Check if all 12 equations are complete (times table ring win condition)
+      if (solvedEquations.length >= 12) { // All 12 unique equations solved
+        isGameComplete = true;
+        _stopGameTimer(); // Stop timer when game is complete
+        Future.delayed(Duration(milliseconds: 1000), () {
+          if (mounted) {
+            _showWinDialog();
+          }
+        });
+      }
+    });
+
+    // Provide visual feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.star, color: Colors.amber),
+            SizedBox(width: 10),
+            Text(
+              'Great job! ${solvedEquations.length}/12 equations found!',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        duration: Duration(seconds: 1),
+        backgroundColor: operation.color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
   }
 
   void _addTimePenalty(int cornerIndex) {
@@ -715,6 +835,8 @@ class _GameScreenState extends State<GameScreen> {
       innerRingModel: innerRingModel,
       outerRingModel: outerRingModel,
       lockedEquations: lockedEquations,
+      greyedOutNumbers: greyedOutPairs,
+      gameMode: widget.gameMode,
       starAnimations: [
         ...starAnimations,
         ..._activePenaltyAnimations
@@ -1098,6 +1220,8 @@ class _GameScreenState extends State<GameScreen> {
                   // Your existing play again logic...
                   setState(() {
                     lockedEquations = [];
+                    greyedOutPairs.clear();
+                    solvedEquations.clear();
                     isGameComplete = false;
                     starAnimations = [];
                     _activePenaltyAnimations.clear();

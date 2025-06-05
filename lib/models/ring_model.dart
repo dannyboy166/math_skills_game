@@ -12,6 +12,7 @@ class RingModel {
   // Current state data
   final Map<int, int> _currentNumbers = {};
   final Map<int, bool> _lockedPositions = {};
+  final Map<int, bool> _greyedNumbers = {};
 
   RingModel({
     required this.numbers,
@@ -54,6 +55,7 @@ class RingModel {
     // Copy the current state
     newModel._currentNumbers.addAll(_currentNumbers);
     newModel._lockedPositions.addAll(_lockedPositions);
+    newModel._greyedNumbers.addAll(_greyedNumbers);
 
     // Apply rotation if needed
     if (rotationSteps != null && rotationSteps != 0) {
@@ -170,5 +172,26 @@ class RingModel {
     // Always return from _currentNumbers, which contains our current state
     // Fall back to original numbers array only if not found in _currentNumbers
     return _currentNumbers[position] ?? numbers[position];
+  }
+
+  // Check if a number is greyed out
+  bool isNumberGreyedOut(int number) {
+    return _greyedNumbers[number] == true;
+  }
+  
+  // Grey out a specific number
+  RingModel copyWithGreyedNumber(int number) {
+    RingModel newModel = RingModel(
+      numbers: numbers,
+      color: color,
+      cornerIndices: cornerIndices,
+    );
+    
+    newModel._currentNumbers.addAll(_currentNumbers);
+    newModel._lockedPositions.addAll(_lockedPositions);
+    newModel._greyedNumbers.addAll(_greyedNumbers);
+    newModel._greyedNumbers[number] = true;
+    
+    return newModel;
   }
 }

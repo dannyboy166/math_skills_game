@@ -1,6 +1,7 @@
 // lib/widgets/simple_ring.dart - Unified with swipe/drag toggle
 import 'package:flutter/material.dart';
 import '../models/ring_model.dart';
+import '../models/game_mode.dart';
 import '../utils/position_utils.dart';
 import '../models/locked_equation.dart';
 import '../widgets/number_tile.dart';
@@ -18,6 +19,8 @@ class SimpleRing extends StatefulWidget {
   final double transitionRate;
   final double margin;
   final bool isDragMode; // NEW: Controls whether to use drag or swipe
+  final Set<String> greyedOutNumbers; // NEW: Track greyed out positions for times table mode
+  final GameMode gameMode; // NEW: Game mode to determine locking behavior
 
   const SimpleRing({
     Key? key,
@@ -31,6 +34,8 @@ class SimpleRing extends StatefulWidget {
     this.transitionRate = 1.0,
     required this.margin,
     this.isDragMode = false, // NEW: Default to swipe mode
+    this.greyedOutNumbers = const {}, // NEW: Default to empty set
+    this.gameMode = GameMode.standard, // NEW: Default to standard mode
   }) : super(key: key);
 
   @override
@@ -530,6 +535,11 @@ class _SimpleRingState extends State<SimpleRing>
   }
 
   List<int> _getLockedPositionsForRing() {
+    // In Times Table Ring Mode, don't lock any positions to allow free rotation
+    if (widget.gameMode == GameMode.timesTableRing) {
+      return [];
+    }
+    
     List<int> lockedPositions = [];
     for (final equation in widget.lockedEquations) {
       final cornerIndex = equation.cornerIndex;
@@ -580,6 +590,8 @@ class _SimpleRingState extends State<SimpleRing>
       final isCorner = cornerIndex != -1;
       final isLocked = lockedPositions.contains(i);
       int numberToDisplay = widget.ringModel.getNumberAtPosition(i);
+      final ringType = widget.isInner ? 'inner' : 'outer';
+      final isGreyedOut = widget.greyedOutNumbers.contains('${ringType}_$numberToDisplay');
 
       Widget tileWidget;
 
@@ -605,6 +617,7 @@ class _SimpleRingState extends State<SimpleRing>
                 color: widget.ringModel.color.withOpacity(currentOpacity),
                 isLocked: isLocked,
                 isCorner: isCorner,
+                isGreyedOut: isGreyedOut,
                 onTap: isCorner
                     ? () {
                         print(
@@ -630,6 +643,7 @@ class _SimpleRingState extends State<SimpleRing>
             color: widget.ringModel.color.withOpacity(animInfo.endOpacity),
             isLocked: isLocked,
             isCorner: isCorner,
+            isGreyedOut: isGreyedOut,
             onTap: isCorner
                 ? () {
                     print(

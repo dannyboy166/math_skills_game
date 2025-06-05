@@ -15,21 +15,28 @@ class ProgressStars extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(total, (index) {
-        final bool isCompleted = index < completed;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: isCompleted
-              ? _buildCompletedStar()
-              : _buildEmptyStar(),
-        );
-      }),
+    // Calculate spacing and size based on total count
+    final double spacing = total > 8 ? 2 : 6;
+    final double starSize = total > 8 ? 24 : 32;
+    
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(total, (index) {
+          final bool isCompleted = index < completed;
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing),
+            child: isCompleted
+                ? _buildCompletedStar(starSize)
+                : _buildEmptyStar(starSize),
+          );
+        }),
+      ),
     );
   }
   
-  Widget _buildCompletedStar() {
+  Widget _buildCompletedStar(double size) {
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 500),
@@ -41,13 +48,13 @@ class ProgressStars extends StatelessWidget {
         );
       },
       child: StarWidget(
-        size: 40, 
+        size: size, 
         color: Color(0xFFFFD700), // Gold color
       ),
     );
   }
   
-  Widget _buildEmptyStar() {
+  Widget _buildEmptyStar(double size) {
     return ShaderMask(
       shaderCallback: (Rect bounds) {
         return LinearGradient(
@@ -57,7 +64,7 @@ class ProgressStars extends StatelessWidget {
         ).createShader(bounds);
       },
       child: StarWidget(
-        size: 40, 
+        size: size, 
         color: Colors.white,
       ),
     );
