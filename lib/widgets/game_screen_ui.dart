@@ -7,6 +7,7 @@ import '../models/operation_config.dart';
 import '../models/ring_model.dart';
 import '../models/locked_equation.dart';
 import '../models/game_mode.dart';
+import '../models/rotation_speed.dart';
 import 'simple_ring.dart';
 import 'equation_layout.dart';
 
@@ -30,6 +31,9 @@ class GameScreenUI extends StatelessWidget {
   // NEW: Control mode toggle
   final bool isDragMode;
   final VoidCallback onToggleMode;
+  
+  // NEW: Rotation speed control
+  final RotationSpeed rotationSpeed;
 
   // Callback functions for interactions
   final Function(int) onUpdateInnerRing;
@@ -56,6 +60,7 @@ class GameScreenUI extends StatelessWidget {
     required this.elapsedTimeMs,
     required this.isDragMode, // NEW
     required this.onToggleMode, // NEW
+    required this.rotationSpeed, // NEW
     required this.onUpdateInnerRing,
     required this.onUpdateOuterRing,
     required this.onTileTap,
@@ -217,9 +222,9 @@ class GameScreenUI extends StatelessWidget {
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // Outer ring - UPDATED to use mode toggle
+                            // Outer ring - UPDATED to use mode toggle and rotation speed
                             SimpleRing(
-                              key: ValueKey('outer_${isDragMode ? 'drag' : 'swipe'}'), // Force rebuild when mode changes
+                              key: ValueKey('outer_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
                               ringModel: outerRingModel,
                               size: boardSize,
                               tileSize: outerTileSize,
@@ -228,15 +233,15 @@ class GameScreenUI extends StatelessWidget {
                               lockedEquations: lockedEquations,
                               greyedOutNumbers: greyedOutNumbers,
                               onTileTap: onTileTap,
-                              transitionRate: 1.0,
+                              transitionRate: rotationSpeed.transitionRate, // NEW: Use user's preferred speed
                               margin: margin,
                               isDragMode: isDragMode, // NEW parameter
                               gameMode: gameMode, // NEW parameter
                             ),
 
-                            // Inner ring - UPDATED to use mode toggle
+                            // Inner ring - UPDATED to use mode toggle and rotation speed
                             SimpleRing(
-                              key: ValueKey('inner_${isDragMode ? 'drag' : 'swipe'}'), // Force rebuild when mode changes
+                              key: ValueKey('inner_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
                               ringModel: innerRingModel,
                               size: innerRingSize,
                               tileSize: innerTileSize,
@@ -245,7 +250,7 @@ class GameScreenUI extends StatelessWidget {
                               lockedEquations: lockedEquations,
                               greyedOutNumbers: greyedOutNumbers,
                               onTileTap: onTileTap,
-                              transitionRate: 1.0,
+                              transitionRate: rotationSpeed.transitionRate, // NEW: Use user's preferred speed
                               margin: margin,
                               isDragMode: isDragMode, // NEW parameter
                               gameMode: gameMode, // NEW parameter

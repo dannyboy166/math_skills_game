@@ -49,11 +49,14 @@ class RingAnimationController {
   }
 
   void _initializeAnimationController() {
-    // Initialize animation controller
+    // Initialize animation controller with duration based on transition rate
+    // Higher transition rate = faster animation = shorter duration
+    final baseDurationMs = 400;
+    final adjustedDurationMs = (baseDurationMs / _transitionRate).round();
+    
     _animationController = AnimationController(
       vsync: _vsync,
-      duration: const Duration(
-          milliseconds: 400), // Slightly longer for smoother transition
+      duration: Duration(milliseconds: adjustedDurationMs),
     );
 
     // Listen for animation completion
@@ -71,6 +74,10 @@ class RingAnimationController {
 
   void updateTransitionRate(double rate) {
     _transitionRate = rate;
+    
+    // Dispose old controller and create new one with updated duration
+    _animationController.dispose();
+    _initializeAnimationController();
   }
 
   void setOnAnimationComplete(VoidCallback callback) {

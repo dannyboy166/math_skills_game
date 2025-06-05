@@ -23,6 +23,7 @@ import '../models/ring_model.dart';
 import '../models/operation_config.dart';
 import '../models/locked_equation.dart';
 import '../models/game_mode.dart';
+import '../models/rotation_speed.dart';
 import '../utils/game_utils.dart';
 
 class GameScreen extends StatefulWidget {
@@ -87,6 +88,7 @@ class _GameScreenState extends State<GameScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isDragMode = false; // Default to swipe mode
+  RotationSpeed _rotationSpeed = RotationSpeed.defaultSpeed; // Default rotation speed
 
 // Add more debug logging to GameScreen initState method:
 
@@ -135,6 +137,10 @@ class _GameScreenState extends State<GameScreen> {
       print("   💾 Loading control mode preference...");
       _loadControlModePreference();
       print("   ✅ Control mode preference loaded");
+
+      print("   🔧 Loading rotation speed preference...");
+      _loadRotationSpeedPreference();
+      print("   ✅ Rotation speed preference loaded");
 
       print("🎮 GameScreen.initState() COMPLETED SUCCESSFULLY");
     } catch (e, stackTrace) {
@@ -207,6 +213,18 @@ class _GameScreenState extends State<GameScreen> {
     if (mounted) {
       setState(() {
         _isDragMode = prefs.getBool('drag_mode') ?? false; // Default to swipe
+      });
+    }
+  }
+
+  void _loadRotationSpeedPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final speedLevel = prefs.getInt('rotation_speed') ?? 5; // Default to Normal (level 5)
+    final loadedSpeed = RotationSpeed.fromLevel(speedLevel);
+    
+    if (mounted) {
+      setState(() {
+        _rotationSpeed = loadedSpeed;
       });
     }
   }
@@ -941,6 +959,7 @@ class _GameScreenState extends State<GameScreen> {
       onShowHelp: _showHelpDialog,
       isDragMode: _isDragMode,
       onToggleMode: _toggleControlMode,
+      rotationSpeed: _rotationSpeed,
     );
   }
 

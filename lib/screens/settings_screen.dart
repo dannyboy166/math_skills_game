@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/services/sound_service.dart';
 import 'package:math_skills_game/services/haptic_service.dart';
+import 'package:math_skills_game/models/rotation_speed.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Local state for settings
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
+  RotationSpeed _rotationSpeed = RotationSpeed.defaultSpeed;
 
   @override
   void initState() {
@@ -26,10 +28,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    // Get current settings from services
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Get current settings from services and preferences
     setState(() {
       _soundEnabled = _soundService.isSoundEnabled;
       _vibrationEnabled = _hapticService.isVibrationEnabled;
+      
+      // Load rotation speed (default to level 5 - Normal)
+      final speedLevel = prefs.getInt('rotation_speed') ?? 5;
+      _rotationSpeed = RotationSpeed.fromLevel(speedLevel);
     });
   }
 
@@ -60,6 +68,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Provide haptic feedback if vibration is enabled
     if (_vibrationEnabled) {
       _hapticService.mediumImpact();
+    }
+  }
+
+  Future<void> _changeRotationSpeed(RotationSpeed newSpeed) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('rotation_speed', newSpeed.level);
+    
+    setState(() {
+      _rotationSpeed = newSpeed;
+    });
+
+    // Provide feedback
+    if (_vibrationEnabled) {
+      _hapticService.lightImpact();
+    }
+    if (_soundEnabled) {
+      _soundService.playCorrect();
     }
   }
 
@@ -104,6 +129,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _toggleVibration,
               Colors.purple,
             ),
+
+            // Ring Rotation Speed
+            _buildRotationSpeedSetting(),
 
             _buildSectionHeader('Game Modes'),
 
@@ -230,6 +258,166 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onChanged();
         },
         activeColor: color,
+      ),
+    );
+  }
+
+  Widget _buildRotationSpeedSetting() {
+    return Card(
+      elevation: 2,
+      margin: EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.rotate_right,
+                    color: Colors.orange,
+                    size: 28,
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ring Rotation Speed',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        'Control how fast the rings rotate',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            
+            // Speed selection slider
+            Column(
+              children: [
+                Text(
+                  'Current: ${_rotationSpeed.displayName}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.orange[700],
+                  ),
+                ),
+                SizedBox(height: 8),
+                Slider(
+                  value: _rotationSpeed.level.toDouble(),
+                  min: 1,
+                  max: 10,
+                  divisions: 9,
+                  activeColor: Colors.orange,
+                  inactiveColor: Colors.orange.withValues(alpha: 0.3),
+                  onChanged: (value) {
+                    final newSpeed = RotationSpeed.fromLevel(value.round());
+                    _changeRotationSpeed(newSpeed);
+                  },
+                ),
+                
+                // Speed labels
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '1',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _rotationSpeed.level == 1 
+                            ? Colors.orange[700] 
+                            : Colors.grey[500],
+                        fontWeight: _rotationSpeed.level == 1 
+                            ? FontWeight.bold 
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    Text(
+                      '5',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _rotationSpeed.level == 5 
+                            ? Colors.orange[700] 
+                            : Colors.grey[500],
+                        fontWeight: _rotationSpeed.level == 5 
+                            ? FontWeight.bold 
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    Text(
+                      '10',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _rotationSpeed.level == 10 
+                            ? Colors.orange[700] 
+                            : Colors.grey[500],
+                        fontWeight: _rotationSpeed.level == 10 
+                            ? FontWeight.bold 
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                SizedBox(height: 8),
+                
+                // Speed descriptions
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Slowest',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    Text(
+                      'Normal',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    Text(
+                      'Maximum',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
