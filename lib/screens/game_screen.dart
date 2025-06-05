@@ -51,10 +51,10 @@ class _GameScreenState extends State<GameScreen> {
 
   // Track locked equations
   List<LockedEquation> lockedEquations = [];
-  
-  // Track greyed out number pairs for times table mode  
+
+  // Track greyed out number pairs for times table mode
   Set<String> greyedOutPairs = {};
-  
+
   // Track solved equations by value (not position) for times table mode
   Set<String> solvedEquations = {};
 
@@ -88,74 +88,112 @@ class _GameScreenState extends State<GameScreen> {
 
   bool _isDragMode = false; // Default to swipe mode
 
+// Add more debug logging to GameScreen initState method:
+
   @override
   void initState() {
     super.initState();
 
-    print(
-        "GameScreen initialized with: operation=${widget.operationName}, difficulty=${widget.difficultyLevel.displayName}, targetNumber=${widget.targetNumber}");
+    print("🎮 GameScreen.initState() START");
+    print("   - operation: ${widget.operationName}");
+    print("   - difficulty: ${widget.difficultyLevel.displayName}");
+    print("   - targetNumber: ${widget.targetNumber}");
+    print("   - gameMode: ${widget.gameMode}");
 
-    // Initialize the operation configuration
-    operation = OperationConfig.forOperation(widget.operationName);
+    try {
+      // Initialize the operation configuration
+      operation = OperationConfig.forOperation(widget.operationName);
+      print("   ✅ Operation config initialized");
 
-    // Set the background gradient based on operation
-    _setBackgroundGradient();
+      // Set the background gradient based on operation
+      _setBackgroundGradient();
+      print("   ✅ Background gradient set");
 
-    // Set target number based on difficulty level
-    if (widget.targetNumber != null) {
-      targetNumber = widget.targetNumber!;
-    } else {
-      final random = Random();
-      targetNumber = widget.difficultyLevel.getRandomCenterNumber(random);
+      // Set target number based on difficulty level
+      if (widget.targetNumber != null) {
+        targetNumber = widget.targetNumber!;
+      } else {
+        final random = Random();
+        targetNumber = widget.difficultyLevel.getRandomCenterNumber(random);
+      }
+      print("   ✅ Target number set: $targetNumber");
+
+      // Generate game numbers
+      print("   🎲 Generating game numbers...");
+      _generateGameNumbers();
+      print("   ✅ Game numbers generated");
+
+      // Start game timer
+      print("   ⏰ Starting game timer...");
+      _startGameTimer();
+      print("   ✅ Game timer started");
+
+      print("   🎯 Checking tutorial...");
+      _checkAndShowTutorial();
+      print("   ✅ Tutorial check complete");
+
+      print("   💾 Loading control mode preference...");
+      _loadControlModePreference();
+      print("   ✅ Control mode preference loaded");
+
+      print("🎮 GameScreen.initState() COMPLETED SUCCESSFULLY");
+    } catch (e, stackTrace) {
+      print("❌ ERROR in GameScreen.initState(): $e");
+      print("   Stack trace: $stackTrace");
+      rethrow;
     }
-
-    // Generate game numbers
-    _generateGameNumbers();
-
-    // Start game timer
-    _startGameTimer();
-
-    _checkAndShowTutorial();
-
-    _loadControlModePreference();
   }
 
   @override
   void dispose() {
-    // Cancel any pending operations
-    _gameTimer?.cancel();
+    print("🔥 GameScreen.dispose() called");
+
+    // Stop the timer FIRST to prevent any more setState calls
     _isTimerRunning = false;
-    
-    // Clean up animations and prevent further setState calls
+    print("🔥 Timer stopped");
+
+    _gameTimer?.cancel();
+    _gameTimer = null;
+    print("🔥 Timer cancelled");
+
+    // Clear all animations to prevent setState calls
     starAnimations.clear();
     _activePenaltyAnimations.clear();
-    
+    print("🔥 Animations cleared");
+
+    // Call super.dispose() LAST
     super.dispose();
+    print("🔥 Super.dispose() called");
   }
 
   void _toggleControlMode() {
+    // Add mounted check to prevent setState after disposal
+    if (!mounted) return;
+
     setState(() {
       _isDragMode = !_isDragMode;
     });
 
-    // Optional: Save preference to SharedPreferences
+    // Save preference asynchronously
     _saveControlModePreference();
 
-    // Optional: Show feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isDragMode ? 'Switched to Drag Mode' : 'Switched to Swipe Mode',
-          style: TextStyle(fontWeight: FontWeight.bold),
+    // Show feedback only if still mounted
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isDragMode ? 'Switched to Drag Mode' : 'Switched to Swipe Mode',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          duration: Duration(seconds: 1),
+          backgroundColor: operation.color,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        duration: Duration(seconds: 1),
-        backgroundColor: operation.color,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
+      );
+    }
   }
 
   // Optional: Save/load preference
@@ -179,11 +217,15 @@ class _GameScreenState extends State<GameScreen> {
 
     // Update timer every 100ms
     _gameTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+      // Check if widget is still mounted AND timer should be running
       if (_isTimerRunning && mounted) {
         setState(() {
           _elapsedTimeMs =
               DateTime.now().difference(_startTime!).inMilliseconds;
         });
+      } else {
+        // Cancel timer if widget is disposed or timer should stop
+        timer.cancel();
       }
     });
   }
@@ -227,59 +269,101 @@ class _GameScreenState extends State<GameScreen> {
         ];
     }
   }
+// Update _generateGameNumbers method with debug logging:
 
-  // Generate numbers for game
   void _generateGameNumbers() {
+    print("🎲 _generateGameNumbers START");
+    print("   - gameMode: ${widget.gameMode}");
+    print("   - operation: ${widget.operationName}");
+    print("   - targetNumber: $targetNumber");
+
     final random = Random();
 
     List<int> innerNumbers;
     List<int> outerNumbers;
 
-    if (widget.gameMode == GameMode.timesTableRing && 
-        (widget.operationName == 'multiplication' || widget.operationName == 'division')) {
-      // Times Table Ring Mode: inner ring 1-12, outer ring has all 12 correct answers + 4 distractors
-      innerNumbers = List.generate(12, (index) => index + 1); // 1-12
-      outerNumbers = GameGenerator.generateTimesTableRingNumbers(targetNumber, random);
-    } else if (widget.operationName == 'multiplication') {
-      innerNumbers = List.generate(12, (index) => index + 1); // 1-12
-      outerNumbers = GameGenerator.generateMultiplicationNumbers(
-          targetNumber, random); // ✅ removed maxOuterNumber
-    } else if (widget.operationName == 'division') {
-      innerNumbers = List.generate(12, (index) => index + 1); // 1-12
-      outerNumbers = GameGenerator.generateDivisionNumbers(
-          targetNumber, random); // ✅ removed maxOuterNumber
-    } else {
-      // Original logic for other operations
-      innerNumbers = widget.difficultyLevel.innerRingNumbers;
+    try {
+      if (widget.gameMode == GameMode.timesTableRing &&
+          (widget.operationName == 'multiplication' ||
+              widget.operationName == 'division')) {
+        print("   📊 Using Times Table Ring Mode");
+        // Times Table Ring Mode: inner ring 1-12, outer ring has all 12 correct answers + 4 distractors
+        innerNumbers = List.generate(12, (index) => index + 1); // 1-12
+        print("   ✅ Inner numbers (1-12): $innerNumbers");
 
-      switch (widget.operationName) {
-        case 'addition':
-          outerNumbers = GameGenerator.generateAdditionNumbers(innerNumbers,
-              targetNumber, widget.difficultyLevel.maxOuterNumber, random);
-          break;
-        case 'subtraction':
-          outerNumbers = GameGenerator.generateSubtractionNumbers(innerNumbers,
-              targetNumber, widget.difficultyLevel.maxOuterNumber, random);
-          break;
-        default:
-          outerNumbers = GameGenerator.generateAdditionNumbers(innerNumbers,
-              targetNumber, widget.difficultyLevel.maxOuterNumber, random);
-          break;
+        print("   🎯 Generating Times Table Ring outer numbers...");
+        outerNumbers =
+            GameGenerator.generateTimesTableRingNumbers(targetNumber, random);
+        print("   ✅ Outer numbers generated: $outerNumbers");
+      } else if (widget.operationName == 'multiplication') {
+        print("   ✖️ Using Standard Multiplication Mode");
+        innerNumbers = List.generate(12, (index) => index + 1); // 1-12
+        print("   ✅ Inner numbers (1-12): $innerNumbers");
+
+        print("   🎯 Generating standard multiplication outer numbers...");
+        outerNumbers =
+            GameGenerator.generateMultiplicationNumbers(targetNumber, random);
+        print("   ✅ Outer numbers generated: $outerNumbers");
+      } else if (widget.operationName == 'division') {
+        print("   ➗ Using Standard Division Mode");
+        innerNumbers = List.generate(12, (index) => index + 1); // 1-12
+        print("   ✅ Inner numbers (1-12): $innerNumbers");
+
+        print("   🎯 Generating standard division outer numbers...");
+        outerNumbers =
+            GameGenerator.generateDivisionNumbers(targetNumber, random);
+        print("   ✅ Outer numbers generated: $outerNumbers");
+      } else {
+        print("   ➕➖ Using Addition/Subtraction Mode");
+        // Original logic for other operations
+        innerNumbers = widget.difficultyLevel.innerRingNumbers;
+        print("   ✅ Inner numbers from difficulty: $innerNumbers");
+
+        switch (widget.operationName) {
+          case 'addition':
+            print("   🎯 Generating addition outer numbers...");
+            outerNumbers = GameGenerator.generateAdditionNumbers(innerNumbers,
+                targetNumber, widget.difficultyLevel.maxOuterNumber, random);
+            break;
+          case 'subtraction':
+            print("   🎯 Generating subtraction outer numbers...");
+            outerNumbers = GameGenerator.generateSubtractionNumbers(
+                innerNumbers,
+                targetNumber,
+                widget.difficultyLevel.maxOuterNumber,
+                random);
+            break;
+          default:
+            print("   🎯 Generating default (addition) outer numbers...");
+            outerNumbers = GameGenerator.generateAdditionNumbers(innerNumbers,
+                targetNumber, widget.difficultyLevel.maxOuterNumber, random);
+            break;
+        }
+        print("   ✅ Outer numbers generated: $outerNumbers");
       }
+
+      print("   🔄 Creating ring models...");
+      // Initialize ring models
+      innerRingModel = RingModel(
+        numbers: innerNumbers,
+        color: _getInnerRingColor(),
+        cornerIndices: [0, 3, 6, 9], // Inner ring corners
+      );
+      print("   ✅ Inner ring model created");
+
+      outerRingModel = RingModel(
+        numbers: outerNumbers,
+        color: _getOuterRingColor(),
+        cornerIndices: [0, 4, 8, 12], // Outer ring corners
+      );
+      print("   ✅ Outer ring model created");
+
+      print("🎲 _generateGameNumbers COMPLETED SUCCESSFULLY");
+    } catch (e, stackTrace) {
+      print("❌ ERROR in _generateGameNumbers: $e");
+      print("   Stack trace: $stackTrace");
+      rethrow;
     }
-
-    // Initialize ring models
-    innerRingModel = RingModel(
-      numbers: innerNumbers,
-      color: _getInnerRingColor(),
-      cornerIndices: [0, 3, 6, 9], // Inner ring corners
-    );
-
-    outerRingModel = RingModel(
-      numbers: outerNumbers,
-      color: _getOuterRingColor(),
-      cornerIndices: [0, 4, 8, 12], // Outer ring corners
-    );
   }
 
   // Get more vibrant inner ring color
@@ -319,7 +403,7 @@ class _GameScreenState extends State<GameScreen> {
 
     // In standard mode, if this corner is already locked, don't check it again
     // In times table ring mode, always validate the equation regardless of previous solutions
-    if (widget.gameMode == GameMode.standard && 
+    if (widget.gameMode == GameMode.standard &&
         lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
       print("DEBUG: This corner is already locked in standard mode");
       return true;
@@ -481,17 +565,20 @@ class _GameScreenState extends State<GameScreen> {
         StarAnimation(
           startPosition: startPosition,
           endPosition: endPosition,
+          // In _showStarAnimation method, update the onComplete callback:
           onComplete: () {
-            // Remove this animation when it's complete
-            setState(() {
-              starAnimations.removeWhere((element) {
-                if (element is StarAnimation) {
-                  return element.startPosition == startPosition &&
-                      element.endPosition == endPosition;
-                }
-                return false;
+            // Remove this animation when it's complete, but only if mounted
+            if (mounted) {
+              setState(() {
+                starAnimations.removeWhere((element) {
+                  if (element is StarAnimation) {
+                    return element.startPosition == startPosition &&
+                        element.endPosition == endPosition;
+                  }
+                  return false;
+                });
               });
-            });
+            }
           },
         ),
       );
@@ -549,8 +636,9 @@ class _GameScreenState extends State<GameScreen> {
 
   /// Handle number drop - supports both locking (standard mode) and greying out (times table ring mode)
   void _onNumberDrop(int cornerIndex) {
-    if (widget.gameMode == GameMode.timesTableRing && 
-        (widget.operationName == 'multiplication' || widget.operationName == 'division')) {
+    if (widget.gameMode == GameMode.timesTableRing &&
+        (widget.operationName == 'multiplication' ||
+            widget.operationName == 'division')) {
       // In times table ring mode, grey out the numbers instead of locking
       _greyOutNumbers(cornerIndex);
     } else {
@@ -562,12 +650,14 @@ class _GameScreenState extends State<GameScreen> {
   /// Grey out numbers in times table ring mode instead of locking them
   void _greyOutNumbers(int cornerIndex) {
     // Get current numbers at these positions
-    final outerNumber = outerRingModel.getNumberAtPosition(outerRingModel.cornerIndices[cornerIndex]);
-    final innerNumber = innerRingModel.getNumberAtPosition(innerRingModel.cornerIndices[cornerIndex]);
+    final outerNumber = outerRingModel
+        .getNumberAtPosition(outerRingModel.cornerIndices[cornerIndex]);
+    final innerNumber = innerRingModel
+        .getNumberAtPosition(innerRingModel.cornerIndices[cornerIndex]);
 
     // Create equation key to track unique equations solved
     final equationKey = '$innerNumber×$targetNumber=$outerNumber';
-    
+
     // If this exact equation was already solved, don't count it again
     if (solvedEquations.contains(equationKey)) {
       return;
@@ -597,7 +687,7 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       // Track this specific equation as solved
       solvedEquations.add(equationKey);
-      
+
       // Add to locked equations list for tracking progress only
       lockedEquations.add(lockedEquation);
 
@@ -609,7 +699,8 @@ class _GameScreenState extends State<GameScreen> {
       _showStarAnimation(cornerIndex);
 
       // Check if all 12 equations are complete (times table ring win condition)
-      if (solvedEquations.length >= 12) { // All 12 unique equations solved
+      if (solvedEquations.length >= 12) {
+        // All 12 unique equations solved
         isGameComplete = true;
         _stopGameTimer(); // Stop timer when game is complete
         Future.delayed(Duration(milliseconds: 1000), () {
@@ -687,27 +778,25 @@ class _GameScreenState extends State<GameScreen> {
       animationId: animationId,
       startPosition: penaltyPosition,
       penaltySeconds: PENALTY_SECONDS,
+      // In _addTimePenalty method, update the onComplete callback:
       onComplete: () {
         print("🔴 DEBUG: Animation $animationId completed, calling onComplete");
-        print(
-            "🔴 DEBUG: Active animations before removal: ${_activePenaltyAnimations.keys.toList()}");
 
         // Use a post-frame callback to avoid setState during build
         WidgetsBinding.instance.addPostFrameCallback((_) {
           print("🔴 DEBUG: Post-frame callback executing for $animationId");
-          if (mounted) {
+          // CRITICAL: Check if widget is still mounted before setState
+          if (mounted && _activePenaltyAnimations.containsKey(animationId)) {
             print(
                 "🔴 DEBUG: Widget is mounted, proceeding with setState for $animationId");
             setState(() {
               final removed = _activePenaltyAnimations.remove(animationId);
               print(
                   "🔴 DEBUG: Removed animation $animationId: ${removed != null}");
-              print(
-                  "🔴 DEBUG: Active animations after removal: ${_activePenaltyAnimations.keys.toList()}");
             });
           } else {
             print(
-                "🔴 DEBUG: Widget not mounted, skipping setState for $animationId");
+                "🔴 DEBUG: Widget not mounted or animation already removed, skipping setState for $animationId");
           }
         });
       },

@@ -1,4 +1,6 @@
 // lib/screens/levels_screen.dart
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/models/difficulty_level.dart';
@@ -28,12 +30,22 @@ class _LevelsScreenState extends State<LevelsScreen> {
   List<LevelCompletionModel> _completedLevels = [];
   late String _currentOperation;
   GameMode _selectedGameMode = GameMode.standard;
+  Timer? _gameModeDebounceTimer;
+
+  bool _isNavigating = false;
+  DateTime? _lastNavigation;
 
   @override
   void initState() {
     super.initState();
     _currentOperation = widget.operationName;
     _loadLevelData();
+  }
+
+  @override
+  void dispose() {
+    _gameModeDebounceTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadLevelData() async {
@@ -319,8 +331,22 @@ class _LevelsScreenState extends State<LevelsScreen> {
     return StarRatingCalculator.formatTime(bestCompletion.completionTimeMs);
   }
 
-  // Navigate to game screen with appropriate parameters
   void _navigateToGame(String difficulty, Map<String, dynamic> level) {
+    // Prevent multiple simultaneous navigations
+    if (_isNavigating) {
+      print("🚫 Navigation blocked - already navigating");
+      return;
+    }
+
+    // Cancel any pending mode changes before navigation
+    _gameModeDebounceTimer?.cancel();
+
+    setState(() {
+      _isNavigating = true;
+    });
+
+    print("🎮 Navigating to game with mode: $_selectedGameMode");
+
     // Get difficulty level enum
     DifficultyLevel difficultyEnum;
     switch (difficulty) {
@@ -365,8 +391,24 @@ class _LevelsScreenState extends State<LevelsScreen> {
         ),
       ),
     ).then((_) {
-      // Reload data when returning from game screen
-      _loadLevelData();
+      // Mark navigation as complete and record time
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+          _lastNavigation = DateTime.now();
+        });
+
+        print("🔙 Returned from game, reloading level data");
+        _loadLevelData();
+      }
+    }).catchError((error) {
+      // Handle navigation errors
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+        });
+      }
+      print("❌ Navigation error: $error");
     });
   }
 
@@ -508,7 +550,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
                   ),
                 ),
                 // Add game mode toggle for multiplication and division
-                if (_currentOperation == 'multiplication' || _currentOperation == 'division') ...[
+                if (_currentOperation == 'multiplication' ||
+                    _currentOperation == 'division') ...[
                   SizedBox(height: 12),
                   Row(
                     children: [
@@ -525,21 +568,60 @@ class _LevelsScreenState extends State<LevelsScreen> {
                           segments: [
                             ButtonSegment<GameMode>(
                               value: GameMode.standard,
-                              label: Text('Standard', style: TextStyle(fontSize: 12)),
+                              label: Text('Standard',
+                                  style: TextStyle(fontSize: 12)),
                             ),
                             ButtonSegment<GameMode>(
                               value: GameMode.timesTableRing,
-                              label: Text('Times Table Ring', style: TextStyle(fontSize: 12)),
+                              label: Text('Times Table Ring',
+                                  style: TextStyle(fontSize: 12)),
                             ),
                           ],
                           selected: {_selectedGameMode},
                           onSelectionChanged: (Set<GameMode> newSelection) {
-                            setState(() {
-                              _selectedGameMode = newSelection.first;
+                            if (newSelection.isEmpty || !mounted) return;
+
+                            // Block mode changes if we just navigated
+                            if (_isNavigating) {
+                              print(
+                                  "🚫 Blocking mode change - navigation in progress");
+                              return;
+                            }
+
+                            // Block rapid mode changes after recent navigation
+                            if (_lastNavigation != null &&
+                                DateTime.now()
+                                        .difference(_lastNavigation!)
+                                        .inMilliseconds <
+                                    1000) {
+                              print(
+                                  "🚫 Blocking mode change - too soon after navigation");
+                              return;
+                            }
+
+                            print(
+                                "🔄 GameMode change requested: ${newSelection.first}");
+
+                            // Cancel any existing timer
+                            _gameModeDebounceTimer?.cancel();
+
+                            // Debounce the state change with longer delay
+                            _gameModeDebounceTimer =
+                                Timer(Duration(milliseconds: 300), () {
+                              if (mounted &&
+                                  newSelection.isNotEmpty &&
+                                  !_isNavigating) {
+                                print(
+                                    "🔄 Applying GameMode change: ${newSelection.first}");
+                                setState(() {
+                                  _selectedGameMode = newSelection.first;
+                                });
+                              }
                             });
                           },
                           style: SegmentedButton.styleFrom(
-                            selectedBackgroundColor: operationColor.withOpacity(0.2),
+                            selectedBackgroundColor:
+                                operationColor.withOpacity(0.2),
                             selectedForegroundColor: operationColor,
                           ),
                         ),
