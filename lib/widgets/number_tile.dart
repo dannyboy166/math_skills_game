@@ -213,7 +213,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
                 '${widget.number}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: size * 0.45,
+                  fontSize: size * 0.55,
                   fontWeight: FontWeight.bold,
                   color: textColor,
                   shadows: [
