@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:math_skills_game/services/leaderboard_service.dart';
 
 class AdminService {
-  static const String ADMIN_USER_ID = '51xmsPQN8eNpiPVueybYjz4sqsp1';
+  static const String ADMIN_USER_ID = '3s5SMJQy7LPfv6dygWYsPqKr0662';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final LeaderboardService _leaderboardService = LeaderboardService();
 
@@ -228,5 +228,126 @@ class AdminService {
     }
 
     return forceLeaderboardSync(userId);
+  }
+
+  // Add age parameters to all users who don't have them
+  Future<void> addAllAgeParameters({int defaultAge = 11}) async {
+    try {
+      print('Starting to add age parameters to all users...');
+      
+      // Get all users
+      final querySnapshot = await _firestore.collection('users').get();
+      
+      final batch = _firestore.batch();
+      int updateCount = 0;
+      
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        
+        // Check if age is missing
+        if (data['age'] == null) {
+          // Get the appropriate unlocked time tables for this age
+          final unlockedTables = _getInitialUnlocksForAge(defaultAge);
+          
+          batch.update(doc.reference, {
+            'age': defaultAge,
+            'unlockedTimeTables': unlockedTables,
+            'mistakeTracker': {
+              'hasAllTablesUnlocked': defaultAge >= 11,
+              'perfectCompletions': data['mistakeTracker']?['perfectCompletions'] ?? {},
+            }
+          });
+          updateCount++;
+        }
+      }
+      
+      if (updateCount > 0) {
+        await batch.commit();
+        print('Added age parameter and unlocked time tables to $updateCount users');
+      } else {
+        print('No users need age parameter update');
+      }
+      
+      return;
+    } catch (e) {
+      print('Error adding age parameters to all users: $e');
+      throw e;
+    }
+  }
+
+  // Fix unlocked time tables for all users based on their age
+  Future<void> fixUnlockedTimeTablesForAllUsers() async {
+    try {
+      print('Starting to fix unlocked time tables for all users...');
+      
+      // Get all users
+      final querySnapshot = await _firestore.collection('users').get();
+      
+      final batch = _firestore.batch();
+      int updateCount = 0;
+      
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        final userAge = data['age'] ?? 11; // Default to 11 if age is missing
+        final currentUnlocked = List<int>.from(data['unlockedTimeTables'] ?? []);
+        
+        // Get what should be unlocked for this age
+        final expectedUnlocked = _getInitialUnlocksForAge(userAge);
+        
+        // Check if the user needs an update
+        if (currentUnlocked.length != expectedUnlocked.length || 
+            !_listsAreEqual(currentUnlocked, expectedUnlocked)) {
+          
+          batch.update(doc.reference, {
+            'unlockedTimeTables': expectedUnlocked,
+            'mistakeTracker': {
+              'hasAllTablesUnlocked': userAge >= 11,
+              'perfectCompletions': data['mistakeTracker']?['perfectCompletions'] ?? {},
+            }
+          });
+          updateCount++;
+        }
+      }
+      
+      if (updateCount > 0) {
+        await batch.commit();
+        print('Fixed unlocked time tables for $updateCount users');
+      } else {
+        print('No users need time table updates');
+      }
+      
+      return;
+    } catch (e) {
+      print('Error fixing unlocked time tables: $e');
+      throw e;
+    }
+  }
+
+  // Helper method to check if two lists contain the same elements
+  bool _listsAreEqual(List<int> list1, List<int> list2) {
+    if (list1.length != list2.length) return false;
+    final set1 = Set<int>.from(list1);
+    final set2 = Set<int>.from(list2);
+    return set1.difference(set2).isEmpty && set2.difference(set1).isEmpty;
+  }
+
+  // Helper method to determine initial unlocks based on age (copied from UserService)
+  List<int> _getInitialUnlocksForAge(int age) {
+    if (age >= 11) {
+      // 11+ gets all tables unlocked
+      return List.generate(15, (index) => index + 1); // 1-15
+    } else if (age >= 10) {
+      // 10-11: 1×, 2×, 5×, 10× + 3×, 4×, 6× + 7×, 8×, 9× + 11×, 12×
+      return [1, 2, 5, 10, 3, 4, 6, 7, 8, 9, 11, 12];
+    } else if (age >= 9) {
+      // 9-10: 1×, 2×, 5×, 10× + 3×, 4×, 6× + 7×, 8×, 9×
+      return [1, 2, 5, 10, 3, 4, 6, 7, 8, 9];
+    } else if (age >= 8) {
+      // 8-9: 1×, 2×, 5×, 10× + 3×, 4×, 6×
+      return [1, 2, 5, 10, 3, 4, 6];
+    } else {
+      // 3-8: 1×, 2×, 5×, 10×
+      return [1, 2, 5, 10];
+    }
   }
 }

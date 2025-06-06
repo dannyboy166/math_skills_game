@@ -51,6 +51,80 @@ class UserService {
     return _firestore.collection('users').doc(userId).snapshots();
   }
 
+  // Get user profile data with age defaulting to 11+
+  Future<Map<String, dynamic>?> getUserProfileData(String userId) async {
+    try {
+      final docSnapshot = await _firestore.collection('users').doc(userId).get();
+      if (!docSnapshot.exists) return null;
+      
+      final data = docSnapshot.data() as Map<String, dynamic>;
+      
+      // If age is missing or null, default to 11
+      if (data['age'] == null) {
+        data['age'] = 11;
+      }
+      
+      return data;
+    } catch (e) {
+      print('Error getting user profile data: $e');
+      return null;
+    }
+  }
+
+  // Add age parameter to users who don't have it
+  Future<void> addAgeParameterToUser(String userId, {int defaultAge = 11}) async {
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final userData = await userRef.get();
+      
+      if (!userData.exists) return;
+      
+      final data = userData.data() as Map<String, dynamic>;
+      
+      // Only update if age is missing
+      if (data['age'] == null) {
+        await userRef.update({'age': defaultAge});
+        print('Added age parameter ($defaultAge) to user: $userId');
+      }
+    } catch (e) {
+      print('Error adding age parameter to user $userId: $e');
+      throw e;
+    }
+  }
+
+  // Add age parameter to all users without it
+  Future<void> addAgeParameterToAllUsers({int defaultAge = 11}) async {
+    try {
+      print('Starting to add age parameters to all users...');
+      
+      // Get all users
+      final querySnapshot = await _firestore.collection('users').get();
+      
+      final batch = _firestore.batch();
+      int updateCount = 0;
+      
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        
+        // Check if age is missing
+        if (data['age'] == null) {
+          batch.update(doc.reference, {'age': defaultAge});
+          updateCount++;
+        }
+      }
+      
+      if (updateCount > 0) {
+        await batch.commit();
+        print('Added age parameter to $updateCount users');
+      } else {
+        print('No users need age parameter update');
+      }
+    } catch (e) {
+      print('Error adding age parameters to all users: $e');
+      throw e;
+    }
+  }
+
 // This is the corrected version of updateGameStats in user_service.dart
   Future<void> updateGameStats(String userId, String operation,
       String difficulty, int targetNumber, int newStars,

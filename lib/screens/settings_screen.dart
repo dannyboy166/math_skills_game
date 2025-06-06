@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:math_skills_game/services/sound_service.dart';
 import 'package:math_skills_game/services/haptic_service.dart';
+import 'package:math_skills_game/services/admin_service.dart';
 import 'package:math_skills_game/models/rotation_speed.dart';
+import 'package:math_skills_game/screens/admin_panel_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,6 +17,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final SoundService _soundService = SoundService();
   final HapticService _hapticService = HapticService();
+  final AdminService _adminService = AdminService();
 
   // Local state for settings
   bool _soundEnabled = true;
@@ -172,6 +175,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Icons.info,
               Colors.blue,
             ),
+
+            // Admin Panel Button (only for admin)
+            if (_adminService.isCurrentUserAdmin()) ...[
+              _buildSectionHeader('Admin'),
+              _buildAdminButton(
+                'Admin Panel',
+                'Administrative functions',
+                Icons.admin_panel_settings,
+                Colors.red,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdminPanelScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
 
             SizedBox(height: 20),
 
@@ -474,6 +496,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildAdminButton(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 2,
+      margin: EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Text(subtitle),
+        leading: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 28,
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.grey[400],
+        ),
+        onTap: onTap,
       ),
     );
   }
