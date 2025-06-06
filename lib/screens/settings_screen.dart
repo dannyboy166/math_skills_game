@@ -5,6 +5,8 @@ import 'package:math_skills_game/services/haptic_service.dart';
 import 'package:math_skills_game/services/admin_service.dart';
 import 'package:math_skills_game/models/rotation_speed.dart';
 import 'package:math_skills_game/screens/admin_panel_screen.dart';
+import 'package:math_skills_game/screens/privacy_settings_screen.dart';
+import 'package:math_skills_game/screens/about_app_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -145,18 +147,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Colors.red,
             ),
 
-            _buildPlaceholderSetting(
+            _buildNavigationSetting(
               'Data & Privacy',
-              'Manage your data',
+              'Manage your data and privacy settings',
               Icons.security,
               Colors.green,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PrivacySettingsScreen(),
+                  ),
+                );
+              },
             ),
 
-            _buildPlaceholderSetting(
+            _buildNavigationSetting(
               'About',
               'App information and credits',
               Icons.info,
               Colors.blue,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AboutAppScreen(),
+                  ),
+                );
+              },
             ),
 
             // Admin Panel Button (only for admin)
@@ -483,7 +501,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildAdminButton(
+  Widget _buildNavigationSetting(
     String title,
     String subtitle,
     IconData icon,
@@ -496,7 +514,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -512,7 +530,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: Container(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 28,
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.grey[400],
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildAdminButton(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 2,
+      margin: EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Text(subtitle),
+        leading: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
