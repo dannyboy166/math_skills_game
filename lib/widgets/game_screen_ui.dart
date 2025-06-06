@@ -309,6 +309,8 @@ class GameScreenUI extends StatelessWidget {
                               operation: operation,
                               lockedEquations: lockedEquations,
                               onEquationTap: onEquationTap,
+                              gameMode: gameMode,
+                              isGameComplete: isGameComplete,
                             ),
                           ],
                         ),
@@ -458,7 +460,7 @@ class GameScreenUI extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           Text(
-            '${lockedEquations.length}/4 equations solved in ${StarRatingCalculator.formatTime(elapsedTimeMs)}',
+            '${lockedEquations.length}/${gameMode == GameMode.timesTableRing ? 12 : 4} equations solved in ${StarRatingCalculator.formatTime(elapsedTimeMs)}',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,

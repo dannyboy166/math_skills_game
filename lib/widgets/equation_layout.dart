@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../models/operation_config.dart';
 import '../models/locked_equation.dart';
+import '../models/game_mode.dart';
 import 'clickable_equals.dart';
 
 class EquationLayout extends StatelessWidget {
@@ -11,6 +12,8 @@ class EquationLayout extends StatelessWidget {
   final OperationConfig operation;
   final List<LockedEquation> lockedEquations;
   final Function(int cornerIndex) onEquationTap;
+  final GameMode gameMode;
+  final bool isGameComplete;
 
   const EquationLayout({
     Key? key,
@@ -20,6 +23,8 @@ class EquationLayout extends StatelessWidget {
     required this.operation,
     required this.lockedEquations,
     required this.onEquationTap,
+    required this.gameMode,
+    required this.isGameComplete,
   }) : super(key: key);
 
   @override
@@ -140,7 +145,11 @@ class EquationLayout extends StatelessWidget {
 
     return List.generate(4, (index) {
       // Check if this corner is locked
-      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == index);
+      // In times table ring mode, only lock when game is complete
+      // In standard mode, lock when individual equations are solved
+      final isLocked = gameMode == GameMode.timesTableRing 
+          ? isGameComplete
+          : lockedEquations.any((eq) => eq.cornerIndex == index);
 
       // Use a greyed-out color if locked
       final Color textColor = isLocked ? Colors.grey : operation.color;
@@ -197,7 +206,11 @@ class EquationLayout extends StatelessWidget {
 
     return List.generate(4, (index) {
       // Check if this corner is locked
-      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == index);
+      // In times table ring mode, only lock when game is complete
+      // In standard mode, lock when individual equations are solved
+      final isLocked = gameMode == GameMode.timesTableRing 
+          ? isGameComplete
+          : lockedEquations.any((eq) => eq.cornerIndex == index);
 
       // Use a greyed-out color if locked
       final Color textColor = isLocked ? Colors.grey : operation.color;
@@ -254,7 +267,11 @@ class EquationLayout extends StatelessWidget {
 
     return List.generate(4, (index) {
       // Check if this corner is locked
-      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == index);
+      // In times table ring mode, only lock when game is complete
+      // In standard mode, lock when individual equations are solved
+      final isLocked = gameMode == GameMode.timesTableRing 
+          ? isGameComplete
+          : lockedEquations.any((eq) => eq.cornerIndex == index);
 
       return Positioned(
         left: symbolPositions[index].dx - symbolSize / 2,
@@ -292,7 +309,11 @@ class EquationLayout extends StatelessWidget {
 
     return List.generate(4, (index) {
       // Check if this corner is locked
-      final isLocked = lockedEquations.any((eq) => eq.cornerIndex == index);
+      // In times table ring mode, only lock when game is complete
+      // In standard mode, lock when individual equations are solved
+      final isLocked = gameMode == GameMode.timesTableRing 
+          ? isGameComplete
+          : lockedEquations.any((eq) => eq.cornerIndex == index);
 
       return Positioned(
         left: symbolPositions[index].dx - symbolSize / 2,
