@@ -29,6 +29,9 @@ class _LevelsScreenState extends State<LevelsScreen> {
   bool _isLoading = true;
   List<LevelCompletionModel> _completedLevels = [];
   late String _currentOperation;
+
+  // Track unlocked time tables
+  List<int> _unlockedTimeTables = [];
   GameMode _selectedGameMode = GameMode.standard;
   Timer? _gameModeDebounceTimer;
 
@@ -40,6 +43,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
     super.initState();
     _currentOperation = widget.operationName;
     _loadLevelData();
+    _loadUnlockData();
   }
 
   @override
@@ -83,12 +87,39 @@ class _LevelsScreenState extends State<LevelsScreen> {
     }
   }
 
+  Future<void> _loadUnlockData() async {
+    setState(() {});
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final unlockedTables =
+            await _userService.getUnlockedTimeTables(user.uid);
+        if (mounted) {
+          setState(() {
+            _unlockedTimeTables = unlockedTables;
+          });
+        }
+      } catch (e) {
+        print('Error loading unlock data: $e');
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    } else {
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   void _handleOperationChanged(String operation) {
     if (operation != _currentOperation) {
       setState(() {
         _currentOperation = operation;
       });
       _loadLevelData();
+      _loadUnlockData(); // Reload unlock data when operation changes
     }
   }
 
@@ -338,6 +369,34 @@ class _LevelsScreenState extends State<LevelsScreen> {
       return;
     }
 
+    // For multiplication/division, check if the table is unlocked
+    if ((_currentOperation == 'multiplication' ||
+        _currentOperation == 'division')) {
+      final targetNumber = level['targetNumber'];
+      if (!_unlockedTimeTables.contains(targetNumber)) {
+        // Show locked message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.lock, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'This table is locked! Complete previous tables perfectly to unlock it.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+    }
+
     // Cancel any pending mode changes before navigation
     _gameModeDebounceTimer?.cancel();
 
@@ -568,7 +627,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
                           segments: [
                             ButtonSegment<GameMode>(
                               value: GameMode.standard,
-                              label: Text('Standard',
+                              label: Text('Normal',
                                   style: TextStyle(fontSize: 12)),
                             ),
                             ButtonSegment<GameMode>(
@@ -777,89 +836,122 @@ class _LevelsScreenState extends State<LevelsScreen> {
     final String title = level['title'];
     final bool isRange = level['rangeStart'] != level['rangeEnd'];
 
+    // Check if this level is unlocked (for multiplication/division)
+    bool isUnlocked = true;
+    if ((_currentOperation == 'multiplication' ||
+        _currentOperation == 'division')) {
+      final targetNumber = level['targetNumber'];
+      isUnlocked = _unlockedTimeTables.contains(targetNumber);
+    }
+
     return GestureDetector(
       onTap: () => _navigateToGame(difficultyName, level),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isUnlocked ? Colors.white : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
+              color: isUnlocked
+                  ? Colors.grey.withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.1),
               blurRadius: 6,
               offset: Offset(0, 2),
             ),
           ],
         ),
         padding: EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // Use minimum space needed
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            // Star rating row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
-                return Icon(
-                  Icons.star,
-                  size: 20,
-                  color: index < stars
-                      ? Colors.amber
-                      : Colors.grey.withOpacity(0.3),
-                );
-              }),
-            ),
-            SizedBox(height: 4), // Reduced from 6
-
-            // Level title
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14, // Reduced from 15
-                fontWeight: FontWeight.bold,
-                color: operationColor,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-
-            // For range-based levels, add a subtitle with less height
-            if (isRange &&
-                (_currentOperation == 'addition' ||
-                    _currentOperation == 'subtraction'))
-              Text(
-                'Target Range',
-                style: TextStyle(
-                  fontSize: 10, // Smaller font size
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-
-            // Best time
-            Flexible(
-              fit: FlexFit.loose,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+            // Main content - properly centered
+            Center(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.timer_outlined,
-                    size: 12, // Reduced from 14
-                    color: Colors.grey[600],
+                  // Star rating row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(3, (index) {
+                      return Icon(
+                        Icons.star,
+                        size: 20,
+                        color: !isUnlocked
+                            ? Colors.grey.withOpacity(0.3)
+                            : index < stars
+                                ? Colors.amber
+                                : Colors.grey.withOpacity(0.3),
+                      );
+                    }),
                   ),
-                  SizedBox(width: 2), // Reduced from 4
+                  SizedBox(height: 4), // Reduced from 6
+
+                  // Level title
                   Text(
-                    bestTime,
+                    title,
                     style: TextStyle(
-                      fontSize: 11, // Reduced from 12
-                      color: Colors.grey[600],
+                      fontSize: 14, // Reduced from 15
+                      fontWeight: FontWeight.bold,
+                      color: isUnlocked ? operationColor : Colors.grey.shade500,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  // For range-based levels, add a subtitle with less height
+                  if (isRange &&
+                      (_currentOperation == 'addition' ||
+                          _currentOperation == 'subtraction'))
+                    Text(
+                      'Target Range',
+                      style: TextStyle(
+                        fontSize: 10, // Smaller font size
+                        color: isUnlocked ? Colors.grey[600] : Colors.grey[400],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                  // Best time
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 12, // Reduced from 14
+                          color:
+                              isUnlocked ? Colors.grey[600] : Colors.grey[400],
+                        ),
+                        SizedBox(width: 2), // Reduced from 4
+                        Text(
+                          isUnlocked ? bestTime : '--:--',
+                          style: TextStyle(
+                            fontSize: 11, // Reduced from 12
+                            color: isUnlocked
+                                ? Colors.grey[600]
+                                : Colors.grey[400],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+            // Show lock icon for locked levels
+            if (!isUnlocked)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Icon(
+                  Icons.lock,
+                  size: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
           ],
         ),
       ),

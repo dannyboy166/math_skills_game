@@ -7,7 +7,7 @@ import '../models/daily_streak.dart';
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<void> createUserProfile(User user, {String? displayName}) async {
+  Future<void> createUserProfile(User user, {String? displayName, int age = 8}) async {
     // Check if profile already exists
     final docSnapshot =
         await _firestore.collection('users').doc(user.uid).get();
@@ -16,10 +16,14 @@ class UserService {
       return; // Profile already exists
     }
 
+    // Determine initial unlocks based on age
+    List<int> initialUnlocks = _getInitialUnlocksForAge(age);
+    
     // Create new profile
     return _firestore.collection('users').doc(user.uid).set({
       'displayName': displayName ?? user.displayName ?? 'Player',
       'email': user.email,
+      'age': age,
       'createdAt': FieldValue.serverTimestamp(),
       'totalGames': 0,
       'totalStars': 0,
@@ -34,6 +38,11 @@ class UserService {
         'lastPlayedDate': Timestamp.fromDate(DateTime.now()),
         'currentStreak': 0,
         'longestStreak': 0,
+      },
+      'unlockedTimeTables': initialUnlocks,
+      'mistakeTracker': {
+        'hasAllTablesUnlocked': age >= 11,
+        'perfectCompletions': {},
       }
     });
   }
@@ -537,6 +546,191 @@ class UserService {
         'currentStreak': 0,
         'longestStreak': 0,
       };
+    });
+  }
+
+  // Helper method to determine initial unlocks based on age
+  List<int> _getInitialUnlocksForAge(int age) {
+    if (age >= 11) {
+      // 11+ gets all tables unlocked
+      return List.generate(15, (index) => index + 1); // 1-15
+    } else if (age >= 10) {
+      // 10-11: 1×, 2×, 5×, 10× + 3×, 4×, 6× + 7×, 8×, 9× + 11×, 12×
+      return [1, 2, 5, 10, 3, 4, 6, 7, 8, 9, 11, 12];
+    } else if (age >= 9) {
+      // 9-10: 1×, 2×, 5×, 10× + 3×, 4×, 6× + 7×, 8×, 9×
+      return [1, 2, 5, 10, 3, 4, 6, 7, 8, 9];
+    } else if (age >= 8) {
+      // 8-9: 1×, 2×, 5×, 10× + 3×, 4×, 6×
+      return [1, 2, 5, 10, 3, 4, 6];
+    } else {
+      // 3-8: 1×, 2×, 5×, 10×
+      return [1, 2, 5, 10];
+    }
+  }
+
+  // Check if a time table is unlocked for a user
+  Future<bool> isTimeTableUnlocked(String userId, int table) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) return false;
+      
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final unlockedTables = List<int>.from(userData['unlockedTimeTables'] ?? []);
+      
+      return unlockedTables.contains(table);
+    } catch (e) {
+      print('Error checking if time table $table is unlocked: $e');
+      return false;
+    }
+  }
+
+  // Get list of unlocked time tables for a user
+  Future<List<int>> getUnlockedTimeTables(String userId) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) return [];
+      
+      final userData = userDoc.data() as Map<String, dynamic>;
+      return List<int>.from(userData['unlockedTimeTables'] ?? []);
+    } catch (e) {
+      print('Error getting unlocked time tables: $e');
+      return [];
+    }
+  }
+
+  // Track a mistake in a level
+  Future<void> trackMistake(String userId, String operation, String difficulty, int targetNumber) async {
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final userData = await userRef.get();
+      
+      if (!userData.exists) return;
+      
+      final data = userData.data() as Map<String, dynamic>;
+      final mistakeTracker = data['mistakeTracker'] as Map<String, dynamic>? ?? {};
+      
+      // Don't track mistakes if all tables are already unlocked
+      if (mistakeTracker['hasAllTablesUnlocked'] == true) return;
+      
+      final levelId = '${operation}_${difficulty}_$targetNumber';
+      final perfectCompletions = Map<String, bool>.from(mistakeTracker['perfectCompletions'] ?? {});
+      
+      // Mark this level as having a mistake
+      perfectCompletions[levelId] = false;
+      
+      await userRef.update({
+        'mistakeTracker.perfectCompletions': perfectCompletions,
+      });
+    } catch (e) {
+      print('Error tracking mistake: $e');
+    }
+  }
+
+  // Track a perfect completion and check for unlocks
+  Future<List<int>> trackPerfectCompletion(String userId, String operation, String difficulty, int targetNumber) async {
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final userData = await userRef.get();
+      
+      if (!userData.exists) return [];
+      
+      final data = userData.data() as Map<String, dynamic>;
+      final mistakeTracker = data['mistakeTracker'] as Map<String, dynamic>? ?? {};
+      
+      // Don't track if all tables are already unlocked
+      if (mistakeTracker['hasAllTablesUnlocked'] == true) return [];
+      
+      final levelId = '${operation}_${difficulty}_$targetNumber';
+      final perfectCompletions = Map<String, bool>.from(mistakeTracker['perfectCompletions'] ?? {});
+      
+      // Mark this level as perfectly completed
+      perfectCompletions[levelId] = true;
+      
+      // Check if this perfect completion unlocks new tables
+      final currentUnlocked = List<int>.from(data['unlockedTimeTables'] ?? []);
+      final newUnlocks = _checkForNewUnlocks(currentUnlocked, operation, targetNumber, perfectCompletions);
+      
+      Map<String, dynamic> updateData = {
+        'mistakeTracker.perfectCompletions': perfectCompletions,
+      };
+      
+      if (newUnlocks.isNotEmpty) {
+        final allUnlocked = [...currentUnlocked, ...newUnlocks];
+        updateData['unlockedTimeTables'] = allUnlocked;
+        
+        // Check if all tables are now unlocked
+        if (allUnlocked.length >= 15) {
+          updateData['mistakeTracker.hasAllTablesUnlocked'] = true;
+        }
+      }
+      
+      await userRef.update(updateData);
+      
+      // Return the newly unlocked tables for celebration
+      return newUnlocks;
+    } catch (e) {
+      print('Error tracking perfect completion: $e');
+      return [];
+    }
+  }
+
+  // Check what new tables should be unlocked based on perfect completion
+  List<int> _checkForNewUnlocks(List<int> currentUnlocked, String operation, int targetNumber, Map<String, bool> perfectCompletions) {
+    // Only unlock for multiplication and division
+    if (operation != 'multiplication' && operation != 'division') {
+      return [];
+    }
+    
+    List<int> newUnlocks = [];
+    
+    // Define the progression groups
+    List<List<int>> progressionGroups = [
+      [1, 2, 5, 10],        // Initial group
+      [3, 4, 6],            // Unlocked after completing any from first group
+      [7, 8, 9],            // Unlocked after completing any from second group  
+      [11, 12],             // Unlocked after completing any from third group
+      [13, 14, 15],         // Unlocked after completing any from fourth group
+    ];
+    
+    // Find which group the completed table belongs to
+    int completedGroupIndex = -1;
+    for (int i = 0; i < progressionGroups.length; i++) {
+      if (progressionGroups[i].contains(targetNumber)) {
+        completedGroupIndex = i;
+        break;
+      }
+    }
+    
+    if (completedGroupIndex == -1 || completedGroupIndex >= progressionGroups.length - 1) {
+      return []; // No next group to unlock
+    }
+    
+    // Check if the next group should be unlocked
+    int nextGroupIndex = completedGroupIndex + 1;
+    List<int> nextGroup = progressionGroups[nextGroupIndex];
+    
+    // Add tables from next group that aren't already unlocked
+    for (int table in nextGroup) {
+      if (!currentUnlocked.contains(table)) {
+        newUnlocks.add(table);
+      }
+    }
+    
+    return newUnlocks;
+  }
+
+  // Stream to monitor unlocked time tables
+  Stream<List<int>> unlockedTimeTablesStream(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) return <int>[];
+      
+      final data = snapshot.data() as Map<String, dynamic>;
+      return List<int>.from(data['unlockedTimeTables'] ?? []);
     });
   }
 }

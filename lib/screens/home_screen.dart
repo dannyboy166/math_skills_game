@@ -28,6 +28,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
 
+  // Track unlocked time tables
+  List<int> _unlockedTimeTables = [];
+  bool _isLoadingUnlocks = true;
+
   // Weekly streak data
   WeeklyStreak _weeklyStreak = WeeklyStreak.currentWeek();
   bool _isLoadingStreak = true; // Add this if not already defined
@@ -37,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Stream subscriptions
   StreamSubscription? _weeklyStreakSubscription;
   StreamSubscription? _streakStatsSubscription;
+  StreamSubscription? _unlockedTimeTablesSubscription;
 
   @override
   void initState() {
@@ -46,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Start listening to streams when signed in
     _listenToStreakData();
+    _listenToUnlockData();
   }
 
   @override
@@ -53,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Cancel stream subscriptions
     _weeklyStreakSubscription?.cancel();
     _streakStatsSubscription?.cancel();
+    _unlockedTimeTablesSubscription?.cancel();
     super.dispose();
   }
 
@@ -96,6 +103,34 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }, onError: (e) {
       print('Error in streak stats stream: $e');
+    });
+  }
+
+  void _listenToUnlockData() {
+    if (_authService.currentUser == null) return;
+
+    setState(() {
+      _isLoadingUnlocks = true;
+    });
+
+    // Listen to unlocked time tables
+    _unlockedTimeTablesSubscription?.cancel();
+    _unlockedTimeTablesSubscription = _userService
+        .unlockedTimeTablesStream(_authService.currentUser!.uid)
+        .listen((unlockedTables) {
+      if (mounted) {
+        setState(() {
+          _unlockedTimeTables = unlockedTables;
+          _isLoadingUnlocks = false;
+        });
+      }
+    }, onError: (e) {
+      print('Error in unlocked time tables stream: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingUnlocks = false;
+        });
+      }
     });
   }
 
@@ -697,6 +732,10 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.black87,
           ),
         ),
+        SizedBox(height: 12),
+        
+        // Add encouraging message for locked tables
+        _buildUnlockMessage(),
         SizedBox(height: 16),
 
         // Tables grid
@@ -784,14 +823,22 @@ class _HomeScreenState extends State<HomeScreen> {
       String category, List<int> tables, Color color) {
     final bool hasSelectedTable = selectedMultiplicationTable != null &&
         tables.contains(selectedMultiplicationTable);
+    
+    // Check if any tables in this category are unlocked
+    final bool hasUnlockedTables = tables.any((table) => _unlockedTimeTables.contains(table));
+    final int unlockedCount = tables.where((table) => _unlockedTimeTables.contains(table)).length;
 
     return GestureDetector(
-      onTap: () {
+      onTap: hasUnlockedTables ? () {
         setState(() {
           final random = Random();
-          selectedMultiplicationTable = tables[random.nextInt(tables.length)];
+          // Only select from unlocked tables
+          final unlockedTablesInCategory = tables.where((table) => _unlockedTimeTables.contains(table)).toList();
+          if (unlockedTablesInCategory.isNotEmpty) {
+            selectedMultiplicationTable = unlockedTablesInCategory[random.nextInt(unlockedTablesInCategory.length)];
+          }
         });
-      },
+      } : null,
       child: Container(
         decoration: BoxDecoration(
           color: hasSelectedTable ? color : Colors.white,
@@ -831,12 +878,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SizedBox(height: 4),
             Text(
-              'Tables: ${tables.join(", ")}',
+              hasUnlockedTables 
+                  ? 'Tables: ${tables.join(", ")} ($unlockedCount/${tables.length} unlocked)'
+                  : 'Tables: ${tables.join(", ")} (Locked)',
               style: TextStyle(
                 fontSize: 12,
                 color: hasSelectedTable
                     ? Colors.white.withOpacity(0.9)
-                    : Colors.grey.shade600,
+                    : hasUnlockedTables
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade500,
               ),
               textAlign: TextAlign.center,
             ),
@@ -866,43 +917,218 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final bool isSelected = selectedMultiplicationTable == number;
+    final bool isUnlocked = _unlockedTimeTables.contains(number);
+    final bool isLoading = _isLoadingUnlocks;
 
     return GestureDetector(
-      onTap: () {
+      onTap: isUnlocked ? () {
         setState(() {
           selectedMultiplicationTable = number;
           selectedLevel =
               difficulty; // THIS LINE IS CRUCIAL - Update the difficulty when selecting a table
         });
-      },
+      } : null, // Disable tap if locked
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white,
+          color: isLoading 
+              ? Colors.grey.shade100
+              : !isUnlocked 
+                  ? Colors.grey.shade200
+                  : isSelected 
+                      ? color 
+                      : Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: isSelected
-                  ? color.withOpacity(0.5)
-                  : Colors.black.withOpacity(0.05),
+              color: isLoading
+                  ? Colors.grey.withOpacity(0.1)
+                  : !isUnlocked
+                      ? Colors.grey.withOpacity(0.2)
+                      : isSelected
+                          ? color.withOpacity(0.5)
+                          : Colors.black.withOpacity(0.05),
               blurRadius: 6,
               offset: Offset(0, 2),
             ),
           ],
           border: Border.all(
-            color: isSelected ? color : Colors.grey.shade200,
+            color: isLoading
+                ? Colors.grey.shade300
+                : !isUnlocked
+                    ? Colors.grey.shade400
+                    : isSelected 
+                        ? color 
+                        : Colors.grey.shade200,
             width: 1.5,
           ),
         ),
-        child: Center(
-          child: Text(
-            '$number',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : color,
+        child: Stack(
+          children: [
+            Center(
+              child: Text(
+                '$number',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isLoading
+                      ? Colors.grey.shade400
+                      : !isUnlocked
+                          ? Colors.grey.shade500
+                          : isSelected 
+                              ? Colors.white 
+                              : color,
+                ),
+              ),
+            ),
+            // Show lock icon for locked tables
+            if (!isUnlocked && !isLoading)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Icon(
+                  Icons.lock,
+                  size: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            // Show loading indicator
+            if (isLoading)
+              Positioned(
+                bottom: 4,
+                right: 4,
+                child: SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnlockMessage() {
+    if (_isLoadingUnlocks) {
+      return SizedBox.shrink(); // Don't show while loading
+    }
+    
+    // Find the next table to unlock
+    List<int> allTables = List.generate(15, (index) => index + 1);
+    List<int> lockedTables = allTables.where((table) => !_unlockedTimeTables.contains(table)).toList();
+    
+    if (lockedTables.isEmpty) {
+      // All tables unlocked - show celebration message
+      return Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.yellow.shade100, Colors.orange.shade100],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange.shade300),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.star, color: Colors.orange, size: 20),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '🎉 Amazing! You\'ve unlocked ALL times tables! 🎉',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade800,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Icon(Icons.star, color: Colors.orange, size: 20),
+          ],
+        ),
+      );
+    }
+    
+    // Group locked tables by unlock requirements and find the next group to unlock
+    List<List<int>> progressionGroups = [
+      [1, 2, 5, 10],        // Basic tables (initial unlock)
+      [3, 4, 6],            // Unlocked after completing any basic table
+      [7, 8, 9],            // Unlocked after completing any intermediate table
+      [11, 12],             // Unlocked after completing any advanced table
+      [13, 14, 15],         // Unlocked after completing any expert table
+    ];
+    
+    // Find which group contains the next tables to unlock
+    List<int> nextGroupToUnlock = [];
+    String tableToComplete = '';
+    
+    for (int i = 0; i < progressionGroups.length; i++) {
+      List<int> group = progressionGroups[i];
+      List<int> lockedInGroup = group.where((table) => lockedTables.contains(table)).toList();
+      
+      if (lockedInGroup.isNotEmpty) {
+        nextGroupToUnlock = lockedInGroup;
+        
+        // Determine what they need to complete to unlock this group
+        if (i == 1) {
+          tableToComplete = 'any 1×, 2×, 5×, or 10× times table';
+        } else if (i == 2) {
+          tableToComplete = 'any 3×, 4×, or 6× times table';
+        } else if (i == 3) {
+          tableToComplete = 'any 7×, 8×, or 9× times table';
+        } else if (i == 4) {
+          tableToComplete = 'any 11× or 12× times table';
+        }
+        break;
+      }
+    }
+    
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade50, Colors.purple.shade50],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_open, color: Colors.blue.shade600, size: 16),
+          SizedBox(width: 8),
+          Expanded(
+            child: RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.blue.shade800,
+                ),
+                children: [
+                  TextSpan(text: 'Complete '),
+                  TextSpan(
+                    text: tableToComplete,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(text: ' perfectly to unlock '),
+                  TextSpan(
+                    text: '${nextGroupToUnlock.map((table) => '$table×').join(', ')} tables',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple.shade700),
+                  ),
+                  TextSpan(text: '! 🚀'),
+                ],
+              ),
             ),
           ),
-        ),
+          Icon(Icons.rocket_launch, color: Colors.purple.shade600, size: 16),
+        ],
       ),
     );
   }

@@ -23,6 +23,9 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  
+  // Age dropdown instead of text field
+  String? _selectedAge;
 
   bool _isLoading = false;
   bool _isSocialLoading = false;
@@ -78,9 +81,11 @@ class _RegisterScreenState extends State<RegisterScreen>
 
       // Create user profile
       try {
+        final age = _getAgeFromSelection(_selectedAge) ?? 8;
         await _userService.createUserProfile(
           result.user!,
           displayName: _nameController.text.trim(),
+          age: age,
         );
       } catch (profileError) {
         // If profile creation fails, log the error but don't fail the registration
@@ -127,11 +132,19 @@ class _RegisterScreenState extends State<RegisterScreen>
       final result = await _authService.signInWithGoogle();
       
       if (result != null && result.user != null) {
+        // Show age selection dialog for Google sign-in
+        final selectedAge = await _showAgeSelectionDialog();
+        if (selectedAge == null) {
+          // User cancelled age selection, don't proceed
+          return;
+        }
+        
         // Create user profile if it doesn't exist
         try {
           await _userService.createUserProfile(
             result.user!,
             displayName: result.user!.displayName ?? 'Player',
+            age: _getAgeFromSelection(selectedAge) ?? 8,
           );
         } catch (profileError) {
           print("Error creating user profile: $profileError");
@@ -172,11 +185,19 @@ class _RegisterScreenState extends State<RegisterScreen>
       final result = await _authService.signInWithApple();
       
       if (result != null && result.user != null) {
+        // Show age selection dialog for Apple sign-in
+        final selectedAge = await _showAgeSelectionDialog();
+        if (selectedAge == null) {
+          // User cancelled age selection, don't proceed
+          return;
+        }
+        
         // Create user profile if it doesn't exist
         try {
           await _userService.createUserProfile(
             result.user!,
             displayName: result.user!.displayName ?? 'Player',
+            age: _getAgeFromSelection(selectedAge) ?? 8,
           );
         } catch (profileError) {
           print("Error creating user profile: $profileError");
@@ -349,6 +370,9 @@ class _RegisterScreenState extends State<RegisterScreen>
 
                     // Form Fields
                     _buildNameField(),
+                    SizedBox(height: 16),
+
+                    _buildAgeField(),
                     SizedBox(height: 16),
 
                     _buildEmailField(),
@@ -876,6 +900,233 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ],
               ),
+      ),
+    );
+  }
+
+  // Helper method to convert age selection to integer
+  int? _getAgeFromSelection(String? ageSelection) {
+    if (ageSelection == null) return null;
+    if (ageSelection == '11+') return 11;
+    return int.tryParse(ageSelection);
+  }
+
+  // Show age selection dialog for social sign-in users
+  Future<String?> _showAgeSelectionDialog() async {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        String? selectedAge;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.cake,
+                      color: Colors.orange,
+                      size: 50,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'How old are you?',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'This helps us unlock the right math tables for you!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 24),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        value: selectedAge,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          hintText: 'Select your age',
+                          hintStyle: TextStyle(color: Colors.grey.shade500),
+                        ),
+                        items: ['3', '4', '5', '6', '7', '8', '9', '10', '11+']
+                            .map((String age) => DropdownMenuItem<String>(
+                                  value: age,
+                                  child: Text(
+                                    age == '11+' ? '11+ years' : '$age years',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedAge = newValue;
+                          });
+                        },
+                        dropdownColor: Colors.white,
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop(null);
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(color: Colors.grey.shade300),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: selectedAge != null ? () {
+                              Navigator.of(dialogContext).pop(selectedAge);
+                            } : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              disabledBackgroundColor: Colors.grey.shade300,
+                            ),
+                            child: Text(
+                              'Continue',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAgeField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: DropdownButtonFormField<String>(
+        value: _selectedAge,
+        decoration: InputDecoration(
+          labelText: 'Age',
+          hintText: 'How old are you?',
+          prefixIcon: Icon(
+            Icons.cake,
+            color: Colors.orange,
+            size: 24,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.orange.shade200),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.orange.shade200),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.orange, width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        ),
+        items: ['3', '4', '5', '6', '7', '8', '9', '10', '11+']
+            .map((String age) => DropdownMenuItem<String>(
+                  value: age,
+                  child: Text(
+                    age == '11+' ? '11+ years' : '$age years',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ))
+            .toList(),
+        onChanged: (String? newValue) {
+          setState(() {
+            _selectedAge = newValue;
+          });
+        },
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select your age';
+          }
+          return null;
+        },
+        dropdownColor: Colors.white,
+        icon: Icon(
+          Icons.arrow_drop_down,
+          color: Colors.orange,
+        ),
       ),
     );
   }

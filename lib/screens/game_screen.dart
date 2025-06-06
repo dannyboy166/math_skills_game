@@ -12,6 +12,7 @@ import 'package:math_skills_game/services/leaderboard_service.dart';
 import 'package:math_skills_game/services/sound_service.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'package:math_skills_game/services/user_stats_service.dart';
+import 'package:math_skills_game/services/unlock_celebration_service.dart';
 import 'package:math_skills_game/utils/tutorial_helper.dart';
 import 'package:math_skills_game/widgets/game_screen_ui.dart';
 import 'package:math_skills_game/widgets/time_penalty_animation.dart';
@@ -81,6 +82,9 @@ class _GameScreenState extends State<GameScreen> {
   int _penaltyCounter = 0; // Counter for unique IDs
 
   int get _displayedElapsedTimeMs => _elapsedTimeMs + _totalPenaltyTimeMs;
+
+  // Track if any mistakes were made during this game session
+  bool _hasMadeMistakes = false;
 
   final HapticService _hapticService = HapticService();
   final SoundService _soundService = SoundService();
@@ -755,6 +759,9 @@ class _GameScreenState extends State<GameScreen> {
   void _addTimePenalty(int cornerIndex) {
     print("🔴 DEBUG: _addTimePenalty called for cornerIndex: $cornerIndex");
 
+    // Mark that a mistake was made
+    _hasMadeMistakes = true;
+
     // Add penalty to total
     setState(() {
       _totalPenaltyTimeMs += PENALTY_SECONDS * 1000;
@@ -1090,6 +1097,29 @@ class _GameScreenState extends State<GameScreen> {
         // Save level completion
         await userService.saveLevelCompletion(userId, levelCompletion);
         print("Level completion saved successfully");
+
+        // Track mistakes and perfect completions for unlock system
+        if ((widget.operationName == 'multiplication' || widget.operationName == 'division') && widget.targetNumber != null) {
+          if (_hasMadeMistakes) {
+            // Track that mistakes were made in this level
+            await userService.trackMistake(userId, widget.operationName, widget.difficultyLevel.displayName, widget.targetNumber!);
+            print("Mistake tracked for unlock system");
+          } else {
+            // Track perfect completion for potential unlocks
+            final newlyUnlockedTables = await userService.trackPerfectCompletion(userId, widget.operationName, widget.difficultyLevel.displayName, widget.targetNumber!);
+            print("Perfect completion tracked for unlock system");
+            
+            // Show celebration if new tables were unlocked
+            if (newlyUnlockedTables.isNotEmpty && mounted) {
+              // Small delay to let the completion dialog finish
+              Future.delayed(Duration(milliseconds: 500), () {
+                if (mounted) {
+                  UnlockCelebrationService().showUnlockCelebration(context, newlyUnlockedTables);
+                }
+              });
+            }
+          }
+        }
 
         // Update both leaderboards
         await leaderboardService.updateUserInAllLeaderboards(userId,
