@@ -17,6 +17,7 @@ class _AdminScreenState extends State<AdminScreen> {
   String _statusMessage = '';
 
   bool _isSyncing = false;
+  bool _isRecalculatingStars = false;
 
   TextEditingController _userIdController = TextEditingController();
   String _syncTargetUserId = '';
@@ -87,6 +88,7 @@ class _AdminScreenState extends State<AdminScreen> {
                             EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       ),
                     ),
+                    SizedBox(height: 12),
                     ElevatedButton.icon(
                       onPressed:
                           _isSyncing ? null : _forceSyncCurrentUserLeaderboards,
@@ -94,6 +96,57 @@ class _AdminScreenState extends State<AdminScreen> {
                       label: Text('Force Sync Current User Leaderboards'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepPurple,
+                        padding:
+                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Stars Fix Tools Card
+            Card(
+              margin: EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Stars Fix Tools',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Fix total stars calculation for all users based on their actual level completions.',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _isRecalculatingStars ? null : _recalculateTotalStars,
+                      icon: Icon(Icons.star_border),
+                      label: Text('Recalculate Total Stars for All Users'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber.shade700,
+                        foregroundColor: Colors.white,
+                        padding:
+                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: _debugCurrentUserStars,
+                      icon: Icon(Icons.bug_report),
+                      label: Text('Debug My Level Completions'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple.shade600,
+                        foregroundColor: Colors.white,
                         padding:
                             EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       ),
@@ -197,7 +250,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
               ),
             SizedBox(height: 16),
-            if (_isMigratingUser || _isMigratingAll || _isRefreshing)
+            if (_isMigratingUser || _isMigratingAll || _isRefreshing || _isRecalculatingStars)
               Center(
                 child: Column(
                   children: [
@@ -245,6 +298,11 @@ class _AdminScreenState extends State<AdminScreen> {
                       'Forces all of your best times to be synced to the leaderboard system.',
                       'Use this if your high scores aren\'t showing up correctly in the leaderboards.',
                     ),
+                    _buildDocItem(
+                      'Recalculate Total Stars',
+                      'Recalculates the total stars field for all users based on their actual level completions.',
+                      'Use this to fix incorrect total star counts, especially for legacy users.',
+                    ),
                   ],
                 ),
               ),
@@ -260,6 +318,7 @@ class _AdminScreenState extends State<AdminScreen> {
     if (_isMigratingAll) return 'Migrating all users...';
     if (_isRefreshing) return 'Refreshing leaderboards...';
     if (_isSyncing) return 'Syncing leaderboards for current user...';
+    if (_isRecalculatingStars) return 'Recalculating total stars for all users...';
     return '';
   }
 
@@ -510,6 +569,224 @@ class _AdminScreenState extends State<AdminScreen> {
     } finally {
       setState(() {
         _isSyncing = false;
+      });
+    }
+  }
+
+  Future<void> _recalculateTotalStars() async {
+    // Show confirmation dialog first
+    bool confirmed = await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Confirm Total Stars Recalculation'),
+            content: Text(
+                'This will recalculate the total stars for ALL users based on their actual level completions. '
+                'This operation might take a while depending on the number of users. '
+                'Are you sure you want to continue?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text('Confirm'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber.shade700),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirmed) return;
+
+    setState(() {
+      _isRecalculatingStars = true;
+      _statusMessage = 'Starting total stars recalculation for all users...';
+    });
+
+    try {
+      await _adminService.recalculateTotalStarsForAllUsers();
+
+      setState(() {
+        _statusMessage = 'Total stars recalculation completed successfully!';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Total stars recalculation completed successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Error during total stars recalculation: $e';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Total stars recalculation failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isRecalculatingStars = false;
+      });
+    }
+  }
+
+  Future<void> _debugCurrentUserStars() async {
+    setState(() {
+      _statusMessage = 'Getting level completion data...';
+    });
+
+    try {
+      final debugData = await _adminService.debugCurrentUserLevelCompletions();
+      
+      if (debugData.containsKey('error')) {
+        setState(() {
+          _statusMessage = 'Debug Error: ${debugData['error']}';
+        });
+        return;
+      }
+
+      final completions = debugData['completions'] as List<Map<String, dynamic>>;
+      final levelGroupings = debugData['levelGroupings'] as List<Map<String, dynamic>>;
+      final totalStars = debugData['calculatedTotalStars'];
+      final totalCompletions = debugData['totalCompletions'];
+
+      // Show detailed dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Level Completions Debug'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 500,
+            child: DefaultTabController(
+              length: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Total Individual Completions: $totalCompletions'),
+                  Text('Calculated Total Stars: $totalStars',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  SizedBox(height: 16),
+                  TabBar(
+                    tabs: [
+                      Tab(text: 'Actual Levels (${levelGroupings.length})'),
+                      Tab(text: 'Raw Data ($totalCompletions)'),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        // Level Groupings Tab
+                        ListView.builder(
+                          itemCount: levelGroupings.length,
+                          itemBuilder: (context, index) {
+                            final group = levelGroupings[index];
+                            final individualCompletions = group['individualCompletions'] as List;
+                            return Card(
+                              margin: EdgeInsets.only(bottom: 8),
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            group['levelTitle'],
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.withOpacity(0.3),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '${group['bestStars']} ⭐',
+                                            style: TextStyle(fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (individualCompletions.length > 1) ...[
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'From ${individualCompletions.length} individual completions',
+                                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        // Raw Completions Tab
+                        ListView.builder(
+                          itemCount: completions.length,
+                          itemBuilder: (context, index) {
+                            final completion = completions[index];
+                            return Card(
+                              margin: EdgeInsets.only(bottom: 4),
+                              child: Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${completion['operation']} ${completion['difficulty']} #${completion['targetNumber']}',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '${completion['stars']} ⭐',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Close'),
+            ),
+          ],
+        ),
+      );
+
+      setState(() {
+        _statusMessage = 'Debug completed - check dialog for details';
+      });
+
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Debug failed: $e';
       });
     }
   }

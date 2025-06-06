@@ -51,6 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Get streak data
           final streakData = await _userService.getStreakStats(userId);
 
+          // Get level completions to calculate total stars
+          final levelCompletions = await _userService.getLevelCompletions(userId);
+
           final userData = docSnapshot.data()!;
           final completedGames = userData['completedGames'] ?? {};
 
@@ -65,8 +68,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               multiplicationCount +
               divisionCount;
 
-          // Use the calculated total instead of the stored total
+          // Calculate total stars from level completions (using same logic as levels screen)
+          int totalStarsEarned = _calculateTotalStarsFromCompletions(levelCompletions);
+
+          // Use the calculated totals instead of stored values
           userData['totalGames'] = calculatedTotal;
+          userData['totalStars'] = totalStarsEarned;
 
           setState(() {
             _userData = userData;
@@ -224,6 +231,112 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+  }
+
+  // Calculate total stars using the same logic as the levels screen
+  int _calculateTotalStarsFromCompletions(List<dynamic> levelCompletions) {
+    int totalStars = 0;
+    
+    // Group completions by operation
+    final Map<String, List<dynamic>> completionsByOperation = {};
+    for (final completion in levelCompletions) {
+      final operation = completion.operationName ?? '';
+      if (!completionsByOperation.containsKey(operation)) {
+        completionsByOperation[operation] = [];
+      }
+      completionsByOperation[operation]!.add(completion);
+    }
+    
+    // Calculate stars for each operation using the same level ranges
+    for (final operation in ['addition', 'subtraction', 'multiplication', 'division']) {
+      final operationCompletions = completionsByOperation[operation] ?? [];
+      if (operationCompletions.isEmpty) continue;
+      
+      if (operation == 'multiplication' || operation == 'division') {
+        // For multiplication/division, each table is its own level
+        totalStars += _calculateMultiplicationDivisionStars(operationCompletions);
+      } else {
+        // For addition/subtraction, use the range-based levels
+        totalStars += _calculateAdditionSubtractionStars(operationCompletions);
+      }
+    }
+    
+    return totalStars;
+  }
+  
+  int _calculateMultiplicationDivisionStars(List<dynamic> completions) {
+    int stars = 0;
+    
+    // Group by difficulty and target number
+    final Map<String, Map<int, int>> bestStarsByDifficultyAndTable = {};
+    
+    for (final completion in completions) {
+      final difficulty = completion.difficultyName ?? '';
+      final targetNumber = completion.targetNumber ?? 0;
+      final completionStars = (completion.stars ?? 0) as int;
+      
+      if (!bestStarsByDifficultyAndTable.containsKey(difficulty)) {
+        bestStarsByDifficultyAndTable[difficulty] = {};
+      }
+      
+      final currentBest = bestStarsByDifficultyAndTable[difficulty]![targetNumber] ?? 0;
+      bestStarsByDifficultyAndTable[difficulty]![targetNumber] = 
+          completionStars > currentBest ? completionStars : currentBest;
+    }
+    
+    // Sum up all the best stars for each table
+    for (final difficultyMap in bestStarsByDifficultyAndTable.values) {
+      for (final tableStars in difficultyMap.values) {
+        stars += tableStars;
+      }
+    }
+    
+    return stars;
+  }
+  
+  int _calculateAdditionSubtractionStars(List<dynamic> completions) {
+    int stars = 0;
+    
+    // Define the same level ranges as in levels_screen.dart
+    final levelRanges = [
+      // Standard: 1, 2, 3, 4, 5 (individual)
+      {'difficulty': 'Standard', 'ranges': [[1,1], [2,2], [3,3], [4,4], [5,5]]},
+      // Challenging: 6, 7, 8, 9, 10 (individual)  
+      {'difficulty': 'Challenging', 'ranges': [[6,6], [7,7], [8,8], [9,9], [10,10]]},
+      // Expert: 11-12, 13-14, 15-16, 17-18, 19-20
+      {'difficulty': 'Expert', 'ranges': [[11,12], [13,14], [15,16], [17,18], [19,20]]},
+      // Impossible: 21-26, 27-32, 33-38, 39-44, 45-50
+      {'difficulty': 'Impossible', 'ranges': [[21,26], [27,32], [33,38], [39,44], [45,50]]},
+    ];
+    
+    for (final difficultyData in levelRanges) {
+      final difficulty = difficultyData['difficulty'] as String;
+      final ranges = difficultyData['ranges'] as List<List<int>>;
+      
+      for (final range in ranges) {
+        final rangeStart = range[0];
+        final rangeEnd = range[1];
+        
+        // Find all completions in this range for this difficulty
+        final matchingCompletions = completions.where((completion) {
+          final completionDifficulty = completion.difficultyName ?? '';
+          final targetNumber = completion.targetNumber ?? 0;
+          return completionDifficulty.toLowerCase() == difficulty.toLowerCase() &&
+                 targetNumber >= rangeStart && 
+                 targetNumber <= rangeEnd;
+        }).toList();
+        
+        if (matchingCompletions.isNotEmpty) {
+          // Take the maximum stars achieved in this range (same logic as levels screen)
+          final maxStars = matchingCompletions
+              .map((completion) => (completion.stars ?? 0) as int)
+              .reduce((a, b) => a > b ? a : b);
+          stars += maxStars;
+        }
+      }
+    }
+    
+    return stars;
   }
 
   @override

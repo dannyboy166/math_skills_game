@@ -331,6 +331,114 @@ class AdminService {
     return set1.difference(set2).isEmpty && set2.difference(set1).isEmpty;
   }
 
+  // Debug current user's level completions
+  Future<Map<String, dynamic>> debugCurrentUserLevelCompletions() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return {'error': 'No user signed in'};
+
+      final userId = user.uid;
+      
+      // Get all level completions for this user
+      final levelCompletionsSnapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('levelCompletions')
+          .get();
+      
+      List<Map<String, dynamic>> completions = [];
+      
+      for (final levelDoc in levelCompletionsSnapshot.docs) {
+        final levelData = levelDoc.data();
+        final stars = levelData['stars'] ?? 0;
+        
+        completions.add({
+          'id': levelDoc.id,
+          'operation': levelData['operationName'] ?? 'unknown',
+          'difficulty': levelData['difficultyName'] ?? 'unknown', 
+          'targetNumber': levelData['targetNumber'] ?? 0,
+          'stars': stars,
+          'completionTime': levelData['completionTimeMs'] ?? 0,
+        });
+      }
+      
+      // Calculate total stars using the same logic as profile screen (grouped by level ranges)
+      int totalStars = _calculateCorrectTotalStars(completions);
+      
+      // Sort by operation and difficulty for easier reading
+      completions.sort((a, b) {
+        final opCompare = a['operation'].toString().compareTo(b['operation'].toString());
+        if (opCompare != 0) return opCompare;
+        return a['targetNumber'].toString().compareTo(b['targetNumber'].toString());
+      });
+      
+      // Generate level groupings for display
+      final levelGroupings = _generateLevelGroupings(completions);
+      
+      return {
+        'userId': userId,
+        'totalCompletions': completions.length,
+        'calculatedTotalStars': totalStars,
+        'completions': completions,
+        'levelGroupings': levelGroupings,
+      };
+    } catch (e) {
+      return {'error': 'Error getting level completions: $e'};
+    }
+  }
+
+  // Recalculate total stars for all users based on their level completions
+  Future<void> recalculateTotalStarsForAllUsers() async {
+    try {
+      print('Starting to recalculate total stars for all users...');
+      
+      // Get all users
+      final usersSnapshot = await _firestore.collection('users').get();
+      
+      int processedCount = 0;
+      int errorCount = 0;
+      
+      for (final userDoc in usersSnapshot.docs) {
+        try {
+          final userId = userDoc.id;
+          
+          // Get all level completions for this user
+          final levelCompletionsSnapshot = await _firestore
+              .collection('users')
+              .doc(userId)
+              .collection('levelCompletions')
+              .get();
+          
+          // Calculate total stars from level completions
+          int totalStarsEarned = 0;
+          for (final levelDoc in levelCompletionsSnapshot.docs) {
+            final levelData = levelDoc.data();
+            final stars = levelData['stars'] ?? 0;
+            totalStarsEarned += stars as int;
+          }
+          
+          // Update the user's totalStars field
+          await _firestore.collection('users').doc(userId).update({
+            'totalStars': totalStarsEarned,
+          });
+          
+          processedCount++;
+          print('Updated total stars for user $userId: $totalStarsEarned stars');
+          
+        } catch (e) {
+          errorCount++;
+          print('Error processing user ${userDoc.id}: $e');
+        }
+      }
+      
+      print('Total stars recalculation completed. Processed: $processedCount, Errors: $errorCount');
+      return;
+    } catch (e) {
+      print('Error recalculating total stars: $e');
+      throw e;
+    }
+  }
+
   // Helper method to determine initial unlocks based on age (copied from UserService)
   List<int> _getInitialUnlocksForAge(int age) {
     if (age >= 11) {
@@ -349,5 +457,209 @@ class AdminService {
       // 3-8: 1×, 2×, 5×, 10×
       return [1, 2, 5, 10];
     }
+  }
+
+  // Calculate total stars using the same logic as the profile screen
+  int _calculateCorrectTotalStars(List<Map<String, dynamic>> completions) {
+    int totalStars = 0;
+    
+    // Group completions by operation
+    final Map<String, List<Map<String, dynamic>>> completionsByOperation = {};
+    for (final completion in completions) {
+      final operation = completion['operation'] ?? '';
+      if (!completionsByOperation.containsKey(operation)) {
+        completionsByOperation[operation] = [];
+      }
+      completionsByOperation[operation]!.add(completion);
+    }
+    
+    // Calculate stars for each operation using the same level ranges
+    for (final operation in ['addition', 'subtraction', 'multiplication', 'division']) {
+      final operationCompletions = completionsByOperation[operation] ?? [];
+      if (operationCompletions.isEmpty) continue;
+      
+      if (operation == 'multiplication' || operation == 'division') {
+        // For multiplication/division, each table is its own level
+        totalStars += _calculateMultiplicationDivisionStars(operationCompletions);
+      } else {
+        // For addition/subtraction, use the range-based levels
+        totalStars += _calculateAdditionSubtractionStars(operationCompletions);
+      }
+    }
+    
+    return totalStars;
+  }
+  
+  int _calculateMultiplicationDivisionStars(List<Map<String, dynamic>> completions) {
+    int stars = 0;
+    
+    // Group by difficulty and target number
+    final Map<String, Map<int, int>> bestStarsByDifficultyAndTable = {};
+    
+    for (final completion in completions) {
+      final difficulty = completion['difficulty'] ?? '';
+      final targetNumber = completion['targetNumber'] ?? 0;
+      final completionStars = (completion['stars'] ?? 0) as int;
+      
+      if (!bestStarsByDifficultyAndTable.containsKey(difficulty)) {
+        bestStarsByDifficultyAndTable[difficulty] = {};
+      }
+      
+      final currentBest = bestStarsByDifficultyAndTable[difficulty]![targetNumber] ?? 0;
+      bestStarsByDifficultyAndTable[difficulty]![targetNumber] = 
+          completionStars > currentBest ? completionStars : currentBest;
+    }
+    
+    // Sum up all the best stars for each table
+    for (final difficultyMap in bestStarsByDifficultyAndTable.values) {
+      for (final tableStars in difficultyMap.values) {
+        stars += tableStars;
+      }
+    }
+    
+    return stars;
+  }
+  
+  int _calculateAdditionSubtractionStars(List<Map<String, dynamic>> completions) {
+    int stars = 0;
+    
+    // Define the same level ranges as in levels_screen.dart
+    final levelRanges = [
+      // Standard: 1, 2, 3, 4, 5 (individual)
+      {'difficulty': 'Standard', 'ranges': [[1,1], [2,2], [3,3], [4,4], [5,5]]},
+      // Challenging: 6, 7, 8, 9, 10 (individual)  
+      {'difficulty': 'Challenging', 'ranges': [[6,6], [7,7], [8,8], [9,9], [10,10]]},
+      // Expert: 11-12, 13-14, 15-16, 17-18, 19-20
+      {'difficulty': 'Expert', 'ranges': [[11,12], [13,14], [15,16], [17,18], [19,20]]},
+      // Impossible: 21-26, 27-32, 33-38, 39-44, 45-50
+      {'difficulty': 'Impossible', 'ranges': [[21,26], [27,32], [33,38], [39,44], [45,50]]},
+    ];
+    
+    for (final difficultyData in levelRanges) {
+      final difficulty = difficultyData['difficulty'] as String;
+      final ranges = difficultyData['ranges'] as List<List<int>>;
+      
+      for (final range in ranges) {
+        final rangeStart = range[0];
+        final rangeEnd = range[1];
+        
+        // Find all completions in this range for this difficulty
+        final matchingCompletions = completions.where((completion) {
+          final completionDifficulty = completion['difficulty'] ?? '';
+          final targetNumber = completion['targetNumber'] ?? 0;
+          return completionDifficulty.toLowerCase() == difficulty.toLowerCase() &&
+                 targetNumber >= rangeStart && 
+                 targetNumber <= rangeEnd;
+        }).toList();
+        
+        if (matchingCompletions.isNotEmpty) {
+          // Take the maximum stars achieved in this range (same logic as levels screen)
+          final maxStars = matchingCompletions
+              .map((completion) => (completion['stars'] ?? 0) as int)
+              .reduce((a, b) => a > b ? a : b);
+          stars += maxStars;
+        }
+      }
+    }
+    
+    return stars;
+  }
+
+  // Generate level groupings to show how individual completions are grouped into actual levels
+  List<Map<String, dynamic>> _generateLevelGroupings(List<Map<String, dynamic>> completions) {
+    List<Map<String, dynamic>> groupings = [];
+    
+    // Group completions by operation
+    final Map<String, List<Map<String, dynamic>>> completionsByOperation = {};
+    for (final completion in completions) {
+      final operation = completion['operation'] ?? '';
+      if (!completionsByOperation.containsKey(operation)) {
+        completionsByOperation[operation] = [];
+      }
+      completionsByOperation[operation]!.add(completion);
+    }
+    
+    // Process each operation
+    for (final operation in ['addition', 'subtraction', 'multiplication', 'division']) {
+      final operationCompletions = completionsByOperation[operation] ?? [];
+      if (operationCompletions.isEmpty) continue;
+      
+      if (operation == 'multiplication' || operation == 'division') {
+        // For multiplication/division, each table is its own level
+        final Map<String, Map<int, Map<String, dynamic>>> grouped = {};
+        
+        for (final completion in operationCompletions) {
+          final difficulty = completion['difficulty'] ?? '';
+          final targetNumber = completion['targetNumber'] ?? 0;
+          
+          if (!grouped.containsKey(difficulty)) {
+            grouped[difficulty] = {};
+          }
+          
+          if (!grouped[difficulty]!.containsKey(targetNumber) || 
+              (completion['stars'] ?? 0) > (grouped[difficulty]![targetNumber]?['stars'] ?? 0)) {
+            grouped[difficulty]![targetNumber] = completion;
+          }
+        }
+        
+        // Add to groupings
+        for (final difficulty in grouped.keys) {
+          for (final targetNumber in grouped[difficulty]!.keys) {
+            final best = grouped[difficulty]![targetNumber]!;
+            groupings.add({
+              'operation': operation,
+              'levelTitle': '$operation $difficulty ${targetNumber}× table',
+              'bestStars': best['stars'],
+              'individualCompletions': [best],
+            });
+          }
+        }
+      } else {
+        // For addition/subtraction, use range-based levels
+        final levelRanges = [
+          {'difficulty': 'Standard', 'ranges': [[1,1], [2,2], [3,3], [4,4], [5,5]]},
+          {'difficulty': 'Challenging', 'ranges': [[6,6], [7,7], [8,8], [9,9], [10,10]]},
+          {'difficulty': 'Expert', 'ranges': [[11,12], [13,14], [15,16], [17,18], [19,20]]},
+          {'difficulty': 'Impossible', 'ranges': [[21,26], [27,32], [33,38], [39,44], [45,50]]},
+        ];
+        
+        for (final difficultyData in levelRanges) {
+          final difficulty = difficultyData['difficulty'] as String;
+          final ranges = difficultyData['ranges'] as List<List<int>>;
+          
+          for (final range in ranges) {
+            final rangeStart = range[0];
+            final rangeEnd = range[1];
+            
+            final matchingCompletions = operationCompletions.where((completion) {
+              final completionDifficulty = completion['difficulty'] ?? '';
+              final targetNumber = completion['targetNumber'] ?? 0;
+              return completionDifficulty.toLowerCase() == difficulty.toLowerCase() &&
+                     targetNumber >= rangeStart && 
+                     targetNumber <= rangeEnd;
+            }).toList();
+            
+            if (matchingCompletions.isNotEmpty) {
+              final maxStars = matchingCompletions
+                  .map((completion) => (completion['stars'] ?? 0) as int)
+                  .reduce((a, b) => a > b ? a : b);
+              
+              final levelTitle = rangeStart == rangeEnd 
+                  ? '$operation $difficulty Level $rangeStart'
+                  : '$operation $difficulty Level $rangeStart-$rangeEnd';
+              
+              groupings.add({
+                'operation': operation,
+                'levelTitle': levelTitle,
+                'bestStars': maxStars,
+                'individualCompletions': matchingCompletions,
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    return groupings;
   }
 }
