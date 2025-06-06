@@ -32,12 +32,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Get current settings from services and preferences
     setState(() {
       _soundEnabled = _soundService.isSoundEnabled;
       _vibrationEnabled = _hapticService.isVibrationEnabled;
-      
+
       // Load rotation speed (default to level 5 - Normal)
       final speedLevel = prefs.getInt('rotation_speed') ?? 5;
       _rotationSpeed = RotationSpeed.fromLevel(speedLevel);
@@ -77,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _changeRotationSpeed(RotationSpeed newSpeed) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('rotation_speed', newSpeed.level);
-    
+
     setState(() {
       _rotationSpeed = newSpeed;
     });
@@ -135,23 +135,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // Ring Rotation Speed
             _buildRotationSpeedSetting(),
-
-            _buildSectionHeader('Game Modes'),
-
-            // Placeholder for future settings
-            _buildPlaceholderSetting(
-              'Dark Mode',
-              'Change the app appearance',
-              Icons.dark_mode,
-              Colors.grey[800]!,
-            ),
-
-            _buildPlaceholderSetting(
-              'Challenge Mode',
-              'Enable timed challenges',
-              Icons.timer,
-              Colors.orange,
-            ),
 
             _buildSectionHeader('Account'),
 
@@ -339,7 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             SizedBox(height: 16),
-            
+
             // Speed selection slider
             Column(
               children: [
@@ -363,7 +346,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _changeRotationSpeed(newSpeed);
                   },
                 ),
-                
+
                 // Speed labels
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -372,11 +355,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       '1',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _rotationSpeed.level == 1 
-                            ? Colors.orange[700] 
+                        color: _rotationSpeed.level == 1
+                            ? Colors.orange[700]
                             : Colors.grey[500],
-                        fontWeight: _rotationSpeed.level == 1 
-                            ? FontWeight.bold 
+                        fontWeight: _rotationSpeed.level == 1
+                            ? FontWeight.bold
                             : FontWeight.normal,
                       ),
                     ),
@@ -384,11 +367,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       '5',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _rotationSpeed.level == 5 
-                            ? Colors.orange[700] 
+                        color: _rotationSpeed.level == 5
+                            ? Colors.orange[700]
                             : Colors.grey[500],
-                        fontWeight: _rotationSpeed.level == 5 
-                            ? FontWeight.bold 
+                        fontWeight: _rotationSpeed.level == 5
+                            ? FontWeight.bold
                             : FontWeight.normal,
                       ),
                     ),
@@ -396,19 +379,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       '10',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _rotationSpeed.level == 10 
-                            ? Colors.orange[700] 
+                        color: _rotationSpeed.level == 10
+                            ? Colors.orange[700]
                             : Colors.grey[500],
-                        fontWeight: _rotationSpeed.level == 10 
-                            ? FontWeight.bold 
+                        fontWeight: _rotationSpeed.level == 10
+                            ? FontWeight.bold
                             : FontWeight.normal,
                       ),
                     ),
                   ],
                 ),
-                
+
                 SizedBox(height: 8),
-                
+
                 // Speed descriptions
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
