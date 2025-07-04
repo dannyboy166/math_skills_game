@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:math_skills_game/services/user_service.dart';
 import 'dart:async';
+import 'dart:math' as math;
 
 class StreakFlameWidget extends StatefulWidget {
   const StreakFlameWidget({Key? key}) : super(key: key);
@@ -62,80 +63,216 @@ class _StreakFlameWidgetState extends State<StreakFlameWidget> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(
-                Icons.local_fire_department_rounded,
-                color: Colors.deepOrange,
-                size: 28,
-              ),
-              SizedBox(width: 10),
-              Text(
-                'Your Streak',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.deepOrange.shade700,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Current streak: $_currentStreak ${_currentStreak == 1 ? 'day' : 'days'}',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Longest streak: $_longestStreak ${_longestStreak == 1 ? 'day' : 'days'}',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Practice math every day to build your streak! Each day you complete at least one practice session, your streak grows. Miss a day and your streak resets to zero.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Keep your streak alive to earn special rewards!',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.deepOrange.shade400,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Got it',
-                style: TextStyle(
-                  color: Colors.deepOrange.shade700,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
+        return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.orange.shade300,
+                  Colors.deepOrange.shade400,
+                  Colors.red.shade400,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated fire emoji or icon
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 50,
+                    color: Colors.white,
+                  ),
+                ),
+
+                SizedBox(height: 16),
+
+                // Main streak title
+                Text(
+                  _currentStreak == 0
+                      ? "Start Your Streak!"
+                      : _currentStreak == 1
+                          ? "🔥 1 Day Streak!"
+                          : "🔥 $_currentStreak Day Streak!",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                SizedBox(height: 12),
+
+                // Streak visualization with circles
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    math.min(_currentStreak, 7), // Show max 7 flames
+                    (index) => Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 3),
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.yellow.shade300,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Icon(
+                          Icons.local_fire_department,
+                          size: 14,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                if (_currentStreak > 7) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    "And ${_currentStreak - 7} more! 🎉",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.yellow.shade200,
+                    ),
+                  ),
+                ],
+
+                SizedBox(height: 20),
+
+                // Personal best section
+                if (_longestStreak > _currentStreak) ...[
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.emoji_events,
+                          color: Colors.yellow.shade200,
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          "Personal Best: $_longestStreak days",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                ],
+
+                // Motivational message
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        _getMotivationalMessage(),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepOrange.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        _getStreakTip(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 20),
+
+                // Action button
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.deepOrange.shade700,
+                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 4,
+                  ),
+                  child: Text(
+                    _currentStreak == 0 ? "Let's Start!" : "Keep Going! 🚀",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  String _getMotivationalMessage() {
+    if (_currentStreak == 0) {
+      return "Practice today to start your streak! 🌟";
+    } else if (_currentStreak == 1) {
+      return "Great start! Come back tomorrow! 🎯";
+    } else if (_currentStreak < 7) {
+      return "You're on fire! Keep it up! 🔥";
+    } else if (_currentStreak < 30) {
+      return "Amazing streak! You're a math champion! 🏆";
+    } else {
+      return "Incredible! You're a math legend! 👑";
+    }
+  }
+
+  String _getStreakTip() {
+    if (_currentStreak == 0) {
+      return "Complete one game to start your streak";
+    } else if (_currentStreak < 3) {
+      return "Practice daily to keep your streak alive";
+    } else if (_currentStreak < 7) {
+      return "You're building a great habit!";
+    } else {
+      return "Daily practice makes you stronger!";
+    }
   }
 
   @override
@@ -190,14 +327,14 @@ class _StreakFlameWidgetState extends State<StreakFlameWidget> {
               ],
             ),
           ),
-          
+
           // Flame icon
           Icon(
             Icons.local_fire_department_rounded,
             color: Colors.white,
             size: 28,
           ),
-          
+
           // Streak count in a small bubble on top right corner
           Positioned(
             top: 0,

@@ -35,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Weekly streak data
   WeeklyStreak _weeklyStreak = WeeklyStreak.currentWeek();
-  bool _isLoadingStreak = true; // Add this if not already defined
   int _currentStreak = 0;
   int _longestStreak = 0;
 
@@ -67,9 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _listenToStreakData() {
     if (_authService.currentUser == null) return;
 
-    setState(() {
-      _isLoadingStreak = true;
-    });
+    setState(() {});
 
     // Listen to weekly streak
     _weeklyStreakSubscription?.cancel();
@@ -79,15 +76,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _weeklyStreak = weeklyStreak;
-          _isLoadingStreak = false;
         });
       }
     }, onError: (e) {
       print('Error in weekly streak stream: $e');
       if (mounted) {
-        setState(() {
-          _isLoadingStreak = false;
-        });
+        setState(() {});
       }
     });
 
@@ -138,9 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadStreakData() async {
     if (_authService.currentUser == null) return;
 
-    setState(() {
-      _isLoadingStreak = true;
-    });
+    setState(() {});
 
     try {
       // Load weekly streak
@@ -156,15 +148,12 @@ class _HomeScreenState extends State<HomeScreen> {
           _weeklyStreak = weeklyStreak;
           _currentStreak = streakStats['currentStreak'] ?? 0;
           _longestStreak = streakStats['longestStreak'] ?? 0;
-          _isLoadingStreak = false;
         });
       }
     } catch (e) {
       print('Error loading streak data: $e');
       if (mounted) {
-        setState(() {
-          _isLoadingStreak = false;
-        });
+        setState(() {});
       }
     }
   }
@@ -263,48 +252,167 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-// In your home_screen.dart file, update the _buildHeader method
-// Make sure to import the StreakFlameWidget at the top of the file:
-// import 'package:math_skills_game/widgets/streak_flame_widget.dart';
-
   Widget _buildHeader() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.blue.shade400,
+            Colors.blue.shade500,
+            Colors.blue.shade600,
+          ],
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 15,
+            offset: Offset(0, 5),
           ),
         ],
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: Colors.blue.shade100,
-            radius: 22,
+          // Animated app icon with glow effect
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.yellow.shade300, Colors.orange.shade400],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.yellow.withOpacity(0.5),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
             child: Icon(
               Icons.calculate_rounded,
-              color: Colors.blue,
-              size: 24,
+              color: Colors.white,
+              size: 28,
             ),
           ),
+
+          SizedBox(width: 16),
+
+          // Fun app title with emoji and styling
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Math Skills',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    // Rotating emojis based on time or streak
+                    Text(
+                      _getHeaderEmoji(),
+                      style: TextStyle(fontSize: 20),
+                    ),
+                  ],
+                ),
+                Text(
+                  _getHeaderSubtitle(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           SizedBox(width: 12),
-          Text(
-            'Math Skills Game',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+
+          // Enhanced streak widget with notification badge
+          Stack(
+            children: [
+              const StreakFlameWidget(),
+
+              // Achievement badge for milestones
+              if (_shouldShowAchievementBadge())
+                Positioned(
+                  top: -2,
+                  left: -2,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.purple.shade400, Colors.pink.shade400],
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      size: 10,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          Spacer(),
-          // Replace the profile avatar with StreakFlameWidget
-          const StreakFlameWidget(),
         ],
       ),
     );
+  }
+
+  String _getHeaderEmoji() {
+    // Fun emojis that rotate based on different factors
+    final hour = DateTime.now().hour;
+
+    if (_currentStreak >= 30) {
+      return '👑'; // Crown for long streaks
+    } else if (_currentStreak >= 7) {
+      return '🔥'; // Fire for good streaks
+    } else if (_currentStreak > 0) {
+      return '⭐'; // Star for any streak
+    } else if (hour < 12) {
+      return '🌅'; // Morning
+    } else if (hour < 17) {
+      return '☀️'; // Afternoon
+    } else {
+      return '🌙'; // Evening
+    }
+  }
+
+  String _getHeaderSubtitle() {
+    final hour = DateTime.now().hour;
+
+    if (_currentStreak >= 7) {
+      return 'You\'re on fire! Keep it up!';
+    } else if (_currentStreak > 0) {
+      return 'Great progress today!';
+    } else if (hour < 12) {
+      return 'Good morning, mathematician!';
+    } else if (hour < 17) {
+      return 'Ready for some math fun?';
+    } else {
+      return 'Evening practice time!';
+    }
+  }
+
+  bool _shouldShowAchievementBadge() {
+    // Show achievement badge for special milestones
+    return _currentStreak > 0 &&
+        (_currentStreak % 7 == 0 || _currentStreak == 1 || _currentStreak == 3);
   }
 
   Widget _buildWelcomeCard() {
@@ -312,160 +420,249 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade400, Colors.blue.shade600],
+          colors: [
+            Colors.purple.shade400,
+            Colors.pink.shade400,
+            Colors.orange.shade400,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: Colors.purple.withOpacity(0.3),
+            blurRadius: 15,
+            offset: Offset(0, 5),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Top section with animated elements
           Row(
             children: [
-              Icon(
-                Icons.emoji_events_rounded,
-                color: Colors.white,
-                size: 40,
+              // Animated trophy/flame based on streak
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.3), width: 2),
+                ),
+                child: Icon(
+                  _currentStreak > 0
+                      ? Icons.local_fire_department_rounded
+                      : Icons.rocket_launch_rounded,
+                  size: 35,
+                  color: Colors.white,
+                ),
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Dynamic title based on streak
                     Text(
-                      "Let's Practice Math!",
+                      _getWelcomeTitle(),
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    if (_currentStreak > 0)
-                      Text(
-                        "Current streak: $_currentStreak days" +
-                            (_longestStreak > _currentStreak
-                                ? " (Best: $_longestStreak)"
-                                : ""),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
+                    SizedBox(height: 4),
+                    // Streak info with emoji
+                    Text(
+                      _getStreakMessage(),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
                   ],
                 ),
               ),
+              // Star decoration
+              Icon(
+                Icons.auto_awesome,
+                color: Colors.yellow.shade200,
+                size: 30,
+              ),
             ],
           ),
-          SizedBox(height: 12),
-          Text(
-            "Choose an operation below to start playing and improve your math skills!",
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white.withOpacity(0.9),
+
+          SizedBox(height: 20),
+
+          // Fun weekly progress with bigger, more colorful circles
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.3)),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  "This Week's Progress 📅",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 12),
+                _buildFunStreakRow(),
+              ],
             ),
           ),
-          SizedBox(height: 12),
-          _isLoadingStreak
-              ? Center(
-                  child: SizedBox(
-                    height: 30,
-                    width: 30,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  ),
-                )
-              : _buildStreakRow(),
+
+          SizedBox(height: 16),
+
+          // Motivational message with emoji
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _getMotivationalQuote(),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ),
     );
   }
-// REPLACE the _buildStreakRow method in your home_screen.dart with this fixed version
 
-  Widget _buildStreakRow() {
-    // Day abbreviations (Sunday to Saturday)
+  String _getWelcomeTitle() {
+    if (_currentStreak == 0) {
+      return "Ready to Start? 🚀";
+    } else if (_currentStreak == 1) {
+      return "Great Start! 🌟";
+    } else if (_currentStreak < 7) {
+      return "You're On Fire! 🔥";
+    } else if (_currentStreak < 30) {
+      return "Math Champion! 🏆";
+    } else {
+      return "Math Legend! 👑";
+    }
+  }
+
+  String _getStreakMessage() {
+    if (_currentStreak == 0) {
+      return "Let's build your first streak!";
+    } else if (_currentStreak == 1) {
+      return "🔥 1 day streak - Keep going!";
+    } else {
+      return "🔥 $_currentStreak day streak" +
+          (_longestStreak > _currentStreak
+              ? " (Best: $_longestStreak)"
+              : " - Amazing!");
+    }
+  }
+
+  String _getMotivationalQuote() {
+    final quotes = [
+      "Practice makes perfect! 💪",
+      "Every expert was once a beginner! ⭐",
+      "You're getting stronger every day! 🌱",
+      "Math is your superpower! ⚡",
+      "Keep up the awesome work! 🎉",
+      "You've got this, champion! 🏆",
+    ];
+
+    return quotes[_currentStreak % quotes.length];
+  }
+
+  Widget _buildFunStreakRow() {
     final dayAbbreviations = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-    // Get today's info for comparison
     final now = DateTime.now();
-    final todayWeekday = now.weekday == 7 ? 0 : now.weekday; // Sunday = 0
+    final todayWeekday = now.weekday == 7 ? 0 : now.weekday;
 
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: List.generate(7, (index) {
-        // Get the streak status for this day of week
         final dayStreak = _weeklyStreak.getDayStreak(index);
         final bool completed = dayStreak?.completed ?? false;
-
-        // Check if this day represents today
         final isToday = index == todayWeekday;
 
-        // Debug information
-        if (isToday) {
-          print(
-              'STREAK ROW DEBUG: Today is day $index ($dayAbbreviations[index])');
-          print('STREAK ROW DEBUG: Today completed: $completed');
-          print('STREAK ROW DEBUG: Current streak count: $_currentStreak');
-        }
-
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: Column(
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: completed
-                        ? Colors.amber
-                        : (isToday
-                            ? Colors.white.withOpacity(0.3)
-                            : Colors.white.withOpacity(0.2)),
-                    border: Border.all(
-                      color: completed
-                          ? Colors.amber.shade600
-                          : (isToday
-                              ? Colors.white.withOpacity(0.6)
-                              : Colors.white.withOpacity(0.5)),
-                      width: 2,
-                    ),
-                  ),
-                  child: completed
+        return Column(
+          children: [
+            // Bigger, more colorful circles
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: completed
+                    ? LinearGradient(
+                        colors: [
+                          Colors.yellow.shade300,
+                          Colors.orange.shade400
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      )
+                    : null,
+                color: completed
+                    ? null
+                    : (isToday
+                        ? Colors.white.withOpacity(0.4)
+                        : Colors.white.withOpacity(0.2)),
+                border: Border.all(
+                  color: completed
+                      ? Colors.yellow.shade600
+                      : (isToday
+                          ? Colors.white.withOpacity(0.8)
+                          : Colors.white.withOpacity(0.5)),
+                  width: 2.5,
+                ),
+                boxShadow: completed
+                    ? [
+                        BoxShadow(
+                          color: Colors.yellow.withOpacity(0.5),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: completed
+                  ? Icon(
+                      Icons.star,
+                      color: Colors.white,
+                      size: 20,
+                    )
+                  : (isToday
                       ? Icon(
-                          Icons.check,
-                          color: Colors.white,
+                          Icons.today,
+                          color: Colors.white.withOpacity(0.9),
                           size: 16,
                         )
-                      : (isToday
-                          ? Icon(
-                              Icons.today,
-                              color: Colors.white.withOpacity(0.8),
-                              size: 12,
-                            )
-                          : null),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  dayAbbreviations[index],
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ],
+                      : Container()),
             ),
-          ),
+            SizedBox(height: 6),
+            Text(
+              dayAbbreviations[index],
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: isToday ? FontWeight.bold : FontWeight.w600,
+              ),
+            ),
+          ],
         );
       }),
     );
@@ -734,7 +931,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         SizedBox(height: 12),
-        
+
         // Add encouraging message for locked tables
         _buildUnlockMessage(),
         SizedBox(height: 16),
@@ -824,22 +1021,29 @@ class _HomeScreenState extends State<HomeScreen> {
       String category, List<int> tables, Color color) {
     final bool hasSelectedTable = selectedMultiplicationTable != null &&
         tables.contains(selectedMultiplicationTable);
-    
+
     // Check if any tables in this category are unlocked
-    final bool hasUnlockedTables = tables.any((table) => _unlockedTimeTables.contains(table));
-    final int unlockedCount = tables.where((table) => _unlockedTimeTables.contains(table)).length;
+    final bool hasUnlockedTables =
+        tables.any((table) => _unlockedTimeTables.contains(table));
+    final int unlockedCount =
+        tables.where((table) => _unlockedTimeTables.contains(table)).length;
 
     return GestureDetector(
-      onTap: hasUnlockedTables ? () {
-        setState(() {
-          final random = Random();
-          // Only select from unlocked tables
-          final unlockedTablesInCategory = tables.where((table) => _unlockedTimeTables.contains(table)).toList();
-          if (unlockedTablesInCategory.isNotEmpty) {
-            selectedMultiplicationTable = unlockedTablesInCategory[random.nextInt(unlockedTablesInCategory.length)];
-          }
-        });
-      } : null,
+      onTap: hasUnlockedTables
+          ? () {
+              setState(() {
+                final random = Random();
+                // Only select from unlocked tables
+                final unlockedTablesInCategory = tables
+                    .where((table) => _unlockedTimeTables.contains(table))
+                    .toList();
+                if (unlockedTablesInCategory.isNotEmpty) {
+                  selectedMultiplicationTable = unlockedTablesInCategory[
+                      random.nextInt(unlockedTablesInCategory.length)];
+                }
+              });
+            }
+          : null,
       child: Container(
         decoration: BoxDecoration(
           color: hasSelectedTable ? color : Colors.white,
@@ -879,7 +1083,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SizedBox(height: 4),
             Text(
-              hasUnlockedTables 
+              hasUnlockedTables
                   ? 'Tables: ${tables.join(", ")} ($unlockedCount/${tables.length} unlocked)'
                   : 'Tables: ${tables.join(", ")} (Locked)',
               style: TextStyle(
@@ -922,21 +1126,23 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isLoading = _isLoadingUnlocks;
 
     return GestureDetector(
-      onTap: isUnlocked ? () {
-        setState(() {
-          selectedMultiplicationTable = number;
-          selectedLevel =
-              difficulty; // THIS LINE IS CRUCIAL - Update the difficulty when selecting a table
-        });
-      } : null, // Disable tap if locked
+      onTap: isUnlocked
+          ? () {
+              setState(() {
+                selectedMultiplicationTable = number;
+                selectedLevel =
+                    difficulty; // THIS LINE IS CRUCIAL - Update the difficulty when selecting a table
+              });
+            }
+          : null, // Disable tap if locked
       child: Container(
         decoration: BoxDecoration(
-          color: isLoading 
+          color: isLoading
               ? Colors.grey.shade100
-              : !isUnlocked 
+              : !isUnlocked
                   ? Colors.grey.shade200
-                  : isSelected 
-                      ? color 
+                  : isSelected
+                      ? color
                       : Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
@@ -957,8 +1163,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? Colors.grey.shade300
                 : !isUnlocked
                     ? Colors.grey.shade400
-                    : isSelected 
-                        ? color 
+                    : isSelected
+                        ? color
                         : Colors.grey.shade200,
             width: 1.5,
           ),
@@ -975,8 +1181,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? Colors.grey.shade400
                       : !isUnlocked
                           ? Colors.grey.shade500
-                          : isSelected 
-                              ? Colors.white 
+                          : isSelected
+                              ? Colors.white
                               : color,
                 ),
               ),
@@ -1016,11 +1222,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_isLoadingUnlocks) {
       return SizedBox.shrink(); // Don't show while loading
     }
-    
+
     // Find the next table to unlock
     List<int> allTables = List.generate(15, (index) => index + 1);
-    List<int> lockedTables = allTables.where((table) => !_unlockedTimeTables.contains(table)).toList();
-    
+    List<int> lockedTables = allTables
+        .where((table) => !_unlockedTimeTables.contains(table))
+        .toList();
+
     if (lockedTables.isEmpty) {
       // All tables unlocked - show celebration message
       return Container(
@@ -1054,27 +1262,28 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    
+
     // Group locked tables by unlock requirements and find the next group to unlock
     List<List<int>> progressionGroups = [
-      [1, 2, 5, 10],        // Basic tables (initial unlock)
-      [3, 4, 6],            // Unlocked after completing any basic table
-      [7, 8, 9],            // Unlocked after completing any intermediate table
-      [11, 12],             // Unlocked after completing any advanced table
-      [13, 14, 15],         // Unlocked after completing any expert table
+      [1, 2, 5, 10], // Basic tables (initial unlock)
+      [3, 4, 6], // Unlocked after completing any basic table
+      [7, 8, 9], // Unlocked after completing any intermediate table
+      [11, 12], // Unlocked after completing any advanced table
+      [13, 14, 15], // Unlocked after completing any expert table
     ];
-    
+
     // Find which group contains the next tables to unlock
     List<int> nextGroupToUnlock = [];
     String tableToComplete = '';
-    
+
     for (int i = 0; i < progressionGroups.length; i++) {
       List<int> group = progressionGroups[i];
-      List<int> lockedInGroup = group.where((table) => lockedTables.contains(table)).toList();
-      
+      List<int> lockedInGroup =
+          group.where((table) => lockedTables.contains(table)).toList();
+
       if (lockedInGroup.isNotEmpty) {
         nextGroupToUnlock = lockedInGroup;
-        
+
         // Determine what they need to complete to unlock this group
         if (i == 1) {
           tableToComplete = 'any 1×, 2×, 5×, or 10× times table';
@@ -1088,7 +1297,7 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
       }
     }
-    
+
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1120,8 +1329,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   TextSpan(text: ' perfectly to unlock '),
                   TextSpan(
-                    text: '${nextGroupToUnlock.map((table) => '$table×').join(', ')} tables',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple.shade700),
+                    text:
+                        '${nextGroupToUnlock.map((table) => '$table×').join(', ')} tables',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade700),
                   ),
                   TextSpan(text: '! 🚀'),
                 ],
