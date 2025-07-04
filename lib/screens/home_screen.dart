@@ -311,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Text(
-                      'Math Skills',
+                      'Number Ninja',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -319,9 +319,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     SizedBox(width: 6),
-                    // Rotating emojis based on time or streak
+                    // Ninja emoji
                     Text(
-                      _getHeaderEmoji(),
+                      '🥷',
                       style: TextStyle(fontSize: 20),
                     ),
                   ],
@@ -351,24 +351,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _getHeaderEmoji() {
-    // Fun emojis that rotate based on different factors
-    final hour = DateTime.now().hour;
-
-    if (_currentStreak >= 30) {
-      return '👑'; // Crown for long streaks
-    } else if (_currentStreak >= 7) {
-      return '🔥'; // Fire for good streaks
-    } else if (_currentStreak > 0) {
-      return '⭐'; // Star for any streak
-    } else if (hour < 12) {
-      return '🌅'; // Morning
-    } else if (hour < 17) {
-      return '☀️'; // Afternoon
-    } else {
-      return '🌙'; // Evening
-    }
-  }
 
   String _getHeaderSubtitle() {
     final hour = DateTime.now().hour;
