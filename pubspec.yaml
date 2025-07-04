@@ -84,6 +84,9 @@ flutter:
     - assets/sounds/2starWin.mp3
     - assets/sounds/3starWin.mp3
     - assets/images/point.png
+    - assets/images/ninja_sprites.png
+
+
 
 
     
