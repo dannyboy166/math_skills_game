@@ -317,6 +317,32 @@ class _GameScreenState extends State<GameScreen> {
         outerNumbers =
             GameGenerator.generateTimesTableRingNumbers(targetNumber, random);
         print("   ✅ Outer numbers generated: $outerNumbers");
+      } else if (widget.gameMode == GameMode.timesTableRing &&
+          (widget.operationName == 'addition' ||
+              widget.operationName == 'subtraction')) {
+        print("   📊 Using Addition/Subtraction Ring Mode (12 answers)");
+        // Ring Mode for addition/subtraction: inner ring 1-12, outer ring has all 12 correct answers + 4 distractors
+        innerNumbers = List.generate(12, (index) => index + 1); // 1-12
+        print("   ✅ Inner numbers (1-12): $innerNumbers");
+
+        switch (widget.operationName) {
+          case 'addition':
+            print("   🎯 Generating addition ring outer numbers...");
+            outerNumbers = GameGenerator.generateAdditionRingNumbers(
+                targetNumber, widget.difficultyLevel.maxOuterNumber, random);
+            break;
+          case 'subtraction':
+            print("   🎯 Generating subtraction ring outer numbers...");
+            outerNumbers = GameGenerator.generateSubtractionRingNumbers(
+                targetNumber, widget.difficultyLevel.maxOuterNumber, random);
+            break;
+          default:
+            print("   🎯 Generating default addition ring outer numbers...");
+            outerNumbers = GameGenerator.generateAdditionRingNumbers(
+                targetNumber, widget.difficultyLevel.maxOuterNumber, random);
+            break;
+        }
+        print("   ✅ Outer numbers generated: $outerNumbers");
       } else if (widget.operationName == 'multiplication') {
         print("   ✖️ Using Standard Multiplication Mode");
         innerNumbers = List.generate(12, (index) => index + 1); // 1-12
@@ -336,7 +362,7 @@ class _GameScreenState extends State<GameScreen> {
             GameGenerator.generateDivisionNumbers(targetNumber, random);
         print("   ✅ Outer numbers generated: $outerNumbers");
       } else {
-        print("   ➕➖ Using Addition/Subtraction Mode");
+        print("   ➕➖ Using Addition/Subtraction Standard Mode");
         // Original logic for other operations
         innerNumbers = widget.difficultyLevel.innerRingNumbers;
         print("   ✅ Inner numbers from difficulty: $innerNumbers");
@@ -660,7 +686,9 @@ class _GameScreenState extends State<GameScreen> {
   void _onNumberDrop(int cornerIndex) {
     if (widget.gameMode == GameMode.timesTableRing &&
         (widget.operationName == 'multiplication' ||
-            widget.operationName == 'division')) {
+            widget.operationName == 'division' ||
+            widget.operationName == 'addition' ||
+            widget.operationName == 'subtraction')) {
       // In times table ring mode, grey out the numbers instead of locking
       _greyOutNumbers(cornerIndex);
     } else {

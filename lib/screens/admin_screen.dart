@@ -93,7 +93,9 @@ class _AdminScreenState extends State<AdminScreen> {
                       onPressed:
                           _isSyncing ? null : _forceSyncCurrentUserLeaderboards,
                       icon: Icon(Icons.sync),
-                      label: Text('Force Sync Current User Leaderboards'),
+                      label: Text('Force Sync Current User Leaderboards'
+                      ),
+                      
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepPurple,
                         padding:

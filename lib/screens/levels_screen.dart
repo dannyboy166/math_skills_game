@@ -446,7 +446,10 @@ class _LevelsScreenState extends State<LevelsScreen> {
           operationName: _currentOperation,
           difficultyLevel: difficultyEnum,
           targetNumber: targetToUse,
-          gameMode: (_currentOperation == 'multiplication' || _currentOperation == 'division')
+          gameMode: (_currentOperation == 'multiplication' || 
+                    _currentOperation == 'division' ||
+                    _currentOperation == 'addition' ||
+                    _currentOperation == 'subtraction')
               ? GameMode.timesTableRing
               : _selectedGameMode,
         ),
@@ -550,9 +553,9 @@ class _LevelsScreenState extends State<LevelsScreen> {
     } else if (_currentOperation == 'division') {
       description = 'Practice division with different tables';
     } else if (_currentOperation == 'addition') {
-      description = 'Practice addition with various center numbers';
+      description = 'Practice addition with all 12 inner numbers';
     } else {
-      description = 'Master subtraction with increasing difficulty';
+      description = 'Master subtraction with all 12 inner numbers';
     }
 
     return Container(
@@ -610,9 +613,11 @@ class _LevelsScreenState extends State<LevelsScreen> {
                     color: Colors.grey[600],
                   ),
                 ),
-                // Note: Multiplication and division always use Times Table Ring mode
+                // Note: All operations now use Ring mode
                 if (_currentOperation == 'multiplication' ||
-                    _currentOperation == 'division') ...[
+                    _currentOperation == 'division' ||
+                    _currentOperation == 'addition' ||
+                    _currentOperation == 'subtraction') ...[
                   SizedBox(height: 12),
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -631,7 +636,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Uses Times Table Ring mode - complete all 12 answers to finish!',
+                            'Uses Ring mode - complete all 12 answers to finish!',
                             style: TextStyle(
                               fontSize: 12,
                               color: operationColor,

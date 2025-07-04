@@ -272,4 +272,139 @@ class GameGenerator {
     print("   ✅ Final shuffled numbers: $allNumbers");
     return allNumbers;
   }
+
+  /// Generate numbers for addition ring mode (12 answers)
+  static List<int> generateAdditionRingNumbers(
+      int targetNumber, int maxOuterNumber, Random random) {
+    print(
+        "🎯 generateAdditionRingNumbers called with targetNumber: $targetNumber");
+
+    // Generate all 12 correct answers: 1+target, 2+target, ..., 12+target
+    List<int> correctAnswers = [];
+    for (int i = 1; i <= 12; i++) {
+      correctAnswers.add(i + targetNumber);
+    }
+    print("   ✅ Correct answers: $correctAnswers");
+
+    // Generate 4 distractor numbers
+    List<int> distractors = [];
+    Set<int> usedNumbers = Set.from(correctAnswers);
+
+    int minRange = 1;
+    int maxRange = maxOuterNumber;
+    int attempts = 0;
+    int maxAttempts = 100; // Safety limit
+
+    print("   🎲 Generating distractors in range $minRange to $maxRange");
+
+    while (distractors.length < 4 && attempts < maxAttempts) {
+      int candidate = random.nextInt(maxRange - minRange + 1) + minRange;
+
+      // Check if it's not already used and doesn't create a valid equation
+      if (!usedNumbers.contains(candidate)) {
+        // Make sure this candidate doesn't accidentally create a valid equation
+        bool isValidEquation = false;
+        for (int innerNum = 1; innerNum <= 12; innerNum++) {
+          if (innerNum + targetNumber == candidate) {
+            isValidEquation = true;
+            break;
+          }
+        }
+        
+        if (!isValidEquation) {
+          distractors.add(candidate);
+          usedNumbers.add(candidate);
+          print("   ✅ Added distractor: $candidate");
+        }
+      }
+      attempts++;
+    }
+
+    // Safety fallback if we couldn't generate enough distractors
+    while (distractors.length < 4) {
+      int fallback = maxRange + distractors.length + 1;
+      if (!usedNumbers.contains(fallback)) {
+        distractors.add(fallback);
+        usedNumbers.add(fallback);
+        print("   ⚠️ Added fallback distractor: $fallback");
+      }
+    }
+
+    print("   ✅ Final distractors: $distractors");
+
+    // Combine and shuffle all 16 numbers
+    List<int> allNumbers = [...correctAnswers, ...distractors];
+    allNumbers.shuffle(random);
+
+    print("   ✅ Final shuffled numbers: $allNumbers");
+    return allNumbers;
+  }
+
+  /// Generate numbers for subtraction ring mode (12 answers)
+  static List<int> generateSubtractionRingNumbers(
+      int targetNumber, int maxOuterNumber, Random random) {
+    print(
+        "🎯 generateSubtractionRingNumbers called with targetNumber: $targetNumber");
+
+    // Generate all 12 correct answers: 1+target, 2+target, ..., 12+target
+    // (For subtraction: outer - inner = target, so outer = inner + target)
+    List<int> correctAnswers = [];
+    for (int i = 1; i <= 12; i++) {
+      correctAnswers.add(i + targetNumber);
+    }
+    print("   ✅ Correct answers: $correctAnswers");
+
+    // Generate 4 distractor numbers
+    List<int> distractors = [];
+    Set<int> usedNumbers = Set.from(correctAnswers);
+
+    int minRange = 1;
+    int maxRange = maxOuterNumber;
+    int attempts = 0;
+    int maxAttempts = 100; // Safety limit
+
+    print("   🎲 Generating distractors in range $minRange to $maxRange");
+
+    while (distractors.length < 4 && attempts < maxAttempts) {
+      int candidate = random.nextInt(maxRange - minRange + 1) + minRange;
+
+      // Check if it's not already used and doesn't create a valid equation
+      if (!usedNumbers.contains(candidate)) {
+        // Make sure this candidate doesn't accidentally create a valid equation
+        bool isValidEquation = false;
+        for (int innerNum = 1; innerNum <= 12; innerNum++) {
+          if (candidate - innerNum == targetNumber) {
+            isValidEquation = true;
+            break;
+          }
+        }
+        
+        if (!isValidEquation) {
+          distractors.add(candidate);
+          usedNumbers.add(candidate);
+          print("   ✅ Added distractor: $candidate");
+        }
+      }
+      attempts++;
+    }
+
+    // Safety fallback if we couldn't generate enough distractors
+    while (distractors.length < 4) {
+      int fallback = maxRange + distractors.length + 1;
+      if (!usedNumbers.contains(fallback)) {
+        distractors.add(fallback);
+        usedNumbers.add(fallback);
+        print("   ⚠️ Added fallback distractor: $fallback");
+      }
+    }
+
+    print("   ✅ Final distractors: $distractors");
+
+    // Combine and shuffle all 16 numbers
+    List<int> allNumbers = [...correctAnswers, ...distractors];
+    allNumbers.shuffle(random);
+
+    print("   ✅ Final shuffled numbers: $allNumbers");
+    return allNumbers;
+  }
 }
