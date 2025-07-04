@@ -126,20 +126,25 @@ class _AnimatedNinjaHeaderState extends State<AnimatedNinjaHeader>
                   _isAttacking ? -_bounceController.value * 8 : 0,
                 ),
                 child: Transform.scale(
-                  scale: _isAttacking ? 1.0 + (_bounceController.value * 0.1) : 1.0,
+                  scale: _isAttacking
+                      ? 1.0 + (_bounceController.value * 0.1)
+                      : 1.0,
                   child: Container(
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.yellow.shade300, Colors.orange.shade400],
+                        colors: [
+                          Colors.yellow.shade300,
+                          Colors.orange.shade400
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: _isAttacking 
+                          color: _isAttacking
                               ? Colors.orange.withOpacity(0.8)
                               : Colors.yellow.withOpacity(0.5),
                           blurRadius: _isAttacking ? 15 : 10,
@@ -217,7 +222,8 @@ class _AnimatedNinjaHeaderState extends State<AnimatedNinjaHeader>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.orange.withOpacity(_bounceController.value),
+                              color: Colors.orange
+                                  .withOpacity(_bounceController.value),
                               width: 2,
                             ),
                           ),
@@ -235,39 +241,45 @@ class _AnimatedNinjaHeaderState extends State<AnimatedNinjaHeader>
   Widget _buildNinjaSprite() {
     // Calculate sprite position based on current frame
     int row = _currentFrame ~/ 2; // 2 sprites per row
-    int col = _currentFrame % 2;   // Column (0 or 1)
+    int col = _currentFrame % 2; // Column (0 or 1)
 
     // Debug output
     print('🥷 NINJA DEBUG: Frame $_currentFrame, Row $row, Col $col');
 
+    // Scale factor - adjust this to zoom in/out
+    double scaleFactor = 0.35; // Smaller value = more zoomed out
+
     return Container(
       width: 50,
       height: 50,
-      child: ClipRect(
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: 128, // Size of one sprite
-            height: 128, // Size of one sprite
-            child: Transform.translate(
-              offset: Offset(
-                -col * 128.0, // Move left by sprite width
-                -row * 128.0, // Move up by sprite height
-              ),
-              child: Image.asset(
-                'assets/images/ninja_sprites.png',
-                width: 256, // Full sprite sheet width
-                height: 384, // Full sprite sheet height
-                fit: BoxFit.none,
-                errorBuilder: (context, error, stackTrace) {
-                  print('❌ NINJA SPRITE ERROR: $error');
-                  return Icon(
-                    Icons.calculate_rounded,
-                    color: Colors.white,
-                    size: 28,
-                  );
-                },
-              ),
+      child: ClipOval(
+        child: Transform.scale(
+          scale: scaleFactor,
+          child: OverflowBox(
+            minWidth: 0,
+            minHeight: 0,
+            maxWidth: double.infinity,
+            maxHeight: double.infinity,
+            alignment: Alignment(
+              // For a 2x3 grid:
+              // Column 0 should be at x = -0.5, Column 1 at x = 0.5
+              -0.5 + col * 1.0,
+              // Row 0 at y = -0.667, Row 1 at y = 0, Row 2 at y = 0.667
+              -0.667 + row * 0.667,
+            ),
+            child: Image.asset(
+              'assets/images/ninja_sprites.png',
+              width: 256, // Full sprite sheet width
+              height: 384, // Full sprite sheet height
+              fit: BoxFit.none, // Don't scale the image
+              errorBuilder: (context, error, stackTrace) {
+                print('❌ NINJA SPRITE ERROR: $error');
+                return Icon(
+                  Icons.calculate_rounded,
+                  color: Colors.white,
+                  size: 28,
+                );
+              },
             ),
           ),
         ),
