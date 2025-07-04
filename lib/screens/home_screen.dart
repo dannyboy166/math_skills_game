@@ -344,29 +344,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             children: [
               const StreakFlameWidget(),
-
-              // Achievement badge for milestones
-              if (_shouldShowAchievementBadge())
-                Positioned(
-                  top: -2,
-                  left: -2,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.purple.shade400, Colors.pink.shade400],
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1),
-                    ),
-                    child: Icon(
-                      Icons.auto_awesome,
-                      size: 10,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
             ],
           ),
         ],
@@ -407,12 +384,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       return 'Evening practice time!';
     }
-  }
-
-  bool _shouldShowAchievementBadge() {
-    // Show achievement badge for special milestones
-    return _currentStreak > 0 &&
-        (_currentStreak % 7 == 0 || _currentStreak == 1 || _currentStreak == 3);
   }
 
   Widget _buildWelcomeCard() {
