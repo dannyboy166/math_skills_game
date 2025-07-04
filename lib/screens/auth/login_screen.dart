@@ -116,11 +116,19 @@ class _LoginScreenState extends State<LoginScreen>
       final result = await _authService.signInWithGoogle();
       
       if (result != null && result.user != null) {
+        // Show age selection dialog for Google sign-in
+        final selectedAge = await _showAgeSelectionDialog();
+        if (selectedAge == null) {
+          // User cancelled age selection, don't proceed
+          return;
+        }
+        
         // Create user profile if it doesn't exist
         try {
           await _userService.createUserProfile(
             result.user!,
             displayName: result.user!.displayName ?? 'Player',
+            age: _getAgeFromSelection(selectedAge) ?? 8,
           );
         } catch (profileError) {
           print("Error creating user profile: $profileError");
@@ -158,11 +166,19 @@ class _LoginScreenState extends State<LoginScreen>
       final result = await _authService.signInWithApple();
       
       if (result != null && result.user != null) {
+        // Show age selection dialog for Apple sign-in
+        final selectedAge = await _showAgeSelectionDialog();
+        if (selectedAge == null) {
+          // User cancelled age selection, don't proceed
+          return;
+        }
+        
         // Create user profile if it doesn't exist
         try {
           await _userService.createUserProfile(
             result.user!,
             displayName: result.user!.displayName ?? 'Player',
+            age: _getAgeFromSelection(selectedAge) ?? 8,
           );
         } catch (profileError) {
           print("Error creating user profile: $profileError");
@@ -588,6 +604,163 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ),
       ],
+    );
+  }
+
+  // Helper method to convert age selection to integer
+  int? _getAgeFromSelection(String? ageSelection) {
+    if (ageSelection == null) return null;
+    if (ageSelection == '11+') return 11;
+    return int.tryParse(ageSelection);
+  }
+
+  // Show age selection dialog for social sign-in users
+  Future<String?> _showAgeSelectionDialog() async {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        String? selectedAge;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.cake,
+                      color: Colors.orange,
+                      size: 50,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'How old are you?',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'This helps us unlock the right math tables for you!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 24),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        value: selectedAge,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          hintText: 'Select your age',
+                          hintStyle: TextStyle(color: Colors.grey.shade500),
+                        ),
+                        items: ['3', '4', '5', '6', '7', '8', '9', '10', '11+']
+                            .map((String age) => DropdownMenuItem<String>(
+                                  value: age,
+                                  child: Text(
+                                    age == '11+' ? '11+ years' : '$age years',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedAge = newValue;
+                          });
+                        },
+                        dropdownColor: Colors.white,
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop(null);
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(color: Colors.grey.shade300),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: selectedAge != null ? () {
+                              Navigator.of(dialogContext).pop(selectedAge);
+                            } : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              disabledBackgroundColor: Colors.grey.shade300,
+                            ),
+                            child: Text(
+                              'Continue',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
