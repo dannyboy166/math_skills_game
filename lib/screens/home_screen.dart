@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:number_ninja/screens/leaderboard_screen.dart';
-import 'package:number_ninja/widgets/animated_ninja_header.dart';
 import 'package:number_ninja/widgets/custom_bottom_nav_bar.dart';
 import 'package:number_ninja/widgets/streak_flame_widget.dart';
 import 'dart:math';
@@ -254,9 +253,102 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
-    return EnhancedNinjaHeader(
-      getHeaderSubtitle: _getHeaderSubtitle,
-      streakWidget: const StreakFlameWidget(),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.blue.shade400,
+            Colors.blue.shade500,
+            Colors.blue.shade600,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 15,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Ninja in yellow circle
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.yellow.shade300,
+                  Colors.orange.shade400
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.yellow.withOpacity(0.5),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Container(
+                width: 35,
+                height: 35,
+                child: Image.asset(
+                  'assets/images/ninja.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
+                      Icons.calculate_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+          
+          SizedBox(width: 16),
+          
+          // App title and subtitle
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Number Ninja',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  _getHeaderSubtitle(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          SizedBox(width: 12),
+          
+          // Streak widget
+          const StreakFlameWidget(),
+        ],
+      ),
     );
   }
 
