@@ -38,7 +38,7 @@ class GameScreen extends StatefulWidget {
     required this.operationName,
     required this.difficultyLevel,
     this.targetNumber,
-    this.gameMode = GameMode.standard,
+    this.gameMode = GameMode.timesTableRing,
   }) : super(key: key);
 
   @override
@@ -305,9 +305,8 @@ class _GameScreenState extends State<GameScreen> {
     List<int> outerNumbers;
 
     try {
-      if (widget.gameMode == GameMode.timesTableRing &&
-          (widget.operationName == 'multiplication' ||
-              widget.operationName == 'division')) {
+      if (widget.operationName == 'multiplication' ||
+          widget.operationName == 'division') {
         print("   📊 Using Times Table Ring Mode");
         // Times Table Ring Mode: inner ring 1-12, outer ring has all 12 correct answers + 4 distractors
         innerNumbers = List.generate(12, (index) => index + 1); // 1-12
@@ -317,9 +316,8 @@ class _GameScreenState extends State<GameScreen> {
         outerNumbers =
             GameGenerator.generateTimesTableRingNumbers(targetNumber, random);
         print("   ✅ Outer numbers generated: $outerNumbers");
-      } else if (widget.gameMode == GameMode.timesTableRing &&
-          (widget.operationName == 'addition' ||
-              widget.operationName == 'subtraction')) {
+      } else if (widget.operationName == 'addition' ||
+          widget.operationName == 'subtraction') {
         print("   📊 Using Addition/Subtraction Ring Mode (12 answers)");
         // Ring Mode for addition/subtraction: inner ring 1-12, outer ring has all 12 correct answers + 4 distractors
         innerNumbers = List.generate(12, (index) => index + 1); // 1-12
@@ -449,13 +447,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _checkEquation(int cornerIndex) {
     print("DEBUG: Checking equation at cornerIndex: $cornerIndex");
 
-    // In standard mode, if this corner is already locked, don't check it again
-    // In times table ring mode, always validate the equation regardless of previous solutions
-    if (widget.gameMode == GameMode.standard &&
-        lockedEquations.any((eq) => eq.cornerIndex == cornerIndex)) {
-      print("DEBUG: This corner is already locked in standard mode");
-      return true;
-    }
+    // Always validate the equation regardless of previous solutions
 
     // Get numbers at corner positions
     final outerCornerPos = outerRingModel.cornerIndices[cornerIndex];
@@ -684,17 +676,8 @@ class _GameScreenState extends State<GameScreen> {
 
   /// Handle number drop - supports both locking (standard mode) and greying out (times table ring mode)
   void _onNumberDrop(int cornerIndex) {
-    if (widget.gameMode == GameMode.timesTableRing &&
-        (widget.operationName == 'multiplication' ||
-            widget.operationName == 'division' ||
-            widget.operationName == 'addition' ||
-            widget.operationName == 'subtraction')) {
-      // In times table ring mode, grey out the numbers instead of locking
-      _greyOutNumbers(cornerIndex);
-    } else {
-      // In standard mode, lock the equation as before
-      _lockEquation(cornerIndex);
-    }
+    // In times table ring mode, grey out the numbers instead of locking
+    _greyOutNumbers(cornerIndex);
   }
 
   /// Grey out numbers in times table ring mode instead of locking them

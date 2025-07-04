@@ -35,7 +35,7 @@ class SimpleRing extends StatefulWidget {
     required this.margin,
     this.isDragMode = false, // NEW: Default to swipe mode
     this.greyedOutNumbers = const {}, // NEW: Default to empty set
-    this.gameMode = GameMode.standard, // NEW: Default to standard mode
+    this.gameMode = GameMode.timesTableRing, // NEW: Default to times table mode
   }) : super(key: key);
 
   @override
@@ -536,17 +536,7 @@ class _SimpleRingState extends State<SimpleRing>
 
   List<int> _getLockedPositionsForRing() {
     // In Times Table Ring Mode, don't lock any positions to allow free rotation
-    if (widget.gameMode == GameMode.timesTableRing) {
-      return [];
-    }
-    
-    List<int> lockedPositions = [];
-    for (final equation in widget.lockedEquations) {
-      final cornerIndex = equation.cornerIndex;
-      final lockedPosition = widget.ringModel.cornerIndices[cornerIndex];
-      lockedPositions.add(lockedPosition);
-    }
-    return lockedPositions;
+    return [];
   }
 
   String _determineRegion(Offset position, double size) {

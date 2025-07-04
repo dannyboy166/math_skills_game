@@ -145,11 +145,8 @@ class EquationLayout extends StatelessWidget {
 
     return List.generate(4, (index) {
       // Check if this corner is locked
-      // In times table ring mode, only lock when game is complete
-      // In standard mode, lock when individual equations are solved
-      final isLocked = gameMode == GameMode.timesTableRing 
-          ? isGameComplete
-          : lockedEquations.any((eq) => eq.cornerIndex == index);
+      // Only lock when game is complete in times table ring mode
+      final isLocked = isGameComplete;
 
       // Use a greyed-out color if locked
       final Color textColor = isLocked ? Colors.grey : operation.color;
@@ -206,11 +203,8 @@ class EquationLayout extends StatelessWidget {
 
     return List.generate(4, (index) {
       // Check if this corner is locked
-      // In times table ring mode, only lock when game is complete
-      // In standard mode, lock when individual equations are solved
-      final isLocked = gameMode == GameMode.timesTableRing 
-          ? isGameComplete
-          : lockedEquations.any((eq) => eq.cornerIndex == index);
+      // Only lock when game is complete in times table ring mode
+      final isLocked = isGameComplete;
 
       // Use a greyed-out color if locked
       final Color textColor = isLocked ? Colors.grey : operation.color;
@@ -267,11 +261,8 @@ class EquationLayout extends StatelessWidget {
 
     return List.generate(4, (index) {
       // Check if this corner is locked
-      // In times table ring mode, only lock when game is complete
-      // In standard mode, lock when individual equations are solved
-      final isLocked = gameMode == GameMode.timesTableRing 
-          ? isGameComplete
-          : lockedEquations.any((eq) => eq.cornerIndex == index);
+      // Only lock when game is complete in times table ring mode
+      final isLocked = isGameComplete;
 
       return Positioned(
         left: symbolPositions[index].dx - symbolSize / 2,
@@ -309,11 +300,8 @@ class EquationLayout extends StatelessWidget {
 
     return List.generate(4, (index) {
       // Check if this corner is locked
-      // In times table ring mode, only lock when game is complete
-      // In standard mode, lock when individual equations are solved
-      final isLocked = gameMode == GameMode.timesTableRing 
-          ? isGameComplete
-          : lockedEquations.any((eq) => eq.cornerIndex == index);
+      // Only lock when game is complete in times table ring mode
+      final isLocked = isGameComplete;
 
       return Positioned(
         left: symbolPositions[index].dx - symbolSize / 2,

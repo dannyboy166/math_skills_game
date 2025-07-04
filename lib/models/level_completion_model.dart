@@ -99,9 +99,13 @@ class StarRatingCalculator {
   static int calculateStars(
       String operation, String difficulty, int completionTimeMs) {
     // Default to Standard difficulty if not found
-    final thresholds = _timeThresholds[operation]?[difficulty] ??
+    // Since we only have 12-equation mode now, multiply base thresholds by 3
+    final baseThresholds = _timeThresholds[operation]?[difficulty] ??
         _timeThresholds[operation]?['Standard'] ??
         [35000, 70000, 140000];
+
+    // All games are now 12-equation mode, so use 3x the original thresholds
+    final thresholds = baseThresholds.map((threshold) => (threshold * 3).toInt()).toList();
 
     if (completionTimeMs <= thresholds[0]) {
       return 3; // Fast completion - 3 stars

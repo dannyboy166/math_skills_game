@@ -32,11 +32,10 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
   // Track unlocked time tables
   List<int> _unlockedTimeTables = [];
-  GameMode _selectedGameMode = GameMode.standard;
+  GameMode _selectedGameMode = GameMode.timesTableRing;
   Timer? _gameModeDebounceTimer;
 
   bool _isNavigating = false;
-  DateTime? _lastNavigation;
 
   @override
   void initState() {
@@ -446,12 +445,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
           operationName: _currentOperation,
           difficultyLevel: difficultyEnum,
           targetNumber: targetToUse,
-          gameMode: (_currentOperation == 'multiplication' || 
-                    _currentOperation == 'division' ||
-                    _currentOperation == 'addition' ||
-                    _currentOperation == 'subtraction')
-              ? GameMode.timesTableRing
-              : _selectedGameMode,
+          gameMode: GameMode.timesTableRing,
         ),
       ),
     ).then((_) {
@@ -459,7 +453,6 @@ class _LevelsScreenState extends State<LevelsScreen> {
       if (mounted) {
         setState(() {
           _isNavigating = false;
-          _lastNavigation = DateTime.now();
         });
 
         print("🔙 Returned from game, reloading level data");
@@ -636,7 +629,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Uses Ring mode - complete all 12 answers to finish!',
+                            'Complete all 12 answers to finish!',
                             style: TextStyle(
                               fontSize: 12,
                               color: operationColor,

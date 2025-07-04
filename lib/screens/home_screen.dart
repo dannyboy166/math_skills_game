@@ -1209,9 +1209,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 selectedMultiplicationTable != null
                             ? selectedMultiplicationTable
                             : null,
-                        gameMode: (selectedOperation == 'multiplication' || selectedOperation == 'division')
-                            ? GameMode.timesTableRing
-                            : GameMode.standard,
+                        gameMode: GameMode.timesTableRing,
                       ),
                     ),
                   );
