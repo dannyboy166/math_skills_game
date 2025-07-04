@@ -1,7 +1,7 @@
 // lib/services/admin_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:math_skills_game/services/leaderboard_service.dart';
+import 'package:number_ninja/services/leaderboard_service.dart';
 
 class AdminService {
   static const String ADMIN_USER_ID = '3s5SMJQy7LPfv6dygWYsPqKr0662';

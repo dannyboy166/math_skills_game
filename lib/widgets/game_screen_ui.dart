@@ -1,7 +1,7 @@
 // lib/widgets/game_screen_ui.dart - Enhanced with swipe/drag toggle
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/models/level_completion_model.dart';
-import 'package:math_skills_game/widgets/progress_stars.dart';
+import 'package:number_ninja/models/level_completion_model.dart';
+import 'package:number_ninja/widgets/progress_stars.dart';
 import '../models/difficulty_level.dart';
 import '../models/operation_config.dart';
 import '../models/ring_model.dart';

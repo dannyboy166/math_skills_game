@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:confetti/confetti.dart';
-import 'package:math_skills_game/animations/star_animation.dart';
-import 'package:math_skills_game/services/sound_service.dart';
-import 'package:math_skills_game/services/haptic_service.dart';
+import 'package:number_ninja/animations/star_animation.dart';
+import 'package:number_ninja/services/haptic_service.dart';
+import 'package:number_ninja/services/sound_service.dart';
 
 class TutorialOverlay extends StatefulWidget {
   final VoidCallback onComplete;

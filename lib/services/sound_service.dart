@@ -1,6 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:number_ninja/services/haptic_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:math_skills_game/services/haptic_service.dart';
 
 class SoundService {
   static final SoundService _instance = SoundService._internal();

@@ -1,16 +1,15 @@
 // lib/screens/levels_screen.dart
 import 'dart:async';
+import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/models/difficulty_level.dart';
-import 'package:math_skills_game/models/level_completion_model.dart';
-import 'package:math_skills_game/models/game_mode.dart';
-import 'package:math_skills_game/screens/game_screen.dart';
-import 'package:math_skills_game/services/user_service.dart';
-import 'dart:math';
-
-import 'package:math_skills_game/widgets/operation_selector.dart';
+import 'package:number_ninja/models/difficulty_level.dart';
+import 'package:number_ninja/models/game_mode.dart';
+import 'package:number_ninja/models/level_completion_model.dart';
+import 'package:number_ninja/screens/game_screen.dart';
+import 'package:number_ninja/services/user_service.dart';
+import 'package:number_ninja/widgets/operation_selector.dart';
 
 class LevelsScreen extends StatefulWidget {
   final String operationName;

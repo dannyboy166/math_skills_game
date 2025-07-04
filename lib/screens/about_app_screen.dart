@@ -30,7 +30,7 @@ class AboutAppScreen extends StatelessWidget {
             _buildSectionHeader('About the Game'),
             _buildInfoCard(
               'Educational Focus',
-              'Math Skills Game is designed to help children improve their mathematical abilities through fun, interactive ring-based puzzles.',
+              'Number Ninja is designed to help children improve their mathematical abilities through fun, interactive ring-based puzzles.',
               Icons.school,
               Colors.green,
             ),
@@ -98,7 +98,7 @@ class AboutAppScreen extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'Math Skills Game',
+              'Number Ninja',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -503,7 +503,7 @@ class AboutAppScreen extends StatelessWidget {
         title: Text('Privacy Policy'),
         content: SingleChildScrollView(
           child: Text(
-            '''Math Skills Game Privacy Policy
+            '''Number Ninja Privacy Policy
 
 Last updated: January 2025
 
@@ -552,7 +552,7 @@ For questions, contact us through the app settings.''',
         title: Text('Terms of Service'),
         content: SingleChildScrollView(
           child: Text(
-            '''Math Skills Game Terms of Service
+            '''Number Ninja Terms of Service
 
 Last updated: January 2025
 
@@ -601,9 +601,9 @@ Contact us through the app for any questions.''',
   void _showLicenses(BuildContext context) {
     showLicensePage(
       context: context,
-      applicationName: 'Math Skills Game',
+      applicationName: 'Number Ninja',
       applicationVersion: '1.0.0',
-      applicationLegalese: '© 2025 Math Skills Game. All rights reserved.',
+      applicationLegalese: '© 2025 Number Ninja. All rights reserved.',
     );
   }
 }

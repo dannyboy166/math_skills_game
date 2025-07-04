@@ -1,12 +1,13 @@
 // lib/screens/auth/login_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/screens/auth/register_screen.dart';
-import 'package:math_skills_game/screens/home_screen.dart';
-import 'package:math_skills_game/services/auth_service.dart';
-import 'package:math_skills_game/services/user_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:number_ninja/screens/auth/register_screen.dart';
+import 'package:number_ninja/screens/home_screen.dart';
 import 'dart:io' show Platform;
+
+import 'package:number_ninja/services/auth_service.dart';
+import 'package:number_ninja/services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -794,7 +795,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         SizedBox(height: 16),
         Text(
-          'Math Skills Game',
+          'Number Ninja',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,

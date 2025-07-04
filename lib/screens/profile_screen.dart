@@ -1,10 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:math_skills_game/screens/admin_screen.dart';
-import 'package:math_skills_game/screens/landing_screen.dart';
-import 'package:math_skills_game/screens/settings_screen.dart';
-import 'package:math_skills_game/services/admin_service.dart';
+import 'package:number_ninja/screens/admin_screen.dart';
+import 'package:number_ninja/screens/landing_screen.dart';
+import 'package:number_ninja/screens/settings_screen.dart';
+import 'package:number_ninja/services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 
@@ -639,7 +639,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   "PROFILE DEBUG: Current user after logout: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
 
                               // Import the LandingScreen at the top of the file
-                              // import 'package:math_skills_game/screens/landing_screen.dart';
 
                               // Navigate to landing screen and clear the stack
                               Navigator.of(context).pushAndRemoveUntil(

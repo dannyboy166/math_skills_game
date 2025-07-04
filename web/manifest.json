@@ -1,11 +1,11 @@
 {
-    "name": "math_skills_game",
-    "short_name": "math_skills_game",
+    "name": "Number Ninja",
+    "short_name": "Number Ninja",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Number Ninja - Educational Math Skills Game",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

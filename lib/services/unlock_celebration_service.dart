@@ -1,11 +1,12 @@
 // lib/services/unlock_celebration_service.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/services/haptic_service.dart';
-import 'package:math_skills_game/services/sound_service.dart';
+import 'package:number_ninja/services/haptic_service.dart';
+import 'package:number_ninja/services/sound_service.dart';
 
 class UnlockCelebrationService {
-  static final UnlockCelebrationService _instance = UnlockCelebrationService._internal();
+  static final UnlockCelebrationService _instance =
+      UnlockCelebrationService._internal();
   factory UnlockCelebrationService() => _instance;
   UnlockCelebrationService._internal();
 
@@ -14,7 +15,7 @@ class UnlockCelebrationService {
 
   // Show celebration for unlocking new tables
   Future<void> showUnlockCelebration(
-    BuildContext context, 
+    BuildContext context,
     List<int> newlyUnlockedTables,
   ) async {
     if (newlyUnlockedTables.isEmpty) return;
@@ -44,7 +45,8 @@ class _UnlockCelebrationDialog extends StatefulWidget {
   });
 
   @override
-  _UnlockCelebrationDialogState createState() => _UnlockCelebrationDialogState();
+  _UnlockCelebrationDialogState createState() =>
+      _UnlockCelebrationDialogState();
 }
 
 class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
@@ -57,7 +59,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
   @override
   void initState() {
     super.initState();
-    
+
     // Bounce animation for the main content
     _bounceController = AnimationController(
       duration: Duration(milliseconds: 600),
@@ -131,7 +133,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                 children: [
                   // Sparkle effects
                   _buildSparkleEffects(),
-                  
+
                   // Main content
                   Column(
                     mainAxisSize: MainAxisSize.min,
@@ -157,9 +159,9 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                           color: Colors.orange,
                         ),
                       ),
-                      
+
                       SizedBox(height: 20),
-                      
+
                       // Celebration text
                       Text(
                         '🎉 AWESOME! 🎉',
@@ -177,9 +179,9 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      
+
                       SizedBox(height: 12),
-                      
+
                       Text(
                         'You unlocked new tables!',
                         style: TextStyle(
@@ -189,9 +191,9 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      
+
                       SizedBox(height: 20),
-                      
+
                       // Show unlocked tables
                       Container(
                         padding: EdgeInsets.all(16),
@@ -215,10 +217,14 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                               runSpacing: 8,
                               children: widget.unlockedTables.map((table) {
                                 return Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: [Colors.orange.shade300, Colors.orange.shade500],
+                                      colors: [
+                                        Colors.orange.shade300,
+                                        Colors.orange.shade500
+                                      ],
                                     ),
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: [
@@ -243,9 +249,9 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                           ],
                         ),
                       ),
-                      
+
                       SizedBox(height: 24),
-                      
+
                       // Continue button
                       ElevatedButton(
                         onPressed: () {
@@ -254,7 +260,8 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.purple.shade700,
-                          padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
                           ),
@@ -298,7 +305,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
               final radius = 60.0;
               final x = radius * cos(angle * pi / 180);
               final y = radius * sin(angle * pi / 180);
-              
+
               return Positioned(
                 left: 150 + x,
                 top: 100 + y,

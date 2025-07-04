@@ -1,6 +1,6 @@
 // lib/widgets/star_animation.dart
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/widgets/progress_stars.dart';
+import 'package:number_ninja/widgets/progress_stars.dart';
 
 class StarAnimation extends StatefulWidget {
   final Function onComplete;

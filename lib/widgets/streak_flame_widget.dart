@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:math_skills_game/services/user_service.dart';
 import 'dart:async';
 import 'dart:math' as math;
+
+import 'package:number_ninja/services/user_service.dart';
 
 class StreakFlameWidget extends StatefulWidget {
   const StreakFlameWidget({Key? key}) : super(key: key);

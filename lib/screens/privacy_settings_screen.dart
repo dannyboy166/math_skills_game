@@ -278,7 +278,7 @@ class PrivacySettingsScreen extends StatelessWidget {
             ),
             SizedBox(height: 12),
             Text(
-              'Math Skills Game is designed to be safe for children. We only collect game progress and scores to track learning. Your data is secure and never shared with third parties.',
+              'Number Ninja is designed to be safe for children. We only collect game progress and scores to track learning. Your data is secure and never shared with third parties.',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[700],

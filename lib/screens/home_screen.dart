@@ -1,9 +1,9 @@
 // lib/screens/home_screen.dart (Redesigned)
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/screens/leaderboard_screen.dart';
-import 'package:math_skills_game/widgets/custom_bottom_nav_bar.dart';
-import 'package:math_skills_game/widgets/streak_flame_widget.dart';
+import 'package:number_ninja/screens/leaderboard_screen.dart';
+import 'package:number_ninja/widgets/custom_bottom_nav_bar.dart';
+import 'package:number_ninja/widgets/streak_flame_widget.dart';
 import 'dart:math';
 import 'game_screen.dart';
 import 'levels_screen.dart';

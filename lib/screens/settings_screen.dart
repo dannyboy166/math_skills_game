@@ -1,10 +1,10 @@
 // lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/services/sound_service.dart';
-import 'package:math_skills_game/services/haptic_service.dart';
-import 'package:math_skills_game/models/rotation_speed.dart';
-import 'package:math_skills_game/screens/privacy_settings_screen.dart';
-import 'package:math_skills_game/screens/about_app_screen.dart';
+import 'package:number_ninja/models/rotation_speed.dart';
+import 'package:number_ninja/screens/about_app_screen.dart';
+import 'package:number_ninja/screens/privacy_settings_screen.dart';
+import 'package:number_ninja/services/haptic_service.dart';
+import 'package:number_ninja/services/sound_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -180,7 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Version number
             Center(
               child: Text(
-                'Math Skills Game v1.0.0',
+                'Number Ninja v1.0.0',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 12,

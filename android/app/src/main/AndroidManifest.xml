@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.sasco.mathskills">
     <application
-        android:label="math_skills_game"
+        android:label="Number Ninja"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

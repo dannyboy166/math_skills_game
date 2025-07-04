@@ -1,6 +1,6 @@
 // lib/screens/admin_screen.dart
 import 'package:flutter/material.dart';
-import 'package:math_skills_game/services/admin_service.dart';
+import 'package:number_ninja/services/admin_service.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({Key? key}) : super(key: key);

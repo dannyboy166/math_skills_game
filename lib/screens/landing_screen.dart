@@ -1,8 +1,8 @@
 // lib/screens/landing_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:math_skills_game/screens/auth/login_screen.dart';
-import 'package:math_skills_game/screens/auth/register_screen.dart';
+import 'package:number_ninja/screens/auth/login_screen.dart';
+import 'package:number_ninja/screens/auth/register_screen.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({Key? key}) : super(key: key);
@@ -185,7 +185,7 @@ class _LandingScreenState extends State<LandingScreen>
     return Column(
       children: [
         Text(
-          "Math Skills Game",
+          "Number Ninja",
           style: TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.bold,
@@ -347,7 +347,7 @@ class _LandingScreenState extends State<LandingScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  "Math Skills Game helps children practice essential math skills through fun, engaging gameplay.",
+                  "Number Ninja helps children practice essential math skills through fun, engaging gameplay.",
                   style: TextStyle(fontSize: 16),
                 ),
                 SizedBox(height: 16),

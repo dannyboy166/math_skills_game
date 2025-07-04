@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Flutter-based educational math skills game designed for children. The app features ring-based puzzle mechanics where users solve mathematical equations by dragging numbers into position. The app includes Firebase authentication (Google Sign-In, Apple Sign-In, email/password), cloud data storage, leaderboards, user statistics tracking, and audio/haptic feedback.
+This is Number Ninja, a Flutter-based educational math skills game designed for children. The app features ring-based puzzle mechanics where users solve mathematical equations by dragging numbers into position. The app includes Firebase authentication (Google Sign-In, Apple Sign-In, email/password), cloud data storage, leaderboards, user statistics tracking, and audio/haptic feedback.
 
 ## Development Commands
 
