@@ -133,23 +133,29 @@ class _RegisterScreenState extends State<RegisterScreen>
       final result = await _authService.signInWithGoogle();
       
       if (result != null && result.user != null) {
-        // Show age selection dialog for Google sign-in
-        final selectedAge = await _showAgeSelectionDialog();
-        if (selectedAge == null) {
-          // User cancelled age selection, don't proceed
-          return;
-        }
+        // Check if user profile already exists
+        final existingProfile = await _userService.getUserProfileData(result.user!.uid);
         
-        // Create user profile if it doesn't exist
-        try {
-          await _userService.createUserProfile(
-            result.user!,
-            displayName: result.user!.displayName ?? 'Player',
-            age: _getAgeFromSelection(selectedAge) ?? 8,
-          );
-        } catch (profileError) {
-          print("Error creating user profile: $profileError");
+        if (existingProfile == null) {
+          // New user - show age selection dialog
+          final selectedAge = await _showAgeSelectionDialog();
+          if (selectedAge == null) {
+            // User cancelled age selection, don't proceed
+            return;
+          }
+          
+          // Create user profile for new user
+          try {
+            await _userService.createUserProfile(
+              result.user!,
+              displayName: result.user!.displayName ?? 'Player',
+              age: _getAgeFromSelection(selectedAge) ?? 8,
+            );
+          } catch (profileError) {
+            print("Error creating user profile: $profileError");
+          }
         }
+        // Existing user - skip age dialog and proceed directly
 
         if (mounted) {
           _showSuccessDialog();
@@ -186,23 +192,29 @@ class _RegisterScreenState extends State<RegisterScreen>
       final result = await _authService.signInWithApple();
       
       if (result != null && result.user != null) {
-        // Show age selection dialog for Apple sign-in
-        final selectedAge = await _showAgeSelectionDialog();
-        if (selectedAge == null) {
-          // User cancelled age selection, don't proceed
-          return;
-        }
+        // Check if user profile already exists
+        final existingProfile = await _userService.getUserProfileData(result.user!.uid);
         
-        // Create user profile if it doesn't exist
-        try {
-          await _userService.createUserProfile(
-            result.user!,
-            displayName: result.user!.displayName ?? 'Player',
-            age: _getAgeFromSelection(selectedAge) ?? 8,
-          );
-        } catch (profileError) {
-          print("Error creating user profile: $profileError");
+        if (existingProfile == null) {
+          // New user - show age selection dialog
+          final selectedAge = await _showAgeSelectionDialog();
+          if (selectedAge == null) {
+            // User cancelled age selection, don't proceed
+            return;
+          }
+          
+          // Create user profile for new user
+          try {
+            await _userService.createUserProfile(
+              result.user!,
+              displayName: result.user!.displayName ?? 'Player',
+              age: _getAgeFromSelection(selectedAge) ?? 8,
+            );
+          } catch (profileError) {
+            print("Error creating user profile: $profileError");
+          }
         }
+        // Existing user - skip age dialog and proceed directly
 
         if (mounted) {
           _showSuccessDialog();

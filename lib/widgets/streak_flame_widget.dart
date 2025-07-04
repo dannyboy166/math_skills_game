@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:number_ninja/services/user_service.dart';
+import 'package:number_ninja/services/haptic_service.dart';
 
 class StreakFlameWidget extends StatefulWidget {
   const StreakFlameWidget({Key? key}) : super(key: key);
@@ -18,6 +19,7 @@ class _StreakFlameWidgetState extends State<StreakFlameWidget> {
   bool _isLoading = true;
   StreamSubscription? _streakSubscription;
   final UserService _userService = UserService();
+  final HapticService _hapticService = HapticService();
 
   @override
   void initState() {
@@ -61,6 +63,7 @@ class _StreakFlameWidgetState extends State<StreakFlameWidget> {
   }
 
   void _showStreakInfo(BuildContext context) {
+    _hapticService.lightImpact();
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -224,7 +227,10 @@ class _StreakFlameWidgetState extends State<StreakFlameWidget> {
 
                 // Action button
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    _hapticService.lightImpact();
+                    Navigator.of(context).pop();
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.deepOrange.shade700,
@@ -301,7 +307,10 @@ class _StreakFlameWidgetState extends State<StreakFlameWidget> {
 
     // Create an interactive streak indicator
     return GestureDetector(
-      onTap: () => _showStreakInfo(context),
+      onTap: () {
+        _hapticService.lightImpact();
+        _showStreakInfo(context);
+      },
       child: Stack(
         alignment: Alignment.center,
         children: [
