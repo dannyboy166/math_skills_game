@@ -20,6 +20,7 @@ class _AdminScreenState extends State<AdminScreen> {
   bool _isRecalculatingStars = false;
   bool _isAddingAgeParameters = false;
   bool _isFixingTimeTables = false;
+  bool _isResettingGameData = false;
 
   TextEditingController _userIdController = TextEditingController();
   String _syncTargetUserId = '';
@@ -207,6 +208,45 @@ class _AdminScreenState extends State<AdminScreen> {
               ),
             ),
 
+            // Data Reset Tools Card
+            Card(
+              margin: EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Data Reset Tools',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'DESTRUCTIVE: Reset all game data while preserving user accounts.',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _isResettingGameData ? null : _resetAllGameData,
+                      icon: Icon(Icons.refresh),
+                      label: Text('Reset All Game Data'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             // Add this UI somewhere in your admin screen
             Card(
               margin: EdgeInsets.only(bottom: 16),
@@ -301,7 +341,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
               ),
             SizedBox(height: 16),
-            if (_isMigratingUser || _isMigratingAll || _isRefreshing || _isRecalculatingStars || _isAddingAgeParameters || _isFixingTimeTables)
+            if (_isMigratingUser || _isMigratingAll || _isRefreshing || _isRecalculatingStars || _isAddingAgeParameters || _isFixingTimeTables || _isResettingGameData)
               Center(
                 child: Column(
                   children: [
@@ -364,6 +404,11 @@ class _AdminScreenState extends State<AdminScreen> {
                       'Recalculates the total stars field for all users based on their actual level completions.',
                       'Use this to fix incorrect total star counts, especially for legacy users.',
                     ),
+                    _buildDocItem(
+                      'Reset All Game Data',
+                      'DESTRUCTIVE: Resets all game data for all users while preserving user accounts.',
+                      'This permanently deletes all scores, completions, stars, and leaderboard entries. Use when game mechanics change significantly.',
+                    ),
                   ],
                 ),
               ),
@@ -382,6 +427,7 @@ class _AdminScreenState extends State<AdminScreen> {
     if (_isRecalculatingStars) return 'Recalculating total stars for all users...';
     if (_isAddingAgeParameters) return 'Adding age parameters to all users...';
     if (_isFixingTimeTables) return 'Fixing unlocked time tables for all users...';
+    if (_isResettingGameData) return 'Resetting all game data...';
     return '';
   }
 
@@ -924,6 +970,171 @@ class _AdminScreenState extends State<AdminScreen> {
     } finally {
       setState(() {
         _isFixingTimeTables = false;
+      });
+    }
+  }
+
+  Future<void> _resetAllGameData() async {
+    // Show double confirmation dialog for this destructive operation
+    bool confirmed = await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('⚠️ DESTRUCTIVE OPERATION'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This will PERMANENTLY reset ALL game data for ALL users including:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text('• All scores and best times'),
+                Text('• All level completions'),
+                Text('• All stars and achievements'),
+                Text('• All leaderboard entries'),
+                Text('• All game statistics'),
+                SizedBox(height: 16),
+                Text(
+                  'User accounts will be preserved (email, name, age, etc.)',
+                  style: TextStyle(color: Colors.green.shade700),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'This cannot be undone. Are you absolutely sure?',
+                  style: TextStyle(
+                    color: Colors.red.shade700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text('Yes, Reset All Data'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirmed) return;
+
+    // Second confirmation
+    bool doubleConfirmed = await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Final Confirmation'),
+            content: Text(
+              'Type "RESET ALL DATA" to confirm this destructive operation:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      final TextEditingController confirmController = TextEditingController();
+                      return AlertDialog(
+                        title: Text('Type to Confirm'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Type "RESET ALL DATA" exactly:'),
+                            SizedBox(height: 8),
+                            TextField(
+                              controller: confirmController,
+                              decoration: InputDecoration(
+                                hintText: 'RESET ALL DATA',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              Navigator.of(context).pop(false);
+                            },
+                            child: Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (confirmController.text.trim() == 'RESET ALL DATA') {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).pop(true);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Text does not match. Operation cancelled.'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                Navigator.of(context).pop();
+                                Navigator.of(context).pop(false);
+                              }
+                            },
+                            child: Text('Confirm Reset'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: Text('Continue'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!doubleConfirmed) return;
+
+    setState(() {
+      _isResettingGameData = true;
+      _statusMessage = 'Starting destructive reset of all game data...';
+    });
+
+    try {
+      await _adminService.resetAllGameData();
+
+      setState(() {
+        _statusMessage = 'All game data has been reset successfully!';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('All game data reset completed successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Error resetting game data: $e';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Game data reset failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isResettingGameData = false;
       });
     }
   }

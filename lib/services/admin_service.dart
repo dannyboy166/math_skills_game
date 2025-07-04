@@ -662,4 +662,151 @@ class AdminService {
     
     return groupings;
   }
+
+  // Reset all game data for all users while preserving user accounts
+  Future<void> resetAllGameData() async {
+    try {
+      print('Starting to reset all game data for all users...');
+      
+      // Get all users
+      final usersSnapshot = await _firestore.collection('users').get();
+      
+      int processedCount = 0;
+      int errorCount = 0;
+      
+      // Process users in batches to avoid memory issues
+      final userBatches = <List<QueryDocumentSnapshot>>[];
+      for (int i = 0; i < usersSnapshot.docs.length; i += 20) {
+        userBatches.add(usersSnapshot.docs.sublist(
+          i, 
+          i + 20 > usersSnapshot.docs.length ? usersSnapshot.docs.length : i + 20
+        ));
+      }
+      
+      for (final batch in userBatches) {
+        final firestoreBatch = _firestore.batch();
+        
+        for (final userDoc in batch) {
+          try {
+            final userId = userDoc.id;
+            final userData = userDoc.data() as Map<String, dynamic>;
+            
+            // Reset user game data while preserving essential account info
+            final resetData = {
+              // Preserve account information
+              'uid': userData['uid'],
+              'email': userData['email'],
+              'displayName': userData['displayName'],
+              'photoURL': userData['photoURL'],
+              'createdAt': userData['createdAt'],
+              'lastLoginAt': userData['lastLoginAt'],
+              'age': userData['age'],
+              'provider': userData['provider'],
+              
+              // Reset game data
+              'totalStars': 0,
+              'level': 'Novice',
+              'bestTimes': {},
+              'gamesPlayed': 0,
+              'averageScore': 0.0,
+              'perfectGames': 0,
+              'totalGameTime': 0,
+              'lastPlayedDate': null,
+              'achievements': [],
+              'unlockedTimeTables': _getInitialUnlocksForAge(userData['age'] ?? 11),
+              'mistakeTracker': {
+                'hasAllTablesUnlocked': (userData['age'] ?? 11) >= 11,
+                'perfectCompletions': {},
+              },
+              'settings': userData['settings'] ?? {
+                'soundEnabled': true,
+                'vibrateEnabled': true,
+                'theme': 'system',
+              },
+            };
+            
+            // Update user document
+            firestoreBatch.update(userDoc.reference, resetData);
+            
+            // Delete all level completions for this user
+            final levelCompletionsSnapshot = await _firestore
+                .collection('users')
+                .doc(userId)
+                .collection('levelCompletions')
+                .get();
+            
+            for (final completionDoc in levelCompletionsSnapshot.docs) {
+              firestoreBatch.delete(completionDoc.reference);
+            }
+            
+            processedCount++;
+            
+          } catch (e) {
+            errorCount++;
+            print('Error processing user ${userDoc.id}: $e');
+          }
+        }
+        
+        // Commit this batch
+        await firestoreBatch.commit();
+        print('Processed batch of ${batch.length} users');
+      }
+      
+      // Clear all leaderboards
+      await _clearAllLeaderboards();
+      
+      print('Game data reset completed. Processed: $processedCount, Errors: $errorCount');
+      return;
+    } catch (e) {
+      print('Error resetting game data: $e');
+      throw e;
+    }
+  }
+
+  // Helper method to clear all leaderboards
+  Future<void> _clearAllLeaderboards() async {
+    try {
+      print('Clearing all leaderboards...');
+      
+      final leaderboardTypes = ['additionTime', 'subtractionTime', 'multiplicationTime', 'divisionTime'];
+      final difficulties = ['standard', 'challenging', 'expert', 'impossible'];
+      
+      for (final type in leaderboardTypes) {
+        // Clear main leaderboard
+        final mainEntriesSnapshot = await _firestore
+            .collection('leaderboards')
+            .doc(type)
+            .collection('entries')
+            .get();
+        
+        final batch = _firestore.batch();
+        for (final doc in mainEntriesSnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+        
+        // Clear difficulty-specific leaderboards
+        for (final difficulty in difficulties) {
+          final diffEntriesSnapshot = await _firestore
+              .collection('leaderboards')
+              .doc(type)
+              .collection('difficulties')
+              .doc(difficulty)
+              .collection('entries')
+              .get();
+          
+          final diffBatch = _firestore.batch();
+          for (final doc in diffEntriesSnapshot.docs) {
+            diffBatch.delete(doc.reference);
+          }
+          await diffBatch.commit();
+        }
+      }
+      
+      print('All leaderboards cleared successfully');
+    } catch (e) {
+      print('Error clearing leaderboards: $e');
+      throw e;
+    }
+  }
 }
