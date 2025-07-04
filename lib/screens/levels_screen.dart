@@ -9,6 +9,7 @@ import 'package:number_ninja/models/game_mode.dart';
 import 'package:number_ninja/models/level_completion_model.dart';
 import 'package:number_ninja/screens/game_screen.dart';
 import 'package:number_ninja/services/user_service.dart';
+import 'package:number_ninja/services/haptic_service.dart';
 import 'package:number_ninja/widgets/operation_selector.dart';
 
 class LevelsScreen extends StatefulWidget {
@@ -797,7 +798,10 @@ class _LevelsScreenState extends State<LevelsScreen> {
     }
 
     return GestureDetector(
-      onTap: () => _navigateToGame(difficultyName, level),
+      onTap: () {
+        HapticService().lightImpact();
+        _navigateToGame(difficultyName, level);
+      },
       child: Container(
         decoration: BoxDecoration(
           color: isUnlocked ? Colors.white : Colors.grey.shade100,

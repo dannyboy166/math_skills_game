@@ -12,6 +12,7 @@ import '../models/difficulty_level.dart';
 import '../models/game_mode.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../services/haptic_service.dart';
 import '../models/daily_streak.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -165,6 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {
+          HapticService().lightImpact();
           setState(() {
             _currentIndex = index;
 
@@ -669,6 +671,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return GestureDetector(
       onTap: () {
+        HapticService().lightImpact();
         setState(() {
           selectedOperation = operation;
           selectedMultiplicationTable = null; // Reset when changing operation

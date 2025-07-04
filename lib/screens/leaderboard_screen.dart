@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/leaderboard_service.dart';
+import '../services/haptic_service.dart';
 import '../models/leaderboard_entry.dart';
 import '../widgets/leaderboard_tab.dart';
 import '../widgets/time_leaderboard_tab.dart';
@@ -53,6 +54,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   void _handleTabChange() {
     if (!_tabController.indexIsChanging) {
+      HapticService().lightImpact();
       _loadTabData(_tabController.index);
     }
   }

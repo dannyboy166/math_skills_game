@@ -1,6 +1,7 @@
 // lib/widgets/leaderboard_tab.dart
 import 'package:flutter/material.dart';
 import '../models/leaderboard_entry.dart';
+import '../services/haptic_service.dart';
 import 'leaderboard_detail.dart';
 
 class LeaderboardTab extends StatelessWidget {
@@ -75,7 +76,10 @@ class LeaderboardTab extends StatelessWidget {
     }
 
     return RefreshIndicator(
-      onRefresh: onRefresh,
+      onRefresh: () async {
+        HapticService().mediumImpact();
+        await onRefresh();
+      },
       child: ListView.builder(
         padding: EdgeInsets.only(top: 8),
         itemCount: leaderboardEntries!.length + 1, // +1 for the top 3 section
