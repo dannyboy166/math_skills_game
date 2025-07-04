@@ -18,6 +18,8 @@ class _AdminScreenState extends State<AdminScreen> {
 
   bool _isSyncing = false;
   bool _isRecalculatingStars = false;
+  bool _isAddingAgeParameters = false;
+  bool _isFixingTimeTables = false;
 
   TextEditingController _userIdController = TextEditingController();
   String _syncTargetUserId = '';
@@ -26,7 +28,7 @@ class _AdminScreenState extends State<AdminScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Tools'),
+        title: Text('Admin Dashboard'),
         backgroundColor: Colors.red.shade800,
       ),
       body: SingleChildScrollView(
@@ -34,6 +36,53 @@ class _AdminScreenState extends State<AdminScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // User Management Section
+            Card(
+              margin: EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'User Management',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Manage user accounts and fix user data issues.',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _isAddingAgeParameters ? null : _addAllAgeParameters,
+                      icon: Icon(Icons.person_add),
+                      label: Text('Add Age Parameters'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: _isFixingTimeTables ? null : _fixUnlockedTimeTables,
+                      icon: Icon(Icons.lock_open),
+                      label: Text('Fix Unlocked Time Tables'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             Card(
               margin: EdgeInsets.only(bottom: 16),
               child: Padding(
@@ -252,7 +301,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
               ),
             SizedBox(height: 16),
-            if (_isMigratingUser || _isMigratingAll || _isRefreshing || _isRecalculatingStars)
+            if (_isMigratingUser || _isMigratingAll || _isRefreshing || _isRecalculatingStars || _isAddingAgeParameters || _isFixingTimeTables)
               Center(
                 child: Column(
                   children: [
@@ -280,6 +329,16 @@ class _AdminScreenState extends State<AdminScreen> {
                       ),
                     ),
                     SizedBox(height: 16),
+                    _buildDocItem(
+                      'Add Age Parameters',
+                      'Adds age=11 to all users who are missing the age parameter.',
+                      'Safe to run multiple times, only affects users missing age data.',
+                    ),
+                    _buildDocItem(
+                      'Fix Unlocked Time Tables',
+                      'Updates unlocked time tables for all users based on their age.',
+                      'Ensures proper time table access based on user age settings.',
+                    ),
                     _buildDocItem(
                       'Migrate Current User',
                       'Updates the current user\'s data in the new leaderboard system.',
@@ -321,6 +380,8 @@ class _AdminScreenState extends State<AdminScreen> {
     if (_isRefreshing) return 'Refreshing leaderboards...';
     if (_isSyncing) return 'Syncing leaderboards for current user...';
     if (_isRecalculatingStars) return 'Recalculating total stars for all users...';
+    if (_isAddingAgeParameters) return 'Adding age parameters to all users...';
+    if (_isFixingTimeTables) return 'Fixing unlocked time tables for all users...';
     return '';
   }
 
@@ -789,6 +850,80 @@ class _AdminScreenState extends State<AdminScreen> {
     } catch (e) {
       setState(() {
         _statusMessage = 'Debug failed: $e';
+      });
+    }
+  }
+
+  Future<void> _addAllAgeParameters() async {
+    setState(() {
+      _isAddingAgeParameters = true;
+      _statusMessage = 'Adding age parameters to all users...';
+    });
+
+    try {
+      await _adminService.addAllAgeParameters(defaultAge: 11);
+      
+      setState(() {
+        _statusMessage = 'Age parameters added successfully!';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully added age parameters to all users'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Error adding age parameters: $e';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding age parameters: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isAddingAgeParameters = false;
+      });
+    }
+  }
+
+  Future<void> _fixUnlockedTimeTables() async {
+    setState(() {
+      _isFixingTimeTables = true;
+      _statusMessage = 'Fixing unlocked time tables for all users...';
+    });
+
+    try {
+      await _adminService.fixUnlockedTimeTablesForAllUsers();
+      
+      setState(() {
+        _statusMessage = 'Time tables fixed successfully!';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully fixed unlocked time tables for all users'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Error fixing time tables: $e';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error fixing time tables: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isFixingTimeTables = false;
       });
     }
   }

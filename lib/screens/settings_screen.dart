@@ -4,7 +4,6 @@ import 'package:math_skills_game/services/sound_service.dart';
 import 'package:math_skills_game/services/haptic_service.dart';
 import 'package:math_skills_game/services/admin_service.dart';
 import 'package:math_skills_game/models/rotation_speed.dart';
-import 'package:math_skills_game/screens/admin_panel_screen.dart';
 import 'package:math_skills_game/screens/privacy_settings_screen.dart';
 import 'package:math_skills_game/screens/about_app_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -177,24 +176,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
 
-            // Admin Panel Button (only for admin)
-            if (_adminService.isCurrentUserAdmin()) ...[
-              _buildSectionHeader('Admin'),
-              _buildAdminButton(
-                'Admin Panel',
-                'Administrative functions',
-                Icons.admin_panel_settings,
-                Colors.red,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AdminPanelScreen(),
-                    ),
-                  );
-                },
-              ),
-            ],
 
             SizedBox(height: 20),
 
