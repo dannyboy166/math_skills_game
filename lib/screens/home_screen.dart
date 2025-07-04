@@ -9,6 +9,7 @@ import 'game_screen.dart';
 import 'levels_screen.dart';
 import 'profile_screen.dart';
 import '../models/difficulty_level.dart';
+import '../models/game_mode.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../models/daily_streak.dart';
@@ -1208,6 +1209,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 selectedMultiplicationTable != null
                             ? selectedMultiplicationTable
                             : null,
+                        gameMode: (selectedOperation == 'multiplication' || selectedOperation == 'division')
+                            ? GameMode.timesTableRing
+                            : GameMode.standard,
                       ),
                     ),
                   );

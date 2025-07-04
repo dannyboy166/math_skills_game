@@ -446,7 +446,9 @@ class _LevelsScreenState extends State<LevelsScreen> {
           operationName: _currentOperation,
           difficultyLevel: difficultyEnum,
           targetNumber: targetToUse,
-          gameMode: _selectedGameMode,
+          gameMode: (_currentOperation == 'multiplication' || _currentOperation == 'division')
+              ? GameMode.timesTableRing
+              : _selectedGameMode,
         ),
       ),
     ).then((_) {
@@ -608,84 +610,37 @@ class _LevelsScreenState extends State<LevelsScreen> {
                     color: Colors.grey[600],
                   ),
                 ),
-                // Add game mode toggle for multiplication and division
+                // Note: Multiplication and division always use Times Table Ring mode
                 if (_currentOperation == 'multiplication' ||
                     _currentOperation == 'division') ...[
                   SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Text(
-                        'Mode: ',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[700],
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: operationColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: operationColor.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: operationColor,
                         ),
-                      ),
-                      Expanded(
-                        child: SegmentedButton<GameMode>(
-                          segments: [
-                            ButtonSegment<GameMode>(
-                              value: GameMode.standard,
-                              label: Text('Normal',
-                                  style: TextStyle(fontSize: 12)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Uses Times Table Ring mode - complete all 12 answers to finish!',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: operationColor,
+                              fontWeight: FontWeight.w500,
                             ),
-                            ButtonSegment<GameMode>(
-                              value: GameMode.timesTableRing,
-                              label: Text('Times Table Ring',
-                                  style: TextStyle(fontSize: 12)),
-                            ),
-                          ],
-                          selected: {_selectedGameMode},
-                          onSelectionChanged: (Set<GameMode> newSelection) {
-                            if (newSelection.isEmpty || !mounted) return;
-
-                            // Block mode changes if we just navigated
-                            if (_isNavigating) {
-                              print(
-                                  "🚫 Blocking mode change - navigation in progress");
-                              return;
-                            }
-
-                            // Block rapid mode changes after recent navigation
-                            if (_lastNavigation != null &&
-                                DateTime.now()
-                                        .difference(_lastNavigation!)
-                                        .inMilliseconds <
-                                    1000) {
-                              print(
-                                  "🚫 Blocking mode change - too soon after navigation");
-                              return;
-                            }
-
-                            print(
-                                "🔄 GameMode change requested: ${newSelection.first}");
-
-                            // Cancel any existing timer
-                            _gameModeDebounceTimer?.cancel();
-
-                            // Debounce the state change with longer delay
-                            _gameModeDebounceTimer =
-                                Timer(Duration(milliseconds: 300), () {
-                              if (mounted &&
-                                  newSelection.isNotEmpty &&
-                                  !_isNavigating) {
-                                print(
-                                    "🔄 Applying GameMode change: ${newSelection.first}");
-                                setState(() {
-                                  _selectedGameMode = newSelection.first;
-                                });
-                              }
-                            });
-                          },
-                          style: SegmentedButton.styleFrom(
-                            selectedBackgroundColor:
-                                operationColor.withOpacity(0.2),
-                            selectedForegroundColor: operationColor,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ],
