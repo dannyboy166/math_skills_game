@@ -122,14 +122,11 @@ class _LandingScreenState extends State<LandingScreen>
               ],
             ),
             child: Center(
-              child: Text(
-                "123",
-                style: TextStyle(
-                  fontSize: 60,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue.shade700,
-                  fontFamily: 'ComicSans',
-                ),
+              child: Image.asset(
+                'assets/images/ninja.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
               ),
             ),
           ),
