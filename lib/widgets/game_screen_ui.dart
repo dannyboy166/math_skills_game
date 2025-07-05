@@ -277,7 +277,7 @@ class GameScreenUI extends StatelessWidget {
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: [
-                                    operation.color.withOpacity(0.7),
+                                    operation.color.withValues(alpha: 0.7),
                                     operation.color,
                                   ],
                                 ),
@@ -343,9 +343,9 @@ class GameScreenUI extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: operation.color.withOpacity(0.3), width: 1),
+        border: Border.all(color: operation.color.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
@@ -413,7 +413,7 @@ class GameScreenUI extends StatelessWidget {
         ),
         label: Text('Hint', style: TextStyle(fontSize: 16)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: operation.color.withOpacity(0.8),
+          backgroundColor: operation.color.withValues(alpha: 0.8),
           foregroundColor: Colors.white,
           padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
           shape: RoundedRectangleBorder(
@@ -428,9 +428,9 @@ class GameScreenUI extends StatelessWidget {
   Widget _buildCompletionMessage() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
+        color: Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: operation.color.withOpacity(0.3), width: 2),
+        border: Border.all(color: operation.color.withValues(alpha: 0.3), width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,

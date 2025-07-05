@@ -156,7 +156,7 @@ class _TimePenaltyAnimationState extends State<TimePenaltyAnimation>
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.red.withOpacity(0.4),
+                        color: Colors.red.withValues(alpha: 0.4),
                         blurRadius: 10,
                         spreadRadius: 2,
                       ),

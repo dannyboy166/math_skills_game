@@ -151,14 +151,14 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
                       : [
                           // Outer shadow
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: adjustedSize * 0.1,
                             spreadRadius: adjustedSize * 0.02,
                             offset: Offset(adjustedSize * 0.04, adjustedSize * 0.04),
                           ),
                           // Inner highlight
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             blurRadius: adjustedSize * 0.1,
                             spreadRadius: adjustedSize * 0.01,
                             offset: Offset(-adjustedSize * 0.02, -adjustedSize * 0.02),
@@ -183,7 +183,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   Widget _buildNormalContent(double size) {
     // Adjust the text color based on locked or greyed out state
     final textColor = (widget.isLocked || widget.isGreyedOut) 
-        ? Colors.white.withOpacity(widget.isGreyedOut ? 0.6 : 0.7) 
+        ? Colors.white.withValues(alpha: widget.isGreyedOut ? 0.6 : 0.7) 
         : Colors.white;
     
     return Stack(
@@ -197,7 +197,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             shape: BoxShape.circle,
             color: Colors.transparent,
             border: Border.all(
-              color: Colors.white.withOpacity((widget.isLocked || widget.isGreyedOut) ? 0.1 : 0.15),
+              color: Colors.white.withValues(alpha: (widget.isLocked || widget.isGreyedOut) ? 0.1 : 0.15),
               width: size * 0.03,
             ),
           ),
@@ -238,7 +238,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
               width: size * 0.2,
               height: size * 0.1,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(size * 0.1),
               ),
             ),
@@ -252,7 +252,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.4),
+                color: Colors.white.withValues(alpha: 0.4),
                 width: size * 0.02,
               ),
             ),
@@ -263,8 +263,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
 
   Widget _buildPressedContent(double size) {
     final textColor = (widget.isLocked || widget.isGreyedOut) 
-        ? Colors.white.withOpacity(0.6) 
-        : Colors.white.withOpacity(0.9);
+        ? Colors.white.withValues(alpha: 0.6) 
+        : Colors.white.withValues(alpha: 0.9);
     
     return Stack(
       alignment: Alignment.center,
@@ -277,7 +277,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             shape: BoxShape.circle,
             color: Colors.transparent,
             border: Border.all(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               width: size * 0.02,
             ),
           ),
@@ -317,7 +317,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 width: size * 0.015,
               ),
             ),

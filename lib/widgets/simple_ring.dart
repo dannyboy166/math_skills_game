@@ -604,7 +604,7 @@ class _SimpleRingState extends State<SimpleRing>
               top: currentPosition.dy,
               child: NumberTile(
                 number: numberToDisplay,
-                color: widget.ringModel.color.withOpacity(currentOpacity),
+                color: widget.ringModel.color.withValues(alpha: currentOpacity),
                 isLocked: isLocked,
                 isCorner: isCorner,
                 isGreyedOut: isGreyedOut,
@@ -630,7 +630,7 @@ class _SimpleRingState extends State<SimpleRing>
           top: animInfo.endPosition.dy,
           child: NumberTile(
             number: numberToDisplay,
-            color: widget.ringModel.color.withOpacity(animInfo.endOpacity),
+            color: widget.ringModel.color.withValues(alpha: animInfo.endOpacity),
             isLocked: isLocked,
             isCorner: isCorner,
             isGreyedOut: isGreyedOut,

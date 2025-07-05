@@ -502,7 +502,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          operationColor.withOpacity(0.1),
+                          operationColor.withValues(alpha: 0.1),
                           Colors.white,
                         ],
                       ),
@@ -559,7 +559,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: operationColor.withOpacity(0.2),
+            color: operationColor.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -571,7 +571,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: operationColor.withOpacity(0.2),
+              color: operationColor.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -615,9 +615,9 @@ class _LevelsScreenState extends State<LevelsScreen> {
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: operationColor.withOpacity(0.1),
+                      color: operationColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: operationColor.withOpacity(0.3)),
+                      border: Border.all(color: operationColor.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -685,7 +685,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
         Container(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: difficultyColor.withOpacity(0.2),
+            color: difficultyColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -809,8 +809,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
           boxShadow: [
             BoxShadow(
               color: isUnlocked
-                  ? Colors.grey.withOpacity(0.2)
-                  : Colors.grey.withOpacity(0.1),
+                  ? Colors.grey.withValues(alpha: 0.2)
+                  : Colors.grey.withValues(alpha: 0.1),
               blurRadius: 6,
               offset: Offset(0, 2),
             ),
@@ -833,10 +833,10 @@ class _LevelsScreenState extends State<LevelsScreen> {
                         Icons.star,
                         size: 20,
                         color: !isUnlocked
-                            ? Colors.grey.withOpacity(0.3)
+                            ? Colors.grey.withValues(alpha: 0.3)
                             : index < stars
                                 ? Colors.amber
-                                : Colors.grey.withOpacity(0.3),
+                                : Colors.grey.withValues(alpha: 0.3),
                       );
                     }),
                   ),

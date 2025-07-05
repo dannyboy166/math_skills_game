@@ -485,7 +485,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.yellow.withOpacity(0.5),
+                            color: Colors.yellow.withValues(alpha: 0.5),
                             blurRadius: 10,
                             offset: Offset(0, 3),
                           ),
@@ -525,7 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             'Your ninja stats await!',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -538,7 +538,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Container(
                         margin: EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
@@ -552,7 +552,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -678,7 +678,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.purple.withOpacity(0.3),
+              color: Colors.purple.withValues(alpha: 0.3),
               blurRadius: 15,
               offset: Offset(0, 5),
             ),
@@ -694,7 +694,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     blurRadius: 15,
                     offset: Offset(0, 0),
                   ),
@@ -716,7 +716,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (_isEditing) ...[
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
@@ -759,7 +759,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SizedBox(width: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: TextButton(
@@ -792,7 +792,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(
                 _userData?['email'] ?? '',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,
@@ -801,7 +801,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -925,7 +925,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: colors[0].withOpacity(0.4),
+            color: colors[0].withValues(alpha: 0.4),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -961,7 +961,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             unit,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1019,7 +1019,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: colors[0].withOpacity(0.3),
+            color: colors[0].withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -1030,7 +1030,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -1048,7 +1048,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1067,7 +1067,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Add some fun decorative elements
           Icon(
             Icons.auto_awesome,
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             size: 24,
           ),
         ],
@@ -1146,7 +1146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: colors[0].withOpacity(0.3),
+            color: colors[0].withValues(alpha: 0.3),
             blurRadius: 8,
             offset: Offset(0, 4),
           ),
@@ -1162,10 +1162,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
                 border:
-                    Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+                    Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
               ),
               child: Center(
                 child: Text(
@@ -1193,7 +1193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               '$count games',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -1684,7 +1684,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Thanks for practicing math today!',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
                 SizedBox(height: 20),

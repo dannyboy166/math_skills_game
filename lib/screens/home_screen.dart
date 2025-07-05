@@ -269,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Colors.blue.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: Offset(0, 5),
           ),
@@ -293,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.yellow.withOpacity(0.5),
+                  color: Colors.yellow.withValues(alpha: 0.5),
                   blurRadius: 10,
                   offset: Offset(0, 3),
                 ),
@@ -337,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _getHeaderSubtitle(),
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -386,7 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.purple.withOpacity(0.3),
+            color: Colors.purple.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: Offset(0, 5),
           ),
@@ -402,10 +402,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: Colors.white.withOpacity(0.3), width: 2),
+                      color: Colors.white.withValues(alpha: 0.3), width: 2),
                 ),
                 child: Icon(
                   _currentStreak > 0
@@ -435,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _getStreakMessage(),
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -457,9 +457,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             ),
             child: Column(
               children: [
@@ -483,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -574,20 +574,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: completed
                     ? null
                     : (isToday
-                        ? Colors.white.withOpacity(0.4)
-                        : Colors.white.withOpacity(0.2)),
+                        ? Colors.white.withValues(alpha: 0.4)
+                        : Colors.white.withValues(alpha: 0.2)),
                 border: Border.all(
                   color: completed
                       ? Colors.yellow.shade600
                       : (isToday
-                          ? Colors.white.withOpacity(0.8)
-                          : Colors.white.withOpacity(0.5)),
+                          ? Colors.white.withValues(alpha: 0.8)
+                          : Colors.white.withValues(alpha: 0.5)),
                   width: 2.5,
                 ),
                 boxShadow: completed
                     ? [
                         BoxShadow(
-                          color: Colors.yellow.withOpacity(0.5),
+                          color: Colors.yellow.withValues(alpha: 0.5),
                           blurRadius: 8,
                           offset: Offset(0, 2),
                         ),
@@ -603,7 +603,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   : (isToday
                       ? Icon(
                           Icons.today,
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           size: 16,
                         )
                       : Container()),
@@ -685,8 +685,8 @@ class _HomeScreenState extends State<HomeScreen> {
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? color.withOpacity(0.5)
-                  : Colors.black.withOpacity(0.05),
+                  ? color.withValues(alpha: 0.5)
+                  : Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -722,8 +722,8 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 40,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Colors.white.withOpacity(0.3)
-                    : color.withOpacity(0.1),
+                    ? Colors.white.withValues(alpha: 0.3)
+                    : color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               // Add alignment to center the content vertically and horizontally
@@ -795,8 +795,8 @@ class _HomeScreenState extends State<HomeScreen> {
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? color.withOpacity(0.5)
-                  : Colors.black.withOpacity(0.05),
+                  ? color.withValues(alpha: 0.5)
+                  : Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -829,7 +829,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: isSelected
-                    ? Colors.white.withOpacity(0.9)
+                    ? Colors.white.withValues(alpha: 0.9)
                     : Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
@@ -916,9 +916,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withOpacity(0.3)),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -926,7 +926,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -1007,8 +1007,8 @@ class _HomeScreenState extends State<HomeScreen> {
           boxShadow: [
             BoxShadow(
               color: hasSelectedTable
-                  ? color.withOpacity(0.5)
-                  : Colors.black.withOpacity(0.05),
+                  ? color.withValues(alpha: 0.5)
+                  : Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -1045,7 +1045,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: hasSelectedTable
-                    ? Colors.white.withOpacity(0.9)
+                    ? Colors.white.withValues(alpha: 0.9)
                     : hasUnlockedTables
                         ? Colors.grey.shade600
                         : Colors.grey.shade500,
@@ -1104,12 +1104,12 @@ class _HomeScreenState extends State<HomeScreen> {
           boxShadow: [
             BoxShadow(
               color: isLoading
-                  ? Colors.grey.withOpacity(0.1)
+                  ? Colors.grey.withValues(alpha: 0.1)
                   : !isUnlocked
-                      ? Colors.grey.withOpacity(0.2)
+                      ? Colors.grey.withValues(alpha: 0.2)
                       : isSelected
-                          ? color.withOpacity(0.5)
-                          : Colors.black.withOpacity(0.05),
+                          ? color.withValues(alpha: 0.5)
+                          : Colors.black.withValues(alpha: 0.05),
               blurRadius: 6,
               offset: Offset(0, 2),
             ),
@@ -1391,7 +1391,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             elevation: 4,
-            shadowColor: buttonColor.withOpacity(0.5),
+            shadowColor: buttonColor.withValues(alpha: 0.5),
             disabledBackgroundColor: Colors.grey.shade300,
             disabledForegroundColor: Colors.grey.shade600,
           ),

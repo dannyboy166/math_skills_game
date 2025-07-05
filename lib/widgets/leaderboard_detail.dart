@@ -223,7 +223,7 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: backgroundColor.withOpacity(0.5),
+            color: backgroundColor.withValues(alpha: 0.5),
             blurRadius: 8,
             offset: Offset(0, 3),
           ),
@@ -247,10 +247,10 @@ class LeaderboardDetailBottomSheet extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
           width: 1,
         ),
       ),

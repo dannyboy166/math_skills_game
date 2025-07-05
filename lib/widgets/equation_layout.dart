@@ -95,11 +95,11 @@ class EquationLayout extends StatelessWidget {
       height: 30,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.3),
+        color: Colors.white.withValues(alpha: 0.3),
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 2,
             spreadRadius: 0.5,
           )
@@ -113,7 +113,7 @@ class EquationLayout extends StatelessWidget {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: color.withOpacity(opacity),
+            color: color.withValues(alpha: opacity),
             height: lineHeight,
           ),
           textAlign: TextAlign.center,
@@ -162,7 +162,7 @@ class EquationLayout extends StatelessWidget {
                   width: symbolSize,
                   height: symbolSize,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -220,7 +220,7 @@ class EquationLayout extends StatelessWidget {
                   width: symbolSize,
                   height: symbolSize,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

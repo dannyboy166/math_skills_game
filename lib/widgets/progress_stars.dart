@@ -58,7 +58,7 @@ class ProgressStars extends StatelessWidget {
     return ShaderMask(
       shaderCallback: (Rect bounds) {
         return LinearGradient(
-          colors: [Colors.white, Colors.white.withOpacity(0.7)],
+          colors: [Colors.white, Colors.white.withValues(alpha: 0.7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ).createShader(bounds);
@@ -140,7 +140,7 @@ class StarPainter extends CustomPainter {
     
     // Add highlight/shine effect
     final Paint shinePaint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
+      ..color = Colors.white.withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
     
     final Path shinePath = Path();

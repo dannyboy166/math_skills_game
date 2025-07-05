@@ -123,7 +123,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.purple.withOpacity(0.5),
+                    color: Colors.purple.withValues(alpha: 0.5),
                     blurRadius: 20,
                     offset: Offset(0, 8),
                   ),
@@ -147,7 +147,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 10,
                               offset: Offset(0, 4),
                             ),
@@ -171,7 +171,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                           color: Colors.white,
                           shadows: [
                             Shadow(
-                              color: Colors.black.withOpacity(0.5),
+                              color: Colors.black.withValues(alpha: 0.5),
                               offset: Offset(0, 2),
                               blurRadius: 4,
                             ),
@@ -198,7 +198,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                       Container(
                         padding: EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Column(
@@ -229,7 +229,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.orange.withOpacity(0.3),
+                                        color: Colors.orange.withValues(alpha: 0.3),
                                         blurRadius: 4,
                                         offset: Offset(0, 2),
                                       ),
@@ -314,7 +314,7 @@ class _UnlockCelebrationDialogState extends State<_UnlockCelebrationDialog>
                   child: Icon(
                     Icons.star,
                     size: 16,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               );

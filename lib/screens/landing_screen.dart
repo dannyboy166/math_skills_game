@@ -115,7 +115,7 @@ class _LandingScreenState extends State<LandingScreen>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: Offset(0, 6),
                 ),
@@ -189,7 +189,7 @@ class _LandingScreenState extends State<LandingScreen>
             color: Colors.white,
             shadows: [
               Shadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 offset: Offset(0, 2),
                 blurRadius: 4,
               ),
@@ -230,7 +230,7 @@ class _LandingScreenState extends State<LandingScreen>
               backgroundColor: Colors.white,
               foregroundColor: Colors.blue.shade700,
               elevation: 6,
-              shadowColor: Colors.black.withOpacity(0.3),
+              shadowColor: Colors.black.withValues(alpha: 0.3),
               padding: EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -267,7 +267,7 @@ class _LandingScreenState extends State<LandingScreen>
               backgroundColor: Colors.yellow.shade600,
               foregroundColor: Colors.blue.shade900,
               elevation: 6,
-              shadowColor: Colors.black.withOpacity(0.3),
+              shadowColor: Colors.black.withValues(alpha: 0.3),
               padding: EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -301,7 +301,7 @@ class _LandingScreenState extends State<LandingScreen>
             child: Container(
               padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(

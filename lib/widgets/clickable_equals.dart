@@ -83,7 +83,7 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
               height: widget.size,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -103,7 +103,7 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
                             width: widget.size * 0.6,
                             height: widget.size * 0.115, // Reduced from 0.15 to 0.1
                             decoration: BoxDecoration(
-                              color: textColor.withOpacity(textOpacity),
+                              color: textColor.withValues(alpha: textOpacity),
                               borderRadius: BorderRadius.circular(1), // Smaller radius for sharper edges
                             ),
                           ),
@@ -112,7 +112,7 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
                             width: widget.size * 0.6,
                             height: widget.size * 0.115, // Reduced from 0.15 to 0.1
                             decoration: BoxDecoration(
-                              color: textColor.withOpacity(textOpacity),
+                              color: textColor.withValues(alpha: textOpacity),
                               borderRadius: BorderRadius.circular(1), // Smaller radius for sharper edges
                             ),
                           ),

@@ -177,7 +177,7 @@ class CelebrationAnimationState extends State<CelebrationAnimation> with SingleT
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 10,
                         spreadRadius: 2,
                       ),
@@ -205,7 +205,7 @@ class CelebrationAnimationState extends State<CelebrationAnimation> with SingleT
                               size: 40,
                               color: index < widget.starRating
                                   ? Colors.amber
-                                  : Colors.grey.withOpacity(0.3),
+                                  : Colors.grey.withValues(alpha: 0.3),
                             ),
                           );
                         }),

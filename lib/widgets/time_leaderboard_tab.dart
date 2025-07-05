@@ -282,7 +282,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
               margin: EdgeInsets.symmetric(horizontal: 6, vertical: 10),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? _getOperationColor().withOpacity(0.2)
+                    ? _getOperationColor().withValues(alpha: 0.2)
                     : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
@@ -396,7 +396,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
               border: Border.all(color: color, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: Offset(0, 2),
                 ),
@@ -457,7 +457,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
               borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: Offset(0, 2),
                 ),
@@ -496,7 +496,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 2,
             offset: Offset(0, 1),
           ),
@@ -521,10 +521,10 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         trailing: Container(
           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: operationColor.withOpacity(0.1),
+            color: operationColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: operationColor.withOpacity(0.3),
+              color: operationColor.withValues(alpha: 0.3),
               width: 1,
             ),
           ),

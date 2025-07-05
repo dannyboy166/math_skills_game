@@ -41,7 +41,7 @@ Future<void> _initializeLeaderboardData() async {
       LeaderboardInitializer.markInitialized();
     }
   } catch (e) {
-    print('Error initializing leaderboard data: $e');
+    // Silently handle initialization errors
   }
 }
 
@@ -75,13 +75,7 @@ class MyApp extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        print(
-            "MAIN DEBUG: Auth state changed. Connection state: ${snapshot.connectionState}");
-        print(
-            "MAIN DEBUG: Has data: ${snapshot.hasData}, User: ${snapshot.data?.uid ?? 'null'}");
-
         if (snapshot.connectionState == ConnectionState.waiting) {
-          print("MAIN DEBUG: Auth state is waiting");
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(),
@@ -91,12 +85,10 @@ class MyApp extends StatelessWidget {
 
         if (snapshot.hasData && snapshot.data != null) {
           // User is logged in
-          print("MAIN DEBUG: User is logged in: ${snapshot.data!.uid}");
           return HomeScreen();
         }
 
         // User is not logged in
-        print("MAIN DEBUG: User is NOT logged in, showing LandingScreen");
         // Return the landing screen instead of the login screen directly
         return LandingScreen();
       },

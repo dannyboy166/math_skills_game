@@ -1201,7 +1201,7 @@ class _GameScreenState extends State<GameScreen> {
                         size: 30,
                         color: index < starRating
                             ? Colors.amber
-                            : Colors.grey.withOpacity(0.3),
+                            : Colors.grey.withValues(alpha: 0.3),
                       ),
                     );
                   }),
@@ -1400,7 +1400,7 @@ class _GameScreenState extends State<GameScreen> {
                   Container(
                     padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: operation.color.withOpacity(0.1),
+                      color: operation.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(additionalInfo),

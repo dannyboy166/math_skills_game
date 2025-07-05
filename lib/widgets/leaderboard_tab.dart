@@ -191,7 +191,7 @@ class LeaderboardTab extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: Offset(0, 2),
                     ),
@@ -262,7 +262,7 @@ class LeaderboardTab extends StatelessWidget {
                   borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: Offset(0, 2),
                     ),
@@ -302,7 +302,7 @@ class LeaderboardTab extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 2,
             offset: Offset(0, 1),
           ),
@@ -326,10 +326,10 @@ class LeaderboardTab extends StatelessWidget {
         trailing: Container(
           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: valueColor.withOpacity(0.1),
+            color: valueColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: valueColor.withOpacity(0.3),
+              color: valueColor.withValues(alpha: 0.3),
               width: 1,
             ),
           ),

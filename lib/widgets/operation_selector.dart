@@ -47,8 +47,8 @@ class OperationSelector extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: isSelected 
-                  ? color.withOpacity(0.4) 
-                  : Colors.black.withOpacity(0.05),
+                  ? color.withValues(alpha: 0.4) 
+                  : Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: Offset(0, 2),
               ),
@@ -64,7 +64,7 @@ class OperationSelector extends StatelessWidget {
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.white.withOpacity(0.3) : color.withOpacity(0.1),
+                  color: isSelected ? Colors.white.withValues(alpha: 0.3) : color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(

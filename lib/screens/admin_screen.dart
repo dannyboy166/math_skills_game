@@ -816,7 +816,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                         Container(
                                           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: Colors.amber.withOpacity(0.3),
+                                            color: Colors.amber.withValues(alpha: 0.3),
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
@@ -859,7 +859,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                     Container(
                                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: Colors.amber.withOpacity(0.3),
+                                        color: Colors.amber.withValues(alpha: 0.3),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
