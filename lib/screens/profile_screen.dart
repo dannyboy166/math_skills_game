@@ -160,76 +160,124 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Row(
-            children: [
-              Icon(
-                Icons.local_fire_department_rounded,
-                color: Colors.deepOrange,
-                size: 28,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.orange.shade300, Colors.red.shade400],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              SizedBox(width: 10),
-              Text(
-                'About Streaks',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.deepOrange.shade700,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.local_fire_department_rounded,
+                  color: Colors.white,
+                  size: 28,
                 ),
-              ),
-            ],
+                SizedBox(width: 10),
+                Text(
+                  'About Streaks 🔥',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Practice math every day to build your streak! Each day you complete at least one practice session, your streak grows. Miss a day and your streak resets to zero.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Text(
+                  'Practice math every day to build your streak! 📅 Each day you complete at least one practice session, your streak grows. Miss a day and your streak resets to zero. 😱',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
               SizedBox(height: 16),
               Text(
-                'Benefits of maintaining a streak:',
+                'Benefits of maintaining a streak: ⭐',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
+                  color: Colors.purple.shade700,
                 ),
               ),
               SizedBox(height: 8),
-              Text(
-                '• Builds consistent learning habits\n• Improves long-term retention\n• Makes learning math more fun\n• Track your dedication to math practice',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '🎯 Builds consistent learning habits\n🧠 Improves long-term retention\n🎉 Makes learning math more fun\n📈 Track your dedication to math practice',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
               SizedBox(height: 16),
-              Text(
-                'Keep your streak alive to earn special rewards!',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.deepOrange.shade400,
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.yellow.shade200, Colors.orange.shade200],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '🏆 Keep your streak alive to earn special rewards and become a Math Ninja Master! 🥷',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange.shade800,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Got it',
-                style: TextStyle(
-                  color: Colors.deepOrange.shade700,
-                  fontWeight: FontWeight.bold,
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade400, Colors.purple.shade400],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Got it! 👍',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
           ],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
         );
       },
     );
@@ -394,327 +442,926 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('My Profile'),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        // Replace the current AppBar actions section with this:
-        actions: [
-          // Edit button (pen) on the left
-          if (!_isEditing && !_isLoading)
-            IconButton(
-              icon: Icon(Icons.edit),
-              onPressed: () {
-                setState(() {
-                  _isEditing = true;
-                });
-              },
-            ),
-          // Settings button always on the right
-          IconButton(
-            icon: Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SettingsScreen()),
-              );
-            },
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blue.shade400,
+              Colors.blue.shade50,
+              Colors.white,
+            ],
           ),
-        ],
-      ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _userData == null
-              ? Center(child: Text('Could not load profile data'))
-              : SingleChildScrollView(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Profile Avatar and Name Section
-                      Center(
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Colors.blue.shade100,
-                              child: Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Colors.blue,
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            if (_isEditing) ...[
-                              TextField(
-                                controller: _displayNameController,
-                                decoration: InputDecoration(
-                                  labelText: 'Display Name',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  ElevatedButton(
-                                    onPressed: _updateDisplayName,
-                                    child: Text('Save'),
-                                  ),
-                                  SizedBox(width: 8),
-                                  TextButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isEditing = false;
-                                        _displayNameController.text =
-                                            _userData?['displayName'] ?? '';
-                                      });
-                                    },
-                                    child: Text('Cancel'),
-                                  ),
-                                ],
-                              ),
-                            ] else ...[
-                              Text(
-                                _userData?['displayName'] ?? 'Player',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                _userData?['email'] ?? '',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Level: ${_userData?['level'] ?? 'Novice'}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                            ],
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Custom Header with Ninja Theme
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.blue.shade400,
+                      Colors.blue.shade500,
+                      Colors.blue.shade600,
+                    ],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Ninja avatar in circle
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.yellow.shade300,
+                            Colors.orange.shade400
                           ],
                         ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.yellow.withOpacity(0.5),
+                            blurRadius: 10,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
                       ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/ninja.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 28,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
 
-                      SizedBox(height: 24),
-                      Divider(),
-                      SizedBox(height: 16),
+                    SizedBox(width: 16),
 
-                      // Streak Section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // Title
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionTitle('Streak Stats'),
-                          GestureDetector(
-                            onTap: _showStreakInfo,
-                            child: Row(
+                          Text(
+                            'My Profile 🥷',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Your ninja stats await!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Edit and Settings buttons
+                    if (!_isEditing && !_isLoading)
+                      Container(
+                        margin: EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.edit, color: Colors.white),
+                          onPressed: () {
+                            setState(() {
+                              _isEditing = true;
+                            });
+                          },
+                        ),
+                      ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.settings, color: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => SettingsScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Scrollable content
+              Expanded(
+                child: _isLoading
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.blue),
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Loading your ninja stats... 🥷',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _userData == null
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.info_outline,
-                                  size: 18,
-                                  color: Colors.grey,
+                                  Icons.error_outline,
+                                  size: 60,
+                                  color: Colors.red.shade300,
                                 ),
-                                SizedBox(width: 4),
+                                SizedBox(height: 16),
                                 Text(
-                                  'How streaks work',
+                                  'Oops! Could not load profile data 😔',
                                   style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 14,
+                                    fontSize: 18,
+                                    color: Colors.red.shade600,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
+                          )
+                        : SingleChildScrollView(
+                            padding: EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Profile Avatar and Name Section with Fun Background
+                                _buildProfileHeader(),
 
-                      // Streak Cards (side by side)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildStreakCard(
-                              'Current Streak',
-                              '${_streakData?['currentStreak'] ?? 0}',
-                              Icons.local_fire_department_rounded,
-                              Colors.deepOrange,
-                              'days',
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: _buildStreakCard(
-                              'Longest Streak',
-                              '${_streakData?['longestStreak'] ?? 0}',
-                              Icons.emoji_events_rounded,
-                              Colors.amber,
-                              'days',
-                            ),
-                          ),
-                        ],
-                      ),
+                                SizedBox(height: 24),
 
-                      SizedBox(height: 24),
+                                // Streak Section with Fun Design
+                                _buildStreakSection(),
 
-                      // Stats Section
-                      _buildSectionTitle('Game Statistics'),
-                      _buildStatCard(
-                        'Total Games Played',
-                        '${_userData?['totalGames'] ?? 0}',
-                        Icons.sports_esports,
-                        Colors.blue,
-                      ),
-                      _buildStatCard(
-                        'Total Stars Earned',
-                        '${_userData?['totalStars'] ?? 0}',
-                        Icons.star,
-                        Colors.amber,
-                      ),
+                                SizedBox(height: 24),
 
-                      SizedBox(height: 16),
-                      _buildSectionTitle('Operation Stats'),
+                                // Stats Section with Colorful Cards
+                                _buildStatsSection(),
 
-                      // Operation Stats Grid
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        childAspectRatio: 1.2,
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        children: [
-                          _buildOperationCard(
-                            'Addition',
-                            '${_userData?['completedGames']?['addition'] ?? 0}',
-                            '+',
-                            Colors.green,
-                          ),
-                          _buildOperationCard(
-                            'Subtraction',
-                            '${_userData?['completedGames']?['subtraction'] ?? 0}',
-                            '-',
-                            Colors.purple,
-                          ),
-                          _buildOperationCard(
-                            'Multiplication',
-                            '${_userData?['completedGames']?['multiplication'] ?? 0}',
-                            '×',
-                            Colors.blue,
-                          ),
-                          _buildOperationCard(
-                            'Division',
-                            '${_userData?['completedGames']?['division'] ?? 0}',
-                            '÷',
-                            Colors.orange,
-                          ),
-                        ],
-                      ),
+                                SizedBox(height: 24),
 
-                      if (_adminService.isCurrentUserAdmin()) ...[
-                        SizedBox(height: 32),
-                        Divider(),
-                        _buildSectionTitle('Admin Tools'),
-                        ListTile(
-                          leading: Icon(Icons.admin_panel_settings,
-                              color: Colors.red),
-                          title: Text('Admin Dashboard'),
-                          subtitle: Text('Manage leaderboards and user data'),
-                          tileColor: Colors.red.shade50,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => AdminScreen()),
-                            );
-                          },
-                        ),
-                      ],
-                      SizedBox(height: 32),
-                      Divider(),
+                                // Operation Stats with Fun Design
+                                _buildOperationStatsSection(),
 
-                      // Account Management Section
-                      _buildSectionTitle('Account'),
-                      ListTile(
-                        leading: Icon(Icons.lock_reset, color: Colors.blue),
-                        title: Text('Reset Password'),
-                        onTap: () {
-                          // Show reset password dialog
-                          _showResetPasswordDialog();
-                        },
-                      ),
-                      ListTile(
-                        leading: Icon(Icons.logout, color: Colors.red),
-                        title: Text('Logout'),
-                        onTap: () {
-                          // Show a simple loading dialog
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (BuildContext dialogContext) {
-                              return SimpleDialog(
-                                title: Center(child: Text('Logging out...')),
-                                children: [
-                                  Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(24.0),
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  ),
+                                // Admin section (if applicable)
+                                if (_adminService.isCurrentUserAdmin()) ...[
+                                  SizedBox(height: 32),
+                                  _buildAdminSection(),
                                 ],
-                              );
-                            },
-                          );
 
-                          // Add debug before logout
-                          print("PROFILE DEBUG: Starting logout process");
-                          print(
-                              "PROFILE DEBUG: Current user before logout: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
+                                SizedBox(height: 32),
 
-                          // Perform logout after a brief delay to ensure dialog is shown
-                          Future.delayed(Duration(milliseconds: 300), () async {
-                            try {
-                              // Sign out
-                              await _authService.signOut();
+                                // Account Management Section
+                                _buildAccountSection(),
 
-                              // Check after signout
-                              print("PROFILE DEBUG: Logout completed");
-                              print(
-                                  "PROFILE DEBUG: Current user after logout: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
+                                SizedBox(height: 20),
+                              ],
+                            ),
+                          ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                              // Import the LandingScreen at the top of the file
+  Widget _buildProfileHeader() {
+    return Center(
+      child: Container(
+        padding: EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.purple.shade300,
+              Colors.pink.shade300,
+              Colors.orange.shade300,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.purple.withOpacity(0.3),
+              blurRadius: 15,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Avatar with fun border and effects
+            Container(
+              padding: EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.8),
+                    blurRadius: 15,
+                    offset: Offset(0, 0),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.blue.shade100,
+                child: Icon(
+                  Icons.person,
+                  size: 50,
+                  color: Colors.blue,
+                ),
+              ),
+            ),
 
-                              // Navigate to landing screen and clear the stack
-                              Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(
-                                    builder: (context) => LandingScreen()),
-                                (route) =>
-                                    false, // This removes all previous routes
-                              );
+            SizedBox(height: 20),
 
-                              print(
-                                  "PROFILE DEBUG: Navigated to landing screen");
-                            } catch (e) {
-                              print("PROFILE DEBUG: Error during logout: $e");
-
-                              // If there's an error, pop the dialog and show error
-                              Navigator.of(context).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        'Failed to log out. Please try again.')),
-                              );
-                            }
-                          });
-                        },
+            if (_isEditing) ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TextField(
+                  controller: _displayNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Display Name ✏️',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.green.shade400, Colors.green.shade600],
                       ),
-                    ],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _updateDisplayName,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                      ),
+                      child: Text('Save 💾',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = false;
+                          _displayNameController.text =
+                              _userData?['displayName'] ?? '';
+                        });
+                      },
+                      child: Text('Cancel ❌',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              Text(
+                _userData?['displayName'] ?? 'Math Ninja',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8),
+              Text(
+                _userData?['email'] ?? '',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.military_tech,
+                        color: Colors.yellow.shade200, size: 20),
+                    SizedBox(width: 6),
+                    Text(
+                      'Level: ${_userData?['level'] ?? 'Novice'} 🥷',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStreakSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.local_fire_department,
+                    color: Colors.orange, size: 28),
+                SizedBox(width: 8),
+                Text(
+                  'Streak Stats 🔥',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
+              ],
+            ),
+            GestureDetector(
+              onTap: _showStreakInfo,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.blue.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Colors.blue.shade700,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'How it works',
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16),
+
+        // Streak Cards (side by side with fun design)
+        Row(
+          children: [
+            Expanded(
+              child: _buildFunStreakCard(
+                'Current Streak 🔥',
+                '${_streakData?['currentStreak'] ?? 0}',
+                Icons.local_fire_department_rounded,
+                [Colors.orange.shade400, Colors.red.shade500],
+                'days',
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: _buildFunStreakCard(
+                'Longest Streak 🏆',
+                '${_streakData?['longestStreak'] ?? 0}',
+                Icons.emoji_events_rounded,
+                [Colors.yellow.shade400, Colors.orange.shade500],
+                'days',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFunStreakCard(String title, String value, IconData icon,
+      List<Color> colors, String unit) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: colors[0].withOpacity(0.4),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 32,
+            color: Colors.white,
+          ),
+          SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            unit,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.bar_chart, color: Colors.blue, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'Game Statistics 📊',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16),
+        _buildFunStatCard(
+          'Total Games Played 🎮',
+          '${_userData?['totalGames'] ?? 0}',
+          Icons.sports_esports,
+          [Colors.blue.shade400, Colors.purple.shade500],
+        ),
+        SizedBox(height: 12),
+        _buildFunStatCard(
+          'Total Stars Earned ⭐',
+          '${_userData?['totalStars'] ?? 0}',
+          Icons.star,
+          [Colors.yellow.shade400, Colors.orange.shade500],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFunStatCard(
+      String title, String value, IconData icon, List<Color> colors) {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: colors[0].withOpacity(0.3),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 32,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Add some fun decorative elements
+          Icon(
+            Icons.auto_awesome,
+            color: Colors.white.withOpacity(0.7),
+            size: 24,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOperationStatsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.calculate, color: Colors.green, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'Operation Stats 🧮',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16),
+
+        // Operation Stats Grid with fun colors
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          children: [
+            _buildFunOperationCard(
+              'Addition 🟢',
+              '${_userData?['completedGames']?['addition'] ?? 0}',
+              '+',
+              [Colors.green.shade400, Colors.green.shade600],
+            ),
+            _buildFunOperationCard(
+              'Subtraction 🟣',
+              '${_userData?['completedGames']?['subtraction'] ?? 0}',
+              '-',
+              [Colors.purple.shade400, Colors.purple.shade600],
+            ),
+            _buildFunOperationCard(
+              'Multiplication 🔵',
+              '${_userData?['completedGames']?['multiplication'] ?? 0}',
+              '×',
+              [Colors.blue.shade400, Colors.blue.shade600],
+            ),
+            _buildFunOperationCard(
+              'Division 🟠',
+              '${_userData?['completedGames']?['division'] ?? 0}',
+              '÷',
+              [Colors.orange.shade400, Colors.orange.shade600],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFunOperationCard(
+      String title, String count, String symbol, List<Color> colors) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: colors[0].withOpacity(0.3),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Symbol in fun circle
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.3),
+                shape: BoxShape.circle,
+                border:
+                    Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  symbol,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+
+            // Title
+            Text(
+              title.split(' ')[0], // Just the operation name without emoji
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 16,
+              ),
+            ),
+
+            // Games count
+            Text(
+              '$count games',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red.shade400, Colors.red.shade600],
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.admin_panel_settings, color: Colors.white, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Admin Tools 🛠️',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red.shade50, Colors.red.shade100],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.red.shade300, width: 2),
+          ),
+          child: ListTile(
+            contentPadding: EdgeInsets.all(16),
+            leading: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade400,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.admin_panel_settings, color: Colors.white),
+            ),
+            title: Text(
+              'Admin Dashboard 👑',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            subtitle: Text(
+              'Manage leaderboards and user data',
+              style: TextStyle(color: Colors.red.shade700),
+            ),
+            trailing: Icon(Icons.arrow_forward_ios, color: Colors.red.shade400),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AdminScreen()),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.account_circle, color: Colors.blue, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'Account 👤',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16),
+
+        // Reset Password Card
+        Container(
+          margin: EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blue.shade50, Colors.blue.shade100],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.blue.shade300, width: 2),
+          ),
+          child: ListTile(
+            contentPadding: EdgeInsets.all(16),
+            leading: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade400,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.lock_reset, color: Colors.white),
+            ),
+            title: Text(
+              'Reset Password 🔐',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            subtitle: Text(
+              'Change your login password',
+              style: TextStyle(color: Colors.blue.shade700),
+            ),
+            trailing:
+                Icon(Icons.arrow_forward_ios, color: Colors.blue.shade400),
+            onTap: () {
+              _showResetPasswordDialog();
+            },
+          ),
+        ),
+
+        // Logout Card
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red.shade50, Colors.red.shade100],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.red.shade300, width: 2),
+          ),
+          child: ListTile(
+            contentPadding: EdgeInsets.all(16),
+            leading: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade400,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.logout, color: Colors.white),
+            ),
+            title: Text(
+              'Logout 👋',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            subtitle: Text(
+              'Sign out of your account',
+              style: TextStyle(color: Colors.red.shade700),
+            ),
+            trailing: Icon(Icons.arrow_forward_ios, color: Colors.red.shade400),
+            onTap: () {
+              _showLogoutDialog();
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -726,51 +1373,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Reset Password'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade400, Colors.blue.shade600],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_reset, color: Colors.white, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Reset Password 🔐',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'We will send a password reset link to your email address:',
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Text(
+                  'We will send a password reset link to your email address: 📧',
+                  style: TextStyle(fontSize: 14, color: Colors.blue.shade800),
+                ),
               ),
               SizedBox(height: 16),
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade300),
                 ),
-                keyboardType: TextInputType.emailAddress,
+                child: TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email Address ✉️',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
               ),
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                // Show loading indicator
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Sending reset email...')),
-                );
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      'Cancel ❌',
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade400, Colors.blue.shade600],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      // Show fun loading message
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 2,
+                              ),
+                              SizedBox(width: 16),
+                              Text('Sending reset email... 📧'),
+                            ],
+                          ),
+                          backgroundColor: Colors.blue.shade600,
+                        ),
+                      );
 
-                try {
-                  await _authService.resetPassword(emailController.text.trim());
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Password reset email sent')),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to send reset email')),
-                  );
-                }
-              },
-              child: Text('Send Reset Link'),
+                      try {
+                        await _authService
+                            .resetPassword(emailController.text.trim());
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text('Password reset email sent! 📬'),
+                              ],
+                            ),
+                            backgroundColor: Colors.green.shade600,
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.error, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text('Failed to send reset email 😔'),
+                              ],
+                            ),
+                            backgroundColor: Colors.red.shade600,
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                    ),
+                    child: Text(
+                      'Send Reset Link 🚀',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -778,167 +1537,208 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStreakCard(
-      String title, String value, IconData icon, Color color, String unit) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: color.withOpacity(0.3), width: 1),
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.orange.shade400, Colors.red.shade500],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  icon,
-                  size: 28,
-                  color: color,
-                ),
+                Icon(Icons.logout, color: Colors.white, size: 24),
                 SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[700],
-                    ),
-                    overflow: TextOverflow.visible,
+                Text(
+                  'Logout 👋',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 18,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 12),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              unit,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      margin: EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 40,
-              color: color,
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOperationCard(
-      String title, String count, String symbol, Color color) {
-    return Card(
-      elevation: 2,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    symbol,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                '$count games',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
           ),
-        ),
-      ),
+          content: Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Text(
+              'Are you sure you want to logout? 🤔\n\nYou can always come back to continue your math ninja journey! 🥷',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.orange.shade800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      'Stay 😊',
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.red.shade400, Colors.red.shade600],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _performLogout();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                    ),
+                    child: Text(
+                      'Logout 👋',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  void _performLogout() {
+    // Show a fun loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade200, Colors.purple.shade200],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.logout,
+                  size: 48,
+                  color: Colors.white,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Logging out... 🥷',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Thanks for practicing math today!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+                SizedBox(height: 20),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    // Add debug before logout
+    print("PROFILE DEBUG: Starting logout process");
+    print(
+        "PROFILE DEBUG: Current user before logout: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
+
+    // Perform logout after a brief delay to ensure dialog is shown
+    Future.delayed(Duration(milliseconds: 500), () async {
+      try {
+        // Sign out
+        await _authService.signOut();
+
+        // Check after signout
+        print("PROFILE DEBUG: Logout completed");
+        print(
+            "PROFILE DEBUG: Current user after logout: ${FirebaseAuth.instance.currentUser?.uid ?? 'null'}");
+
+        // Navigate to landing screen and clear the stack
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => LandingScreen()),
+          (route) => false, // This removes all previous routes
+        );
+
+        print("PROFILE DEBUG: Navigated to landing screen");
+      } catch (e) {
+        print("PROFILE DEBUG: Error during logout: $e");
+
+        // If there's an error, pop the dialog and show error
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Failed to log out. Please try again. 😔'),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    });
   }
 }
