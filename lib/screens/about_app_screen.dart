@@ -1,6 +1,7 @@
 // lib/screens/about_app_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutAppScreen extends StatelessWidget {
   const AboutAppScreen({super.key});
@@ -501,39 +502,24 @@ class AboutAppScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Privacy Policy'),
-        content: SingleChildScrollView(
-          child: Text(
-            '''Number Ninja Privacy Policy
-
-Last updated: January 2025
-
-We respect your privacy and are committed to protecting your personal data.
-
-Information We Collect:
-• Account information (email, display name)
-• Game progress and statistics
-• Device and usage information
-
-How We Use Your Information:
-• To provide and improve our services
-• To track game progress and achievements
-• To maintain leaderboards and statistics
-• To provide customer support
-
-Data Security:
-• All data is encrypted in transit and at rest
-• We use Firebase's secure infrastructure
-• We never sell personal information to third parties
-
-Your Rights:
-• Access your personal data
-• Request data deletion
-• Export your data
-• Opt out of data collection
-
-For questions, contact us through the app settings.''',
-            style: TextStyle(height: 1.4),
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'View our complete privacy policy online for the most up-to-date information about how we collect, use, and protect your data.',
+              style: TextStyle(height: 1.4),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _launchPrivacyPolicyUrl(context),
+              icon: Icon(Icons.open_in_new),
+              label: Text('View Privacy Policy'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -543,6 +529,35 @@ For questions, contact us through the app settings.''',
         ],
       ),
     );
+  }
+
+  void _launchPrivacyPolicyUrl(BuildContext context) async {
+    const url = 'https://your-website.com/privacy-policy'; // Replace with your actual URL
+    try {
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open privacy policy. Please visit: $url'),
+              action: SnackBarAction(
+                label: 'Copy',
+                onPressed: () => Clipboard.setData(ClipboardData(text: url)),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening privacy policy: $e'),
+          ),
+        );
+      }
+    }
   }
 
   void _showTermsOfService(BuildContext context) {
