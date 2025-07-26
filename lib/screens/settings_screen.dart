@@ -5,6 +5,7 @@ import 'package:number_ninja/screens/about_app_screen.dart';
 import 'package:number_ninja/screens/privacy_settings_screen.dart';
 import 'package:number_ninja/services/haptic_service.dart';
 import 'package:number_ninja/services/sound_service.dart';
+import 'package:number_ninja/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final SoundService _soundService = SoundService();
   final HapticService _hapticService = HapticService();
+  final AuthService _authService = AuthService();
 
   // Local state for settings
   bool _soundEnabled = true;
@@ -90,6 +92,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _showLogoutDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.logout, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Logout'),
+            ],
+          ),
+          content: Text('Are you sure you want to logout?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Logout'),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close dialog
+                await _performLogout();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _performLogout() async {
+    try {
+      await _authService.signOut();
+      if (mounted) {
+        // Navigate back to login/landing screen
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+    } catch (e) {
+      print('Error during logout: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error logging out. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,6 +217,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 );
               },
+            ),
+
+            _buildNavigationSetting(
+              'Logout',
+              'Sign out of your account',
+              Icons.logout,
+              Colors.red,
+              () => _showLogoutDialog(),
             ),
 
             _buildNavigationSetting(

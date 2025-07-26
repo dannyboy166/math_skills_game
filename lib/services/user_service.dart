@@ -306,8 +306,8 @@ class UserService {
         currentStreak += 1;
         streakUpdated = true;
       } else {
-        // Missed more than one day, reset streak
-        print('STREAK DEBUG: Missed days, resetting streak to 1');
+        // Missed more than one day, start new streak
+        print('STREAK DEBUG: Missed days, starting new streak at 1');
         currentStreak = 1;
         streakUpdated = true;
       }
@@ -482,12 +482,29 @@ class UserService {
         final streakData = data?['streakData'] as Map<String, dynamic>?;
 
         if (streakData != null) {
+          int currentStreak = streakData['currentStreak'] ?? 0;
+          
+          // Check if streak should be reset due to missed days (without updating database)
+          final lastPlayedTimestamp = streakData['lastPlayedDate'] as Timestamp?;
+          if (lastPlayedTimestamp != null && currentStreak > 0) {
+            final lastPlayed = lastPlayedTimestamp.toDate();
+            final lastPlayedDate = DateTime(lastPlayed.year, lastPlayed.month, lastPlayed.day);
+            final today = DateTime.now();
+            final todayDate = DateTime(today.year, today.month, today.day);
+            
+            if (lastPlayedDate.isBefore(todayDate)) {
+              final daysDifference = todayDate.difference(lastPlayedDate).inDays;
+              if (daysDifference > 1) {
+                // Missed more than one day, streak should show as 0 until they play
+                currentStreak = 0;
+              }
+            }
+          }
+          
           return {
-            'currentStreak': streakData['currentStreak'] ?? 0,
+            'currentStreak': currentStreak,
             'longestStreak': streakData['longestStreak'] ?? 0,
-            'lastPlayedDate': streakData['lastPlayedDate'] != null
-                ? (streakData['lastPlayedDate'] as Timestamp).toDate()
-                : null,
+            'lastPlayedDate': lastPlayedTimestamp?.toDate(),
           };
         }
       }
@@ -610,8 +627,27 @@ class UserService {
       final streakData = data?['streakData'] as Map<String, dynamic>?;
 
       if (streakData != null) {
+        int currentStreak = streakData['currentStreak'] ?? 0;
+        
+        // Check if streak should be reset due to missed days (without updating database)
+        final lastPlayedTimestamp = streakData['lastPlayedDate'] as Timestamp?;
+        if (lastPlayedTimestamp != null && currentStreak > 0) {
+          final lastPlayed = lastPlayedTimestamp.toDate();
+          final lastPlayedDate = DateTime(lastPlayed.year, lastPlayed.month, lastPlayed.day);
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+          
+          if (lastPlayedDate.isBefore(todayDate)) {
+            final daysDifference = todayDate.difference(lastPlayedDate).inDays;
+            if (daysDifference > 1) {
+              // Missed more than one day, streak should show as 0 until they play
+              currentStreak = 0;
+            }
+          }
+        }
+        
         return {
-          'currentStreak': streakData['currentStreak'] ?? 0,
+          'currentStreak': currentStreak,
           'longestStreak': streakData['longestStreak'] ?? 0,
         };
       }

@@ -1,5 +1,7 @@
 // lib/screens/admin_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:number_ninja/services/admin_service.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -354,6 +356,56 @@ class _AdminScreenState extends State<AdminScreen> {
                   ],
                 ),
               ),
+            
+            // Crashlytics Testing Section
+            Card(
+              margin: EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Crashlytics Testing',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Test Firebase Crashlytics crash reporting and dSYM upload.',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _testCrash,
+                      icon: Icon(Icons.bug_report),
+                      label: Text('Force Test Crash'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: _logTestError,
+                      icon: Icon(Icons.error_outline),
+                      label: Text('Log Test Error'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade600,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
             SizedBox(height: 24),
             Card(
               child: Padding(
@@ -408,6 +460,16 @@ class _AdminScreenState extends State<AdminScreen> {
                       'Reset All Game Data',
                       'DESTRUCTIVE: Resets all game data for all users while preserving user accounts.',
                       'This permanently deletes all scores, completions, stars, and leaderboard entries. Use when game mechanics change significantly.',
+                    ),
+                    _buildDocItem(
+                      'Force Test Crash',
+                      'Forces the app to crash to test Firebase Crashlytics reporting.',
+                      'The crash report will appear in Firebase Console after a few minutes. Use this to verify dSYM upload is working.',
+                    ),
+                    _buildDocItem(
+                      'Log Test Error',
+                      'Logs a non-fatal error to Firebase Crashlytics for testing.',
+                      'Creates an error report without crashing the app. Useful for testing error logging functionality.',
                     ),
                   ],
                 ),
@@ -1136,6 +1198,68 @@ class _AdminScreenState extends State<AdminScreen> {
       setState(() {
         _isResettingGameData = false;
       });
+    }
+  }
+
+  void _testCrash() {
+    // Show confirmation dialog first
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Force Test Crash'),
+        content: Text(
+          'This will force the app to crash to test Crashlytics reporting. '
+          'The crash will appear in your Firebase Console after a few minutes. '
+          'Are you sure you want to continue?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Force a crash after a short delay to allow dialog to close
+              Future.delayed(Duration(seconds: 1), () {
+                FirebaseCrashlytics.instance.crash();
+              });
+            },
+            child: Text('Crash App'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _logTestError() async {
+    try {
+      // Log a test error to Crashlytics
+      await FirebaseCrashlytics.instance.recordError(
+        'Test error from admin panel',
+        StackTrace.current,
+        reason: 'Testing Crashlytics error logging',
+        information: [
+          DiagnosticsProperty('timestamp', DateTime.now().toString()),
+          DiagnosticsProperty('user_id', 'admin_test'),
+          DiagnosticsProperty('test_type', 'manual_error_logging'),
+        ],
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Test error logged to Crashlytics'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to log test error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

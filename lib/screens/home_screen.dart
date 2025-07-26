@@ -517,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getStreakMessage() {
     if (_currentStreak == 0) {
-      return "Let's build your first streak!";
+      return "Let's build your streak!";
     } else if (_currentStreak == 1) {
       return "🔥 1 day streak - Keep going!";
     } else {
