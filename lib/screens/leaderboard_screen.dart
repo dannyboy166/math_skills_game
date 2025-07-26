@@ -111,7 +111,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           }
           break;
         case 1: // Time tab
-          await _loadAllTimeLeaderboards();
+          await _loadAllTimeLeaderboards('Standard');
           break;
       }
     } catch (e) {
@@ -141,7 +141,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
   }
 
-  Future<void> _loadAllTimeLeaderboards() async {
+  Future<void> _loadAllTimeLeaderboards([String? difficulty]) async {
     try {
       // Load all time leaderboards in parallel
       final futures = <Future>[];
@@ -152,7 +152,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         'multiplication',
         'division'
       ]) {
-        futures.add(_loadTimeLeaderboard(operation));
+        futures.add(_loadTimeLeaderboard(operation, difficulty: difficulty));
       }
 
       await Future.wait(futures);
@@ -173,7 +173,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       final leaderboardType = _getTimeLeaderboardType(operation);
 
       List<LeaderboardEntry> entries;
-      if (difficulty != null && difficulty != 'All') {
+      if (difficulty != null) {
         entries = await _leaderboardService.getTopEntriesForDifficulty(
             leaderboardType, difficulty.toLowerCase(), 20);
       } else {

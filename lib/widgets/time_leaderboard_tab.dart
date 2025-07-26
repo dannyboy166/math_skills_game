@@ -33,12 +33,11 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     with SingleTickerProviderStateMixin {
   late TabController _operationTabController;
   String _currentOperation = 'addition';
-  String _currentDifficulty = 'All';
+  String _currentDifficulty = 'Standard';
   bool _isLoading = false;
 
   // List of difficulty options
   final List<String> _difficulties = [
-    'All',
     'Standard',
     'Challenging',
     'Expert',
@@ -50,6 +49,25 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     super.initState();
     _operationTabController = TabController(length: 4, vsync: this);
     _operationTabController.addListener(_handleOperationTabChanged);
+    
+    // Load initial data for the default operation and difficulty
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
+    });
+  }
+
+  void _loadInitialData() {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    widget.onDifficultyChanged(_currentOperation, _currentDifficulty).then((_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
   }
 
   @override
@@ -70,26 +88,15 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
         });
 
         // Then load the data for the new operation
-        if (_currentDifficulty != 'All') {
-          widget
-              .onDifficultyChanged(_currentOperation, _currentDifficulty)
-              .then((_) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-            }
-          });
-        } else {
-          // Handle 'All' difficulty case
-          widget.onRefresh().then((_) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-            }
-          });
-        }
+        widget
+            .onDifficultyChanged(_currentOperation, _currentDifficulty)
+            .then((_) {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        });
       }
     }
   }
@@ -128,9 +135,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
     final entries = _getCurrentLeaderboard();
     if (entries.isEmpty) return [];
 
-    final timeKey = _currentDifficulty == 'All'
-        ? _currentOperation
-        : '$_currentOperation-${_currentDifficulty.toLowerCase()}';
+    final timeKey = '$_currentOperation-${_currentDifficulty.toLowerCase()}';
 
     // Filter entries with valid time for this operation/difficulty
     final filtered = entries.where((entry) {
@@ -179,9 +184,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   }
 
   int _getBestTime(LeaderboardEntry entry) {
-    final timeKey = _currentDifficulty == 'All'
-        ? _currentOperation
-        : '$_currentOperation-${_currentDifficulty.toLowerCase()}';
+    final timeKey = '$_currentOperation-${_currentDifficulty.toLowerCase()}';
     return entry.bestTimes[timeKey] ?? 0;
   }
 
@@ -317,9 +320,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
             Icon(Icons.timer_outlined, size: 48, color: Colors.grey[400]),
             SizedBox(height: 16),
             Text(
-              _currentDifficulty == 'All'
-                  ? 'No time records available yet'
-                  : 'No time records for $_currentDifficulty difficulty',
+              'No time records for $_currentDifficulty difficulty',
               style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
           ],
@@ -512,8 +513,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           ),
         ),
         subtitle: Text(
-          'Level: ${entry.level}' +
-              (_currentDifficulty != 'All' ? ' • $_currentDifficulty' : ''),
+          'Level: ${entry.level} • $_currentDifficulty',
           style: TextStyle(
             fontSize: 12,
           ),
