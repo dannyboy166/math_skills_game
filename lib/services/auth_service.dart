@@ -1,5 +1,6 @@
 // lib/services/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:crypto/crypto.dart';
@@ -18,6 +19,10 @@ class AuthService {
 
   // Sign in with email and password
   Future<UserCredential> signInWithEmail(String email, String password) async {
+    FirebaseCrashlytics.instance.log('Attempting email sign-in for: $email');
+    FirebaseCrashlytics.instance.setCustomKey('last_attempted_email', email);
+    FirebaseCrashlytics.instance.setCustomKey('auth_method', 'email_password');
+    
     try {
       print("AUTH DEBUG: Starting signInWithEmail for $email");
 
@@ -33,6 +38,8 @@ class AuthService {
       // Force refresh the token to ensure auth state is properly updated
       if (result.user != null) {
         await result.user!.getIdTokenResult(true);
+        FirebaseCrashlytics.instance.log('Email sign-in successful for: ${result.user!.uid}');
+        FirebaseCrashlytics.instance.setCustomKey('last_successful_auth', DateTime.now().toIso8601String());
         print(
             "AUTH DEBUG: Sign-in successful for user: ${result.user?.uid ?? 'null'}");
       }
@@ -40,32 +47,61 @@ class AuthService {
       return result;
     } catch (e) {
       print("AUTH DEBUG: Error signing in with email: $e");
-      throw e;
+      FirebaseCrashlytics.instance.log('Email sign-in failed: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        StackTrace.current,
+        fatal: false,
+        information: ['Email sign-in failed for: $email', 'Error: $e'],
+      );
+      rethrow;
     }
   }
 
   // Register with email and password
   Future<UserCredential> registerWithEmail(
       String email, String password, String displayName) async {
-    final result = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    FirebaseCrashlytics.instance.log('Attempting email registration for: $email');
+    FirebaseCrashlytics.instance.setCustomKey('registration_email', email);
+    FirebaseCrashlytics.instance.setCustomKey('registration_display_name', displayName);
+    
+    try {
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    // Update display name
-    await result.user!.updateDisplayName(displayName);
+      // Update display name
+      await result.user!.updateDisplayName(displayName);
+      
+      FirebaseCrashlytics.instance.log('Email registration successful for: ${result.user!.uid}');
+      FirebaseCrashlytics.instance.setCustomKey('last_registration', DateTime.now().toIso8601String());
 
-    return result;
+      return result;
+    } catch (e) {
+      FirebaseCrashlytics.instance.log('Email registration failed: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        StackTrace.current,
+        fatal: false,
+        information: ['Email registration failed for: $email', 'Display name: $displayName', 'Error: $e'],
+      );
+      rethrow;
+    }
   }
 
   // Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
+    FirebaseCrashlytics.instance.log('Attempting Google sign-in');
+    FirebaseCrashlytics.instance.setCustomKey('auth_method', 'google');
+    
     try {
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
         // The user canceled the sign-in
+        FirebaseCrashlytics.instance.log('Google sign-in cancelled by user');
         return null;
       }
 
@@ -84,17 +120,29 @@ class AuthService {
       // Force token refresh here too
       if (result.user != null) {
         await result.user!.getIdTokenResult(true);
+        FirebaseCrashlytics.instance.log('Google sign-in successful for: ${result.user!.uid}');
+        FirebaseCrashlytics.instance.setCustomKey('last_successful_auth', DateTime.now().toIso8601String());
       }
 
       return result;
     } catch (e) {
       print("Error signing in with Google: $e");
-      throw e;
+      FirebaseCrashlytics.instance.log('Google sign-in failed: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        StackTrace.current,
+        fatal: false,
+        information: ['Google sign-in failed', 'Error: $e'],
+      );
+      rethrow;
     }
   }
 
   // Sign in with Apple
   Future<UserCredential?> signInWithApple() async {
+    FirebaseCrashlytics.instance.log('Attempting Apple sign-in');
+    FirebaseCrashlytics.instance.setCustomKey('auth_method', 'apple');
+    
     try {
       // Generate a random nonce for security
       final rawNonce = _generateNonce();
@@ -129,12 +177,21 @@ class AuthService {
       // Force token refresh
       if (result.user != null) {
         await result.user!.getIdTokenResult(true);
+        FirebaseCrashlytics.instance.log('Apple sign-in successful for: ${result.user!.uid}');
+        FirebaseCrashlytics.instance.setCustomKey('last_successful_auth', DateTime.now().toIso8601String());
       }
 
       return result;
     } catch (e) {
       print("Error signing in with Apple: $e");
-      throw e;
+      FirebaseCrashlytics.instance.log('Apple sign-in failed: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        StackTrace.current,
+        fatal: false,
+        information: ['Apple sign-in failed', 'Error: $e'],
+      );
+      rethrow;
     }
   }
 
@@ -167,7 +224,13 @@ class AuthService {
           "AUTH DEBUG: Sign-out completed, current user is now: ${_auth.currentUser?.uid ?? 'null'}");
     } catch (e) {
       print("AUTH DEBUG: Error during sign out: $e");
-      throw e;
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        StackTrace.current,
+        fatal: false,
+        information: ['Sign-out failed'],
+      );
+      rethrow;
     }
   }
 

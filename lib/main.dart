@@ -1,17 +1,30 @@
 // lib/main.dart - Updated to include haptic service
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:number_ninja/services/sound_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 import 'screens/landing_screen.dart'; // Import the new landing screen
 import 'services/leaderboard_initializer.dart';
 import 'services/haptic_service.dart'; // Import the haptic service
+import 'services/crashlytics_navigation_observer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Initialize Firebase Crashlytics
+  FlutterError.onError = (errorDetails) {
+    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+  };
+  // Pass all uncaught asynchronous errors
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
 
   await SoundService().initialize();
 
@@ -40,8 +53,14 @@ Future<void> _initializeLeaderboardData() async {
       await initializer.initializeForCurrentUser();
       LeaderboardInitializer.markInitialized();
     }
-  } catch (e) {
-    // Silently handle initialization errors
+  } catch (e, stackTrace) {
+    // Report non-fatal error to Crashlytics
+    FirebaseCrashlytics.instance.recordError(
+      e,
+      stackTrace,
+      fatal: false,
+      information: ['Leaderboard initialization failed'],
+    );
   }
 }
 
@@ -66,6 +85,7 @@ class MyApp extends StatelessWidget {
           bodyMedium: TextStyle(fontFamily: 'ComicSans'),
         ),
       ),
+      navigatorObservers: [CrashlyticsNavigationObserver()],
       home: _handleAuthState(),
       debugShowCheckedModeBanner: false,
     );
@@ -84,11 +104,24 @@ class MyApp extends StatelessWidget {
         }
 
         if (snapshot.hasData && snapshot.data != null) {
-          // User is logged in
+          // User is logged in - set user info for Crashlytics
+          final user = snapshot.data!;
+          FirebaseCrashlytics.instance.setUserIdentifier(user.uid);
+          FirebaseCrashlytics.instance.setCustomKey('user_email', user.email ?? 'no_email');
+          FirebaseCrashlytics.instance.setCustomKey('display_name', user.displayName ?? 'no_name');
+          FirebaseCrashlytics.instance.setCustomKey('auth_provider', user.providerData.isNotEmpty ? user.providerData.first.providerId : 'unknown');
+          FirebaseCrashlytics.instance.log('User authenticated: ${user.uid}');
+          
           return HomeScreen();
         }
 
-        // User is not logged in
+        // User is not logged in - set anonymous tracking
+        FirebaseCrashlytics.instance.setUserIdentifier('anonymous');
+        FirebaseCrashlytics.instance.setCustomKey('user_email', 'anonymous');
+        FirebaseCrashlytics.instance.setCustomKey('display_name', 'anonymous');
+        FirebaseCrashlytics.instance.setCustomKey('auth_provider', 'none');
+        FirebaseCrashlytics.instance.log('User not authenticated - showing landing screen');
+        
         // Return the landing screen instead of the login screen directly
         return LandingScreen();
       },
