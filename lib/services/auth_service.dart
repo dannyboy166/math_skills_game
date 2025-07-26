@@ -22,7 +22,7 @@ class AuthService {
     FirebaseCrashlytics.instance.log('Attempting email sign-in for: $email');
     FirebaseCrashlytics.instance.setCustomKey('last_attempted_email', email);
     FirebaseCrashlytics.instance.setCustomKey('auth_method', 'email_password');
-    
+
     try {
       print("AUTH DEBUG: Starting signInWithEmail for $email");
 
@@ -38,8 +38,10 @@ class AuthService {
       // Force refresh the token to ensure auth state is properly updated
       if (result.user != null) {
         await result.user!.getIdTokenResult(true);
-        FirebaseCrashlytics.instance.log('Email sign-in successful for: ${result.user!.uid}');
-        FirebaseCrashlytics.instance.setCustomKey('last_successful_auth', DateTime.now().toIso8601String());
+        FirebaseCrashlytics.instance
+            .log('Email sign-in successful for: ${result.user!.uid}');
+        FirebaseCrashlytics.instance.setCustomKey(
+            'last_successful_auth', DateTime.now().toIso8601String());
         print(
             "AUTH DEBUG: Sign-in successful for user: ${result.user?.uid ?? 'null'}");
       }
@@ -61,10 +63,12 @@ class AuthService {
   // Register with email and password
   Future<UserCredential> registerWithEmail(
       String email, String password, String displayName) async {
-    FirebaseCrashlytics.instance.log('Attempting email registration for: $email');
+    FirebaseCrashlytics.instance
+        .log('Attempting email registration for: $email');
     FirebaseCrashlytics.instance.setCustomKey('registration_email', email);
-    FirebaseCrashlytics.instance.setCustomKey('registration_display_name', displayName);
-    
+    FirebaseCrashlytics.instance
+        .setCustomKey('registration_display_name', displayName);
+
     try {
       final result = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -73,9 +77,11 @@ class AuthService {
 
       // Update display name
       await result.user!.updateDisplayName(displayName);
-      
-      FirebaseCrashlytics.instance.log('Email registration successful for: ${result.user!.uid}');
-      FirebaseCrashlytics.instance.setCustomKey('last_registration', DateTime.now().toIso8601String());
+
+      FirebaseCrashlytics.instance
+          .log('Email registration successful for: ${result.user!.uid}');
+      FirebaseCrashlytics.instance
+          .setCustomKey('last_registration', DateTime.now().toIso8601String());
 
       return result;
     } catch (e) {
@@ -84,7 +90,11 @@ class AuthService {
         e,
         StackTrace.current,
         fatal: false,
-        information: ['Email registration failed for: $email', 'Display name: $displayName', 'Error: $e'],
+        information: [
+          'Email registration failed for: $email',
+          'Display name: $displayName',
+          'Error: $e'
+        ],
       );
       rethrow;
     }
@@ -94,7 +104,7 @@ class AuthService {
   Future<UserCredential?> signInWithGoogle() async {
     FirebaseCrashlytics.instance.log('Attempting Google sign-in');
     FirebaseCrashlytics.instance.setCustomKey('auth_method', 'google');
-    
+
     try {
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -106,7 +116,8 @@ class AuthService {
       }
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
@@ -120,8 +131,10 @@ class AuthService {
       // Force token refresh here too
       if (result.user != null) {
         await result.user!.getIdTokenResult(true);
-        FirebaseCrashlytics.instance.log('Google sign-in successful for: ${result.user!.uid}');
-        FirebaseCrashlytics.instance.setCustomKey('last_successful_auth', DateTime.now().toIso8601String());
+        FirebaseCrashlytics.instance
+            .log('Google sign-in successful for: ${result.user!.uid}');
+        FirebaseCrashlytics.instance.setCustomKey(
+            'last_successful_auth', DateTime.now().toIso8601String());
       }
 
       return result;
@@ -142,13 +155,19 @@ class AuthService {
   Future<UserCredential?> signInWithApple() async {
     FirebaseCrashlytics.instance.log('Attempting Apple sign-in');
     FirebaseCrashlytics.instance.setCustomKey('auth_method', 'apple');
-    
+
     try {
+      print('🍎 === APPLE SIGN-IN DEBUG START ===');
+
       // Generate a random nonce for security
       final rawNonce = _generateNonce();
       final nonce = _sha256ofString(rawNonce);
 
+      print('🍎 Generated rawNonce length: ${rawNonce.length}');
+      print('🍎 Generated nonce hash: $nonce');
+
       // Request credential for the currently signed in Apple account
+      print('🍎 Requesting Apple ID credential...');
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
@@ -157,33 +176,89 @@ class AuthService {
         nonce: nonce,
       );
 
+      print('🍎 Apple credential received successfully');
+      print('🍎 Apple ID Token: ${appleCredential.identityToken}');
+      print('🍎 Apple Auth Code: ${appleCredential.authorizationCode}');
+      print('🍎 Apple Email: ${appleCredential.email}');
+      print('🍎 Apple Given Name: ${appleCredential.givenName}');
+      print('🍎 Apple Family Name: ${appleCredential.familyName}');
+      print('🍎 Apple User ID: ${appleCredential.userIdentifier}');
+
+      // Validate required fields
+      if (appleCredential.identityToken == null) {
+        throw Exception('Apple ID token is null');
+      }
+
+      print(
+          '🍎 Identity token length: ${appleCredential.identityToken!.length}');
+      print('🍎 Raw nonce for credential: $rawNonce');
+
       // Create an `OAuthCredential` from the credential returned by Apple
+      print('🍎 Creating OAuth credential...');
+      print('🍎 Using rawNonce: $rawNonce');
+      print(
+          '🍎 Using idToken length: ${appleCredential.identityToken!.length}');
+
       final oauthCredential = OAuthProvider("apple.com").credential(
         idToken: appleCredential.identityToken,
         rawNonce: rawNonce,
+        accessToken: appleCredential.authorizationCode, // ← Add this line
       );
 
+      print('🍎 OAuth credential created successfully');
+      print('🍎 OAuth credential provider: ${oauthCredential.providerId}');
+      print(
+          '🍎 OAuth credential sign-in method: ${oauthCredential.signInMethod}');
+
       // Sign in the user with Firebase
+      print('🍎 Attempting Firebase sign-in with credential...');
       final result = await _auth.signInWithCredential(oauthCredential);
 
+      print('🍎 Firebase sign-in successful!');
+      print('🍎 User UID: ${result.user?.uid}');
+      print('🍎 User email: ${result.user?.email}');
+      print('🍎 User display name: ${result.user?.displayName}');
+
       // If the user's name is available and not already set, update it
-      if (result.user != null && 
-          result.user!.displayName == null && 
+      if (result.user != null &&
+          result.user!.displayName == null &&
           appleCredential.givenName != null) {
-        final displayName = '${appleCredential.givenName} ${appleCredential.familyName ?? ''}'.trim();
+        final displayName =
+            '${appleCredential.givenName} ${appleCredential.familyName ?? ''}'
+                .trim();
+        print('🍎 Updating display name to: $displayName');
         await result.user!.updateDisplayName(displayName);
       }
 
       // Force token refresh
       if (result.user != null) {
+        print('🍎 Refreshing ID token...');
         await result.user!.getIdTokenResult(true);
-        FirebaseCrashlytics.instance.log('Apple sign-in successful for: ${result.user!.uid}');
-        FirebaseCrashlytics.instance.setCustomKey('last_successful_auth', DateTime.now().toIso8601String());
+        FirebaseCrashlytics.instance
+            .log('Apple sign-in successful for: ${result.user!.uid}');
+        FirebaseCrashlytics.instance.setCustomKey(
+            'last_successful_auth', DateTime.now().toIso8601String());
+        print('🍎 Token refresh complete');
       }
 
+      print('🍎 === APPLE SIGN-IN DEBUG END (SUCCESS) ===');
       return result;
     } catch (e) {
-      print("Error signing in with Apple: $e");
+      print('🍎 === APPLE SIGN-IN DEBUG END (ERROR) ===');
+      print('🍎 Error Type: ${e.runtimeType}');
+      print('🍎 Error Message: $e');
+      print('🍎 Stack Trace: ${StackTrace.current}');
+
+      // Additional error analysis
+      if (e.toString().contains('invalid-credential')) {
+        print('🍎 INVALID CREDENTIAL ERROR DETECTED');
+        print('🍎 This usually means:');
+        print('🍎 1. Apple OAuth not configured in Firebase Console');
+        print('🍎 2. Bundle ID mismatch between Xcode and Firebase');
+        print('🍎 3. Apple Services ID configuration issue');
+        print('🍎 4. Missing or incorrect Apple Team ID/Key ID');
+      }
+
       FirebaseCrashlytics.instance.log('Apple sign-in failed: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
@@ -241,9 +316,11 @@ class AuthService {
 
   // Helper method to generate a cryptographically secure random nonce
   String _generateNonce([int length = 32]) {
-    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
   }
 
   // Helper method to generate SHA256 hash of a string
