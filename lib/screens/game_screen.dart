@@ -793,77 +793,6 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-// Show hint button functionality
-  void _showHint() {
-    // Light haptic feedback when showing hint
-    _hapticService.lightImpact();
-
-    // Find an unlocked corner that could be locked with the current position
-    bool foundHint = false;
-    for (int i = 0; i < 4; i++) {
-      if (!lockedEquations.any((eq) => eq.cornerIndex == i) &&
-          _checkEquation(i)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.lightbulb, color: Colors.yellow),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'There\'s a correct equation in one of the corners. Tap to lock it in!',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: true,
-                  ),
-                ),
-              ],
-            ),
-            duration: Duration(seconds: 3),
-            backgroundColor: operation.color,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-        foundHint = true;
-        break;
-      }
-    }
-
-    if (!foundHint) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.start, // Align items to the top
-            children: [
-              Icon(Icons.touch_app, color: Colors.white),
-              SizedBox(width: 10),
-              Expanded(
-                // Add Expanded to allow the text to take available width
-                child: Text(
-                  'Keep rotating the rings until the equations match!',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                  softWrap: true, // Allow text to wrap to multiple lines
-                  maxLines: 2, // Limit to 2 lines (increase if needed)
-                ),
-              ),
-            ],
-          ),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.orange.shade700,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -889,7 +818,6 @@ class _GameScreenState extends State<GameScreen> {
       onUpdateOuterRing: _updateOuterRing,
       onTileTap: _handleTileTap,
       onEquationTap: _handleEquationTap,
-      onShowHint: _showHint,
       onShowSettings: _showGameSettings,
       isDragMode: _isDragMode,
       onToggleMode: _toggleControlMode,

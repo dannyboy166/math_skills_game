@@ -15,24 +15,43 @@ class ProgressStars extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    // Calculate spacing and size based on total count
-    final double spacing = total > 8 ? 2 : 6;
-    final double starSize = total > 8 ? 24 : 32;
+    // Display 6 stars per row with 2 rows
+    final int starsPerRow = 6;
+    final double spacing = 6;
+    final double starSize = 32;
     
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(total, (index) {
-          final bool isCompleted = index < completed;
-          return Padding(
+    // Split stars into rows
+    List<Widget> rows = [];
+    for (int row = 0; row < 2; row++) {
+      List<Widget> rowStars = [];
+      for (int col = 0; col < starsPerRow; col++) {
+        final int index = row * starsPerRow + col;
+        final bool isCompleted = index < completed;
+        
+        rowStars.add(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: spacing),
             child: isCompleted
                 ? _buildCompletedStar(starSize)
                 : _buildEmptyStar(starSize),
-          );
-        }),
-      ),
+          ),
+        );
+      }
+      
+      rows.add(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: rowStars,
+        ),
+      );
+    }
+    
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: rows.map((row) => Padding(
+        padding: EdgeInsets.symmetric(vertical: 4),
+        child: row,
+      )).toList(),
     );
   }
   

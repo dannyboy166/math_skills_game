@@ -40,7 +40,6 @@ class GameScreenUI extends StatelessWidget {
   final Function(int) onUpdateOuterRing;
   final Function(int, int) onTileTap;
   final Function(int) onEquationTap;
-  final VoidCallback onShowHint;
   final VoidCallback onShowSettings;
 
   const GameScreenUI({
@@ -65,7 +64,6 @@ class GameScreenUI extends StatelessWidget {
     required this.onUpdateOuterRing,
     required this.onTileTap,
     required this.onEquationTap,
-    required this.onShowHint,
     required this.onShowSettings,
   }) : super(key: key);
 
@@ -177,14 +175,7 @@ class GameScreenUI extends StatelessWidget {
                           color: operation.color,
                         ),
                       ),
-                      SizedBox(height: 8),
-
-                      SizedBox(height: 16),
-                      // Progress stars at the top
-                      ProgressStars(
-                        total: 12,
-                        completed: lockedEquations.length,
-                      ),
+                      SizedBox(height: 24),
                     ],
                   ),
 
@@ -299,14 +290,21 @@ class GameScreenUI extends StatelessWidget {
                     ),
                   ),
 
-                  // Bottom section: Only show hint button during gameplay
-                  // When game is complete, show locked equations
+                  // Progress stars under the rings
                   Container(
-                    padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                    child: isGameComplete
-                        ? _buildCompletionMessage()
-                        : _buildHintButton(),
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    child: ProgressStars(
+                      total: 12,
+                      completed: lockedEquations.length,
+                    ),
                   ),
+
+                  // Bottom section: Show completion message when game is complete
+                  if (isGameComplete)
+                    Container(
+                      padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                      child: _buildCompletionMessage(),
+                    ),
                 ],
               ),
 
@@ -319,30 +317,6 @@ class GameScreenUI extends StatelessWidget {
     );
   }
 
-
-  // Helper method to build the hint button
-  Widget _buildHintButton() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 60, vertical: 10),
-      child: ElevatedButton.icon(
-        onPressed: onShowHint,
-        icon: Icon(
-          Icons.lightbulb_outline,
-          color: Colors.white, // Make the icon light colored
-        ),
-        label: Text('Hint', style: TextStyle(fontSize: 16)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: operation.color.withValues(alpha: 0.8),
-          foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          elevation: 3,
-        ),
-      ),
-    );
-  }
 
   Widget _buildCompletionMessage() {
     return Container(
