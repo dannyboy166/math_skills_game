@@ -83,17 +83,17 @@ class GameScreenUI extends StatelessWidget {
     String title;
     switch (operationName) {
       case 'addition':
-        title = 'Addition - Target: $targetNumber';
+        title = 'Addition';
         break;
       case 'subtraction':
-        title = 'Subtraction - Target: $targetNumber';
+        title = 'Subtraction';
         break;
       case 'division':
-        title = 'Division - Target: $targetNumber';
+        title = 'Division';
         break;
       case 'multiplication':
       default:
-        title = 'Multiplication - Target: $targetNumber';
+        title = 'Multiplication';
         break;
     }
 
