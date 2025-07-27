@@ -27,11 +27,11 @@ class GameScreenUI extends StatelessWidget {
   final List<Widget> starAnimations;
   final bool isGameComplete;
   final int elapsedTimeMs;
-  
+
   // NEW: Control mode toggle
   final bool isDragMode;
   final VoidCallback onToggleMode;
-  
+
   // NEW: Rotation speed control
   final RotationSpeed rotationSpeed;
 
@@ -184,24 +184,6 @@ class GameScreenUI extends StatelessWidget {
 
                       SizedBox(height: 8),
 
-                      // Star rating guide
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.timer,
-                              size: 16, color: Colors.amber.shade800),
-                          SizedBox(width: 4),
-                          Text(
-                            'Complete faster to earn more stars!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.amber.shade800,
-                            ),
-                          ),
-                        ],
-                      ),
-
                       SizedBox(height: 16),
                       // Progress stars at the top
                       ProgressStars(
@@ -224,7 +206,8 @@ class GameScreenUI extends StatelessWidget {
                           children: [
                             // Outer ring - UPDATED to use mode toggle and rotation speed
                             SimpleRing(
-                              key: ValueKey('outer_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
+                              key: ValueKey(
+                                  'outer_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
                               ringModel: outerRingModel,
                               size: boardSize,
                               tileSize: outerTileSize,
@@ -233,7 +216,8 @@ class GameScreenUI extends StatelessWidget {
                               lockedEquations: lockedEquations,
                               greyedOutNumbers: greyedOutNumbers,
                               onTileTap: onTileTap,
-                              transitionRate: rotationSpeed.transitionRate, // NEW: Use user's preferred speed
+                              transitionRate: rotationSpeed
+                                  .transitionRate, // NEW: Use user's preferred speed
                               margin: margin,
                               isDragMode: isDragMode, // NEW parameter
                               gameMode: gameMode, // NEW parameter
@@ -241,7 +225,8 @@ class GameScreenUI extends StatelessWidget {
 
                             // Inner ring - UPDATED to use mode toggle and rotation speed
                             SimpleRing(
-                              key: ValueKey('inner_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
+                              key: ValueKey(
+                                  'inner_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
                               ringModel: innerRingModel,
                               size: innerRingSize,
                               tileSize: innerTileSize,
@@ -250,7 +235,8 @@ class GameScreenUI extends StatelessWidget {
                               lockedEquations: lockedEquations,
                               greyedOutNumbers: greyedOutNumbers,
                               onTileTap: onTileTap,
-                              transitionRate: rotationSpeed.transitionRate, // NEW: Use user's preferred speed
+                              transitionRate: rotationSpeed
+                                  .transitionRate, // NEW: Use user's preferred speed
                               margin: margin,
                               isDragMode: isDragMode, // NEW parameter
                               gameMode: gameMode, // NEW parameter
@@ -345,7 +331,8 @@ class GameScreenUI extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: operation.color.withValues(alpha: 0.3), width: 1),
+        border:
+            Border.all(color: operation.color.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
@@ -383,7 +370,8 @@ class GameScreenUI extends StatelessWidget {
               ),
               child: AnimatedAlign(
                 duration: Duration(milliseconds: 200),
-                alignment: isDragMode ? Alignment.centerRight : Alignment.centerLeft,
+                alignment:
+                    isDragMode ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
                   width: 16,
                   height: 16,
@@ -430,7 +418,8 @@ class GameScreenUI extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: operation.color.withValues(alpha: 0.3), width: 2),
+        border:
+            Border.all(color: operation.color.withValues(alpha: 0.3), width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
