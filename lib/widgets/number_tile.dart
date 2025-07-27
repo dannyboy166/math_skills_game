@@ -6,7 +6,7 @@ class NumberTile extends StatefulWidget {
   final int number;
   final Color color;
   final bool isLocked;
-  final bool isCorner; 
+  final bool isCorner;
   final bool isGreyedOut;
   final VoidCallback? onTap;
   final double size;
@@ -28,7 +28,8 @@ class NumberTile extends StatefulWidget {
   State<NumberTile> createState() => _NumberTileState();
 }
 
-class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateMixin {
+class _NumberTileState extends State<NumberTile>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
@@ -46,11 +47,6 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
         curve: Curves.easeInOut,
       ),
     );
-
-    // Debug print on init
-    if (widget.isCorner) {
-      print("DEBUG: Corner NumberTile initialized with number ${widget.number}, onTap is ${widget.onTap != null ? 'set' : 'null'}");
-    }
   }
 
   @override
@@ -61,7 +57,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
 
   void _handleTapDown(TapDownDetails details) {
     if (widget.onTap != null) {
-      print("DEBUG: TapDown on NumberTile ${widget.number}, isCorner: ${widget.isCorner}");
+      print(
+          "DEBUG: TapDown on NumberTile ${widget.number}, isCorner: ${widget.isCorner}");
       setState(() {
         _isPressed = true;
       });
@@ -71,7 +68,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
 
   void _handleTapUp(TapUpDetails details) {
     if (widget.onTap != null) {
-      print("DEBUG: TapUp on NumberTile ${widget.number}, isCorner: ${widget.isCorner}");
+      print(
+          "DEBUG: TapUp on NumberTile ${widget.number}, isCorner: ${widget.isCorner}");
       setState(() {
         _isPressed = false;
       });
@@ -96,18 +94,19 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
     if (widget.isLocked || widget.isGreyedOut) {
       // Convert to grayscale with reduced opacity
       final grayValue = _getGrayscaleValue(widget.color);
-      baseColor = Color.fromRGBO(grayValue, grayValue, grayValue, widget.isGreyedOut ? 0.5 : 0.7);
+      baseColor = Color.fromRGBO(
+          grayValue, grayValue, grayValue, widget.isGreyedOut ? 0.5 : 0.7);
     } else {
       baseColor = widget.color;
     }
-    
+
     // Create gradient colors for 3D effect
     final Color lightColor = _getLighterColor(baseColor);
     final Color darkColor = _getDarkerColor(baseColor);
-    
+
     // Calculate the adjusted size, applying the multiplier
     final adjustedSize = widget.size * widget.sizeMultiplier;
-    
+
     return Semantics(
       button: true,
       enabled: widget.onTap != null,
@@ -117,7 +116,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
         ignoring: widget.isLocked,
         child: GestureDetector(
           onTap: () {
-            print("DEBUG: TAPPED on NumberTile ${widget.number}, isCorner: ${widget.isCorner}, isLocked: ${widget.isLocked}");
+            print(
+                "DEBUG: TAPPED on NumberTile ${widget.number}, isCorner: ${widget.isCorner}, isLocked: ${widget.isLocked}");
             if (widget.onTap != null) {
               widget.onTap!();
             }
@@ -125,7 +125,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
           onTapDown: _handleTapDown,
           onTapUp: _handleTapUp,
           onTapCancel: _handleTapCancel,
-          behavior: HitTestBehavior.opaque, // Important: Makes the entire area clickable
+          behavior: HitTestBehavior
+              .opaque, // Important: Makes the entire area clickable
           child: AnimatedBuilder(
             animation: _scaleAnimation,
             builder: (context, child) {
@@ -147,29 +148,31 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
                       stops: const [0.1, 0.5, 0.9],
                     ),
                     boxShadow: (widget.isLocked || widget.isGreyedOut)
-                      ? []
-                      : [
-                          // Outer shadow
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: adjustedSize * 0.1,
-                            spreadRadius: adjustedSize * 0.02,
-                            offset: Offset(adjustedSize * 0.04, adjustedSize * 0.04),
-                          ),
-                          // Inner highlight
-                          BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            blurRadius: adjustedSize * 0.1,
-                            spreadRadius: adjustedSize * 0.01,
-                            offset: Offset(-adjustedSize * 0.02, -adjustedSize * 0.02),
-                          ),
-                        ],
+                        ? []
+                        : [
+                            // Outer shadow
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: adjustedSize * 0.1,
+                              spreadRadius: adjustedSize * 0.02,
+                              offset: Offset(
+                                  adjustedSize * 0.04, adjustedSize * 0.04),
+                            ),
+                            // Inner highlight
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              blurRadius: adjustedSize * 0.1,
+                              spreadRadius: adjustedSize * 0.01,
+                              offset: Offset(
+                                  -adjustedSize * 0.02, -adjustedSize * 0.02),
+                            ),
+                          ],
                   ),
                   child: Material(
                     color: Colors.transparent,
                     child: _isPressed
-                      ? _buildPressedContent(adjustedSize)
-                      : _buildNormalContent(adjustedSize),
+                        ? _buildPressedContent(adjustedSize)
+                        : _buildNormalContent(adjustedSize),
                   ),
                 ),
               );
@@ -182,10 +185,10 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
 
   Widget _buildNormalContent(double size) {
     // Adjust the text color based on locked or greyed out state
-    final textColor = (widget.isLocked || widget.isGreyedOut) 
-        ? Colors.white.withValues(alpha: widget.isGreyedOut ? 0.6 : 0.7) 
+    final textColor = (widget.isLocked || widget.isGreyedOut)
+        ? Colors.white.withValues(alpha: widget.isGreyedOut ? 0.6 : 0.7)
         : Colors.white;
-    
+
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -197,12 +200,13 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             shape: BoxShape.circle,
             color: Colors.transparent,
             border: Border.all(
-              color: Colors.white.withValues(alpha: (widget.isLocked || widget.isGreyedOut) ? 0.1 : 0.15),
+              color: Colors.white.withValues(
+                  alpha: (widget.isLocked || widget.isGreyedOut) ? 0.1 : 0.15),
               width: size * 0.03,
             ),
           ),
         ),
-        
+
         // Text with subtle shadow
         Center(
           child: FittedBox(
@@ -228,7 +232,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             ),
           ),
         ),
-        
+
         // Shine effect (subtle arc at top-left) - only if not locked or greyed out
         if (!widget.isLocked && !widget.isGreyedOut)
           Positioned(
@@ -243,7 +247,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
               ),
             ),
           ),
-          
+
         // Add a subtle indicator for corner pieces to make them more visually distinct
         if (widget.isCorner && !widget.isLocked && !widget.isGreyedOut)
           Container(
@@ -262,10 +266,10 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
   }
 
   Widget _buildPressedContent(double size) {
-    final textColor = (widget.isLocked || widget.isGreyedOut) 
-        ? Colors.white.withValues(alpha: 0.6) 
+    final textColor = (widget.isLocked || widget.isGreyedOut)
+        ? Colors.white.withValues(alpha: 0.6)
         : Colors.white.withValues(alpha: 0.9);
-    
+
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -282,7 +286,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             ),
           ),
         ),
-        
+
         // Text with less pronounced shadow
         Center(
           child: FittedBox(
@@ -308,7 +312,7 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
             ),
           ),
         ),
-        
+
         // Add a subtle indicator for corner pieces to make them more visually distinct
         if (widget.isCorner)
           Container(
@@ -328,7 +332,8 @@ class _NumberTileState extends State<NumberTile> with SingleTickerProviderStateM
 
   // Helper method to calculate grayscale equivalent
   int _getGrayscaleValue(Color color) {
-    return ((0.299 * color.red) + (0.587 * color.green) + (0.114 * color.blue)).round();
+    return ((0.299 * color.red) + (0.587 * color.green) + (0.114 * color.blue))
+        .round();
   }
 
   Color _getLighterColor(Color color) {

@@ -27,6 +27,7 @@ class GameScreenUI extends StatelessWidget {
   final List<Widget> starAnimations;
   final bool isGameComplete;
   final int elapsedTimeMs;
+  final String currentHighScore;
 
   // NEW: Control mode toggle
   final bool isDragMode;
@@ -57,6 +58,7 @@ class GameScreenUI extends StatelessWidget {
     required this.starAnimations,
     required this.isGameComplete,
     required this.elapsedTimeMs,
+    required this.currentHighScore,
     required this.isDragMode, // NEW
     required this.onToggleMode, // NEW
     required this.rotationSpeed, // NEW
@@ -116,6 +118,32 @@ class GameScreenUI extends StatelessWidget {
           ),
         ),
         actions: [
+          // High score display in app bar  
+          Center(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: EdgeInsets.only(right: 4),
+              decoration: BoxDecoration(
+                color: Colors.white12,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.emoji_events, size: 14, color: Colors.white70),
+                  SizedBox(width: 2),
+                  Text(
+                    currentHighScore,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           // Timer display in app bar
           Center(
             child: Container(

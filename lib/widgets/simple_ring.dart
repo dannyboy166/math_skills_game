@@ -73,10 +73,14 @@ class _SimpleRingState extends State<SimpleRing>
     _updatePositionMappings();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _animationController.animationController.value = 0.01;
-      Future.delayed(Duration(milliseconds: 10), () {
-        _animationController.animationController.value = 0;
-      });
+      if (mounted) {
+        _animationController.animationController.value = 0.01;
+        Future.delayed(Duration(milliseconds: 10), () {
+          if (mounted) {
+            _animationController.animationController.value = 0;
+          }
+        });
+      }
     });
   }
 

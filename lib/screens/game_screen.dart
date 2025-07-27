@@ -53,6 +53,9 @@ class _GameScreenState extends State<GameScreen> {
   // Track locked equations
   List<LockedEquation> lockedEquations = [];
 
+  // High score tracking
+  String _currentHighScore = '--:--';
+
   // Track greyed out number pairs for times table mode
   Set<String> greyedOutPairs = {};
 
@@ -91,7 +94,8 @@ class _GameScreenState extends State<GameScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isDragMode = false; // Default to swipe mode
-  RotationSpeed _rotationSpeed = RotationSpeed.defaultSpeed; // Default rotation speed
+  RotationSpeed _rotationSpeed =
+      RotationSpeed.defaultSpeed; // Default rotation speed
 
 // Add more debug logging to GameScreen initState method:
 
@@ -133,7 +137,6 @@ class _GameScreenState extends State<GameScreen> {
       _startGameTimer();
       print("   ✅ Game timer started");
 
-
       print("   💾 Loading control mode preference...");
       _loadControlModePreference();
       print("   ✅ Control mode preference loaded");
@@ -141,6 +144,10 @@ class _GameScreenState extends State<GameScreen> {
       print("   🔧 Loading rotation speed preference...");
       _loadRotationSpeedPreference();
       print("   ✅ Rotation speed preference loaded");
+
+      print("   🏆 Loading high score for current level...");
+      _loadCurrentLevelHighScore();
+      print("   ✅ High score loaded");
 
       print("🎮 GameScreen.initState() COMPLETED SUCCESSFULLY");
     } catch (e, stackTrace) {
@@ -219,14 +226,115 @@ class _GameScreenState extends State<GameScreen> {
 
   void _loadRotationSpeedPreference() async {
     final prefs = await SharedPreferences.getInstance();
-    final speedLevel = prefs.getInt('rotation_speed') ?? 5; // Default to Normal (level 5)
+    final speedLevel =
+        prefs.getInt('rotation_speed') ?? 5; // Default to Normal (level 5)
     final loadedSpeed = RotationSpeed.fromLevel(speedLevel);
-    
+
     if (mounted) {
       setState(() {
         _rotationSpeed = loadedSpeed;
       });
     }
+  }
+
+  void _loadCurrentLevelHighScore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _currentHighScore = '--:--';
+      });
+      return;
+    }
+
+    try {
+      final userService = UserService();
+      final allCompletions = await userService.getLevelCompletions(user.uid);
+
+      // Filter completions for this operation
+      final operationCompletions = allCompletions
+          .where(
+              (completion) => completion.operationName == widget.operationName)
+          .toList();
+
+      String bestTime = _getBestTimeForCurrentLevel(operationCompletions);
+
+      if (mounted) {
+        setState(() {
+          _currentHighScore = bestTime;
+        });
+      }
+    } catch (e) {
+      print('Error loading high score: $e');
+      if (mounted) {
+        setState(() {
+          _currentHighScore = '--:--';
+        });
+      }
+    }
+  }
+
+  String _getBestTimeForCurrentLevel(List<LevelCompletionModel> completions) {
+    // Determine the range for this level based on operation and difficulty
+    List<int> levelRange = _getLevelRange();
+
+    // Filter completions that fall within this level's range
+    final matchingCompletions = completions
+        .where((completion) =>
+            levelRange.contains(completion.targetNumber) &&
+            completion.completionTimeMs > 0)
+        .toList();
+
+    if (matchingCompletions.isEmpty) {
+      return '--:--';
+    }
+
+    // Find the minimum time (best time) achieved in this level range
+    final bestCompletion = matchingCompletions
+        .reduce((a, b) => a.completionTimeMs < b.completionTimeMs ? a : b);
+
+    return StarRatingCalculator.formatTime(bestCompletion.completionTimeMs);
+  }
+
+  List<int> _getLevelRange() {
+    if (widget.operationName == 'multiplication' ||
+        widget.operationName == 'division') {
+      // For multiplication/division, it's just the single target number
+      return [targetNumber];
+    }
+
+    // For addition/subtraction, determine the range based on difficulty and target number
+    if (widget.difficultyLevel == DifficultyLevel.standard ||
+        widget.difficultyLevel == DifficultyLevel.challenging) {
+      // Individual levels (1-10)
+      return [targetNumber];
+    }
+
+    // Expert and Impossible have ranges
+    if (widget.difficultyLevel == DifficultyLevel.expert) {
+      // Expert ranges: 11-12, 13-14, 15-16, 17-18, 19-20
+      if (targetNumber >= 11 && targetNumber <= 12) return [11, 12];
+      if (targetNumber >= 13 && targetNumber <= 14) return [13, 14];
+      if (targetNumber >= 15 && targetNumber <= 16) return [15, 16];
+      if (targetNumber >= 17 && targetNumber <= 18) return [17, 18];
+      if (targetNumber >= 19 && targetNumber <= 20) return [19, 20];
+    }
+
+    if (widget.difficultyLevel == DifficultyLevel.impossible) {
+      // Impossible ranges: 21-26, 27-32, 33-38, 39-44, 45-50
+      if (targetNumber >= 21 && targetNumber <= 26)
+        return List.generate(6, (i) => 21 + i);
+      if (targetNumber >= 27 && targetNumber <= 32)
+        return List.generate(6, (i) => 27 + i);
+      if (targetNumber >= 33 && targetNumber <= 38)
+        return List.generate(6, (i) => 33 + i);
+      if (targetNumber >= 39 && targetNumber <= 44)
+        return List.generate(6, (i) => 39 + i);
+      if (targetNumber >= 45 && targetNumber <= 50)
+        return List.generate(6, (i) => 45 + i);
+    }
+
+    // Fallback to single number
+    return [targetNumber];
   }
 
   void _startGameTimer() {
@@ -441,10 +549,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   bool _checkEquation(int cornerIndex) {
-    print("DEBUG: Checking equation at cornerIndex: $cornerIndex");
-
-    // Always validate the equation regardless of previous solutions
-
     // Get numbers at corner positions
     final outerCornerPos = outerRingModel.cornerIndices[cornerIndex];
     final innerCornerPos = innerRingModel.cornerIndices[cornerIndex];
@@ -452,12 +556,8 @@ class _GameScreenState extends State<GameScreen> {
     final outerNumber = outerRingModel.getNumberAtPosition(outerCornerPos);
     final innerNumber = innerRingModel.getNumberAtPosition(innerCornerPos);
 
-    print(
-        "DEBUG: Equation values - innerNumber: $innerNumber, outerNumber: $outerNumber, target: $targetNumber");
-
     final result =
         operation.checkEquation(innerNumber, outerNumber, targetNumber);
-    print("DEBUG: Equation check result: $result");
 
     return result;
   }
@@ -793,7 +893,6 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return GameScreenUI(
@@ -814,6 +913,7 @@ class _GameScreenState extends State<GameScreen> {
       ],
       isGameComplete: isGameComplete,
       elapsedTimeMs: _displayedElapsedTimeMs,
+      currentHighScore: _currentHighScore,
       onUpdateInnerRing: _updateInnerRing,
       onUpdateOuterRing: _updateOuterRing,
       onTileTap: _handleTileTap,
@@ -954,22 +1054,31 @@ class _GameScreenState extends State<GameScreen> {
         print("Level completion saved successfully");
 
         // Track mistakes and perfect completions for unlock system
-        if ((widget.operationName == 'multiplication' || widget.operationName == 'division') && widget.targetNumber != null) {
+        if ((widget.operationName == 'multiplication' ||
+                widget.operationName == 'division') &&
+            widget.targetNumber != null) {
           if (_hasMadeMistakes) {
             // Track that mistakes were made in this level
-            await userService.trackMistake(userId, widget.operationName, widget.difficultyLevel.displayName, widget.targetNumber!);
+            await userService.trackMistake(userId, widget.operationName,
+                widget.difficultyLevel.displayName, widget.targetNumber!);
             print("Mistake tracked for unlock system");
           } else {
             // Track perfect completion for potential unlocks
-            final newlyUnlockedTables = await userService.trackPerfectCompletion(userId, widget.operationName, widget.difficultyLevel.displayName, widget.targetNumber!);
+            final newlyUnlockedTables =
+                await userService.trackPerfectCompletion(
+                    userId,
+                    widget.operationName,
+                    widget.difficultyLevel.displayName,
+                    widget.targetNumber!);
             print("Perfect completion tracked for unlock system");
-            
+
             // Show celebration if new tables were unlocked
             if (newlyUnlockedTables.isNotEmpty && mounted) {
               // Small delay to let the completion dialog finish
               Future.delayed(Duration(milliseconds: 500), () {
                 if (mounted) {
-                  UnlockCelebrationService().showUnlockCelebration(context, newlyUnlockedTables);
+                  UnlockCelebrationService()
+                      .showUnlockCelebration(context, newlyUnlockedTables);
                 }
               });
             }
@@ -1225,14 +1334,19 @@ class _GameScreenState extends State<GameScreen> {
                         widget.operationName == 'division') {
                       targetNumber = widget.targetNumber ?? targetNumber;
                     } else {
-                      final random = Random();
-                      targetNumber =
-                          widget.difficultyLevel.getRandomCenterNumber(random);
+                      // Keep the same target number for "Play Again" instead of randomizing
+                      targetNumber = targetNumber;
                     }
 
                     _generateGameNumbers();
                     _elapsedTimeMs = 0;
                     _startGameTimer();
+                  });
+                  // Refresh high score after resetting the game with a small delay
+                  Future.delayed(Duration(milliseconds: 500), () {
+                    if (mounted) {
+                      _loadCurrentLevelHighScore();
+                    }
                   });
                 },
                 style: ElevatedButton.styleFrom(
@@ -1269,8 +1383,6 @@ class _GameScreenState extends State<GameScreen> {
       ),
     );
   }
-
-
 }
 
 // Add this extension method
