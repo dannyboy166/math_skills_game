@@ -1221,12 +1221,25 @@ class _AdminScreenState extends State<AdminScreen> {
             onPressed: () {
               Navigator.of(context).pop();
               // Force a crash after a short delay to allow dialog to close
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
               Future.delayed(Duration(seconds: 1), () {
-                FirebaseCrashlytics.instance.crash();
+                if (kReleaseMode) {
+                  FirebaseCrashlytics.instance.crash();
+                } else {
+                  // In debug mode, just show a message instead of crashing
+                  if (mounted) {
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Crash test skipped in debug mode. Use release mode to test Crashlytics.'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                }
               });
             },
-            child: Text('Crash App'),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Crash App'),
           ),
         ],
       ),
@@ -1236,30 +1249,41 @@ class _AdminScreenState extends State<AdminScreen> {
   void _logTestError() async {
     try {
       // Log a test error to Crashlytics
-      await FirebaseCrashlytics.instance.recordError(
-        'Test error from admin panel',
-        StackTrace.current,
-        reason: 'Testing Crashlytics error logging',
-        information: [
-          DiagnosticsProperty('timestamp', DateTime.now().toString()),
-          DiagnosticsProperty('user_id', 'admin_test'),
-          DiagnosticsProperty('test_type', 'manual_error_logging'),
-        ],
-      );
+      if (kReleaseMode) {
+        await FirebaseCrashlytics.instance.recordError(
+          'Test error from admin panel',
+          StackTrace.current,
+          reason: 'Testing Crashlytics error logging',
+          information: [
+            DiagnosticsProperty('timestamp', DateTime.now().toString()),
+            DiagnosticsProperty('user_id', 'admin_test'),
+            DiagnosticsProperty('test_type', 'manual_error_logging'),
+          ],
+        );
+      } else {
+        // In debug mode, just show a message instead of logging to Crashlytics
+        if (kDebugMode) {
+          print('Debug mode: Test error would be logged to Crashlytics: Test error from admin panel');
+        }
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Test error logged to Crashlytics'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Test error logged to Crashlytics'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to log test error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to log test error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

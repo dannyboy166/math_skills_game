@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import '../models/level_completion_model.dart';
 
 class UserStatsService {
@@ -49,13 +50,17 @@ class UserStatsService {
 
       return operationStars;
     } catch (e) {
-      print('Error calculating stars per operation: $e');
-      FirebaseCrashlytics.instance.recordError(
-        e,
-        StackTrace.current,
-        fatal: false,
-        information: ['Stars calculation failed for user: $userId'],
-      );
+      if (kDebugMode) {
+        print('Error calculating stars per operation: $e');
+      }
+      if (kReleaseMode) {
+        FirebaseCrashlytics.instance.recordError(
+          e,
+          StackTrace.current,
+          fatal: false,
+          information: ['Stars calculation failed for user: $userId'],
+        );
+      }
       return {
         'addition': 0,
         'subtraction': 0,
@@ -112,13 +117,17 @@ class UserStatsService {
       // If we don't have cached data or it's old, calculate it
       return await calculateStarsPerOperation(user.uid);
     } catch (e) {
-      print('Error getting current user stars per operation: $e');
-      FirebaseCrashlytics.instance.recordError(
-        e,
-        StackTrace.current,
-        fatal: false,
-        information: ['Failed to get user stars for: ${user.uid}'],
-      );
+      if (kDebugMode) {
+        print('Error getting current user stars per operation: $e');
+      }
+      if (kReleaseMode) {
+        FirebaseCrashlytics.instance.recordError(
+          e,
+          StackTrace.current,
+          fatal: false,
+          information: ['Failed to get user stars for: ${user.uid}'],
+        );
+      }
       return {
         'addition': 0,
         'subtraction': 0,
@@ -147,13 +156,17 @@ class UserStatsService {
         'gameStats.lastCalculated': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Error updating operation stars: $e');
-      FirebaseCrashlytics.instance.recordError(
-        e,
-        StackTrace.current,
-        fatal: false,
-        information: ['Failed to update operation stars for user: $userId, operation: $operation'],
-      );
+      if (kDebugMode) {
+        print('Error updating operation stars: $e');
+      }
+      if (kReleaseMode) {
+        FirebaseCrashlytics.instance.recordError(
+          e,
+          StackTrace.current,
+          fatal: false,
+          information: ['Failed to update operation stars for user: $userId, operation: $operation'],
+        );
+      }
     }
   }
 }

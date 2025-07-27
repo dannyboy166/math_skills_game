@@ -1,5 +1,6 @@
 // lib/main.dart - Updated to include haptic service
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,15 +17,17 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // Initialize Firebase Crashlytics
-  FlutterError.onError = (errorDetails) {
-    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-  };
-  // Pass all uncaught asynchronous errors
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
+  // Initialize Firebase Crashlytics only in release mode
+  if (kReleaseMode) {
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+    // Pass all uncaught asynchronous errors
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
 
   await SoundService().initialize();
 
@@ -54,13 +57,15 @@ Future<void> _initializeLeaderboardData() async {
       LeaderboardInitializer.markInitialized();
     }
   } catch (e, stackTrace) {
-    // Report non-fatal error to Crashlytics
-    FirebaseCrashlytics.instance.recordError(
-      e,
-      stackTrace,
-      fatal: false,
-      information: ['Leaderboard initialization failed'],
-    );
+    // Report non-fatal error to Crashlytics only in release mode
+    if (kReleaseMode) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stackTrace,
+        fatal: false,
+        information: ['Leaderboard initialization failed'],
+      );
+    }
   }
 }
 
@@ -104,23 +109,27 @@ class MyApp extends StatelessWidget {
         }
 
         if (snapshot.hasData && snapshot.data != null) {
-          // User is logged in - set user info for Crashlytics
-          final user = snapshot.data!;
-          FirebaseCrashlytics.instance.setUserIdentifier(user.uid);
-          FirebaseCrashlytics.instance.setCustomKey('user_email', user.email ?? 'no_email');
-          FirebaseCrashlytics.instance.setCustomKey('display_name', user.displayName ?? 'no_name');
-          FirebaseCrashlytics.instance.setCustomKey('auth_provider', user.providerData.isNotEmpty ? user.providerData.first.providerId : 'unknown');
-          FirebaseCrashlytics.instance.log('User authenticated: ${user.uid}');
+          // User is logged in - set user info for Crashlytics only in release mode
+          if (kReleaseMode) {
+            final user = snapshot.data!;
+            FirebaseCrashlytics.instance.setUserIdentifier(user.uid);
+            FirebaseCrashlytics.instance.setCustomKey('user_email', user.email ?? 'no_email');
+            FirebaseCrashlytics.instance.setCustomKey('display_name', user.displayName ?? 'no_name');
+            FirebaseCrashlytics.instance.setCustomKey('auth_provider', user.providerData.isNotEmpty ? user.providerData.first.providerId : 'unknown');
+            FirebaseCrashlytics.instance.log('User authenticated: ${user.uid}');
+          }
           
           return HomeScreen();
         }
 
-        // User is not logged in - set anonymous tracking
-        FirebaseCrashlytics.instance.setUserIdentifier('anonymous');
-        FirebaseCrashlytics.instance.setCustomKey('user_email', 'anonymous');
-        FirebaseCrashlytics.instance.setCustomKey('display_name', 'anonymous');
-        FirebaseCrashlytics.instance.setCustomKey('auth_provider', 'none');
-        FirebaseCrashlytics.instance.log('User not authenticated - showing landing screen');
+        // User is not logged in - set anonymous tracking only in release mode
+        if (kReleaseMode) {
+          FirebaseCrashlytics.instance.setUserIdentifier('anonymous');
+          FirebaseCrashlytics.instance.setCustomKey('user_email', 'anonymous');
+          FirebaseCrashlytics.instance.setCustomKey('display_name', 'anonymous');
+          FirebaseCrashlytics.instance.setCustomKey('auth_provider', 'none');
+          FirebaseCrashlytics.instance.log('User not authenticated - showing landing screen');
+        }
         
         // Return the landing screen instead of the login screen directly
         return LandingScreen();

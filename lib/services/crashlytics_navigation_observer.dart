@@ -1,4 +1,5 @@
 // lib/services/crashlytics_navigation_observer.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
@@ -26,11 +27,13 @@ class CrashlyticsNavigationObserver extends NavigatorObserver {
   }
 
   void _logScreenChange(Route<dynamic> route, String action) {
-    final screenName = _getScreenName(route);
-    FirebaseCrashlytics.instance.log('Screen $action: $screenName');
-    FirebaseCrashlytics.instance.setCustomKey('current_screen', screenName);
-    FirebaseCrashlytics.instance.setCustomKey('last_navigation_action', action);
-    FirebaseCrashlytics.instance.setCustomKey('last_navigation_time', DateTime.now().toIso8601String());
+    if (kReleaseMode) {
+      final screenName = _getScreenName(route);
+      FirebaseCrashlytics.instance.log('Screen $action: $screenName');
+      FirebaseCrashlytics.instance.setCustomKey('current_screen', screenName);
+      FirebaseCrashlytics.instance.setCustomKey('last_navigation_action', action);
+      FirebaseCrashlytics.instance.setCustomKey('last_navigation_time', DateTime.now().toIso8601String());
+    }
   }
 
   String _getScreenName(Route<dynamic> route) {
