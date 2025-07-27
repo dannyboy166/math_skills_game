@@ -41,7 +41,7 @@ class GameScreenUI extends StatelessWidget {
   final Function(int, int) onTileTap;
   final Function(int) onEquationTap;
   final VoidCallback onShowHint;
-  final VoidCallback onShowHelp;
+  final VoidCallback onShowSettings;
 
   const GameScreenUI({
     Key? key,
@@ -66,7 +66,7 @@ class GameScreenUI extends StatelessWidget {
     required this.onTileTap,
     required this.onEquationTap,
     required this.onShowHint,
-    required this.onShowHelp,
+    required this.onShowSettings,
   }) : super(key: key);
 
   @override
@@ -142,10 +142,10 @@ class GameScreenUI extends StatelessWidget {
               ),
             ),
           ),
-          // Help button
+          // Settings button
           IconButton(
-            icon: Icon(Icons.help_outline),
-            onPressed: onShowHelp,
+            icon: Icon(Icons.settings),
+            onPressed: onShowSettings,
           ),
         ],
       ),
@@ -177,11 +177,6 @@ class GameScreenUI extends StatelessWidget {
                           color: operation.color,
                         ),
                       ),
-                      SizedBox(height: 8),
-
-                      // Control mode toggle - NEW!
-                      _buildControlModeToggle(),
-
                       SizedBox(height: 8),
 
                       SizedBox(height: 16),
@@ -324,70 +319,6 @@ class GameScreenUI extends StatelessWidget {
     );
   }
 
-  // NEW: Build the control mode toggle widget
-  Widget _buildControlModeToggle() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: operation.color.withValues(alpha: 0.3), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isDragMode ? Icons.drag_indicator : Icons.swipe,
-            size: 18,
-            color: operation.color,
-          ),
-          SizedBox(width: 8),
-          Text(
-            isDragMode ? 'Drag Mode' : 'Swipe Mode',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: operation.color,
-            ),
-          ),
-          SizedBox(width: 8),
-          GestureDetector(
-            onTap: onToggleMode,
-            child: Container(
-              width: 40,
-              height: 20,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: isDragMode ? operation.color : Colors.grey.shade300,
-              ),
-              child: AnimatedAlign(
-                duration: Duration(milliseconds: 200),
-                alignment:
-                    isDragMode ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  margin: EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // Helper method to build the hint button
   Widget _buildHintButton() {

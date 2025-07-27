@@ -15,6 +15,7 @@ import 'package:number_ninja/services/user_service.dart';
 import 'package:number_ninja/services/user_stats_service.dart';
 import 'package:number_ninja/widgets/game_screen_ui.dart';
 import 'package:number_ninja/widgets/time_penalty_animation.dart';
+import 'package:number_ninja/screens/game_settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import 'dart:async'; // Add Timer import
@@ -889,7 +890,7 @@ class _GameScreenState extends State<GameScreen> {
       onTileTap: _handleTileTap,
       onEquationTap: _handleEquationTap,
       onShowHint: _showHint,
-      onShowHelp: _showHelpDialog,
+      onShowSettings: _showGameSettings,
       isDragMode: _isDragMode,
       onToggleMode: _toggleControlMode,
       rotationSpeed: _rotationSpeed,
@@ -1325,156 +1326,22 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  void _showHelpDialog() {
-    // Light haptic feedback when showing help
+  void _showGameSettings() {
+    // Light haptic feedback when showing settings
     _hapticService.lightImpact();
 
-    String equationFormat;
-    String additionalInfo = '';
-
-    switch (widget.operationName) {
-      case 'addition':
-        equationFormat = 'inner + $targetNumber = outer';
-        break;
-      case 'subtraction':
-        equationFormat = 'outer - inner = $targetNumber';
-        break;
-      case 'multiplication':
-        equationFormat = 'inner × $targetNumber = outer';
-        additionalInfo =
-            'For multiplication, find numbers from the inner ring (1-12) that, when multiplied by $targetNumber, match values in the outer ring. There are at least 4 valid solutions to find!';
-        break;
-      case 'division':
-        equationFormat = 'outer ÷ inner = $targetNumber';
-        additionalInfo =
-            'For division, find pairs of numbers where an outer ring number divided by an inner ring number (1-12) equals $targetNumber exactly (no remainder). There are at least 4 valid solutions to find!';
-        break;
-      default:
-        equationFormat = 'inner × $targetNumber = outer';
-        break;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          mainAxisSize: MainAxisSize.min, // Prevent title overflow
-          children: [
-            Icon(Icons.info_outline, color: operation.color),
-            SizedBox(width: 10),
-            Flexible(child: Text('How to Play')),
-          ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GameSettingsScreen(
+          operation: operation,
+          isDragMode: _isDragMode,
+          onToggleMode: _toggleControlMode,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        // Make the content area scrollable with SingleChildScrollView
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height *
-                0.6, // Limit height to 60% of screen height
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHelpItem('1',
-                    'Rotate the rings to form correct equations at the four corners.'),
-                _buildHelpItem(
-                    '2', 'Each corner should satisfy: $equationFormat'),
-                _buildHelpItem('3',
-                    'When a corner has a correct equation, tap any part of it to lock it.'),
-                _buildHelpItem('4',
-                    'Locked equations stay in place while you continue rotating to solve the remaining corners.'),
-                _buildHelpItem('5', 'Complete all four corners to win!'),
-                _buildHelpItem(
-                    '6', 'Complete levels faster to earn more stars!'),
-                if (additionalInfo.isNotEmpty) ...[
-                  SizedBox(height: 10),
-                  Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: operation.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(additionalInfo),
-                  ),
-                ],
-                SizedBox(height: 16),
-                Text('Note:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('• For addition and multiplication: inner → outer'),
-                      Text('• For subtraction and division: outer → inner'),
-                      Text('• Faster completion times earn more stars!'),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 10),
-                (widget.operationName == 'multiplication' ||
-                            widget.operationName == 'division') &&
-                        widget.targetNumber != null
-                    ? Text(
-                        '${widget.operationName.capitalize()} Number: ${widget.targetNumber}',
-                        style: TextStyle(fontWeight: FontWeight.bold))
-                    : Text('Difficulty: ${widget.difficultyLevel.displayName}',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Got it!'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: operation.color,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildHelpItem(String number, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 25,
-            height: 25,
-            decoration: BoxDecoration(
-              color: operation.color,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(text),
-          ),
-        ],
-      ),
-    );
-  }
 
 }
 
