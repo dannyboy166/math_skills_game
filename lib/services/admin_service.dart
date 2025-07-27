@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:number_ninja/services/leaderboard_service.dart';
 
 class AdminService {
-  static const String ADMIN_USER_ID = '3s5SMJQy7LPfv6dygWYsPqKr0662';
+  static const String ADMIN_USER_ID = '7yvFntiougcjPKSAzthx2Fhkefg2';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final LeaderboardService _leaderboardService = LeaderboardService();
 
