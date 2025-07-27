@@ -292,7 +292,7 @@ class GameScreenUI extends StatelessWidget {
 
                   // Progress stars under the rings
                   Container(
-                    padding: EdgeInsets.symmetric(vertical: 15),
+                    padding: EdgeInsets.only(top: 5, bottom: 15),
                     child: ProgressStars(
                       total: 12,
                       completed: lockedEquations.length,

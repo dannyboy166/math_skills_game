@@ -259,31 +259,31 @@ class _GameScreenState extends State<GameScreen> {
       case 'addition':
         backgroundGradient = [
           Colors.green.shade100,
-          Colors.green.shade50,
+          Colors.green.shade200,
         ];
         break;
       case 'subtraction':
         backgroundGradient = [
           Colors.purple.shade100,
-          Colors.purple.shade50,
+          Colors.purple.shade200,
         ];
         break;
       case 'multiplication':
         backgroundGradient = [
           Colors.blue.shade100,
-          Colors.blue.shade50,
+          Colors.blue.shade200,
         ];
         break;
       case 'division':
         backgroundGradient = [
           Colors.orange.shade100,
-          Colors.orange.shade50,
+          Colors.orange.shade200,
         ];
         break;
       default:
         backgroundGradient = [
           Colors.blue.shade100,
-          Colors.blue.shade50,
+          Colors.blue.shade200,
         ];
     }
   }
