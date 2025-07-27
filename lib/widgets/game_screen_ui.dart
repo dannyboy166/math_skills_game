@@ -160,153 +160,153 @@ class GameScreenUI extends StatelessWidget {
         child: SafeArea(
           child: Stack(
             children: [
-              // Main content column with better space management
-              Column(
-                children: [
-                  // Top section: title, timer and instructions
-                  Column(
-                    children: [
-                      SizedBox(height: 20),
-                      Text(
-                        '${difficultyLevel.displayName} Mode',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: operation.color,
-                        ),
-                      ),
-                      SizedBox(height: 24),
-                    ],
-                  ),
+              // Centered rings and stars
+              Align(
+                alignment: Alignment(0, 0.5),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Game board section - centered
+                    Container(
+                      width: boardSize,
+                      height: boardSize,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Outer ring - UPDATED to use mode toggle and rotation speed
+                          SimpleRing(
+                            key: ValueKey(
+                                'outer_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
+                            ringModel: outerRingModel,
+                            size: boardSize,
+                            tileSize: outerTileSize,
+                            isInner: false,
+                            onRotateSteps: onUpdateOuterRing,
+                            lockedEquations: lockedEquations,
+                            greyedOutNumbers: greyedOutNumbers,
+                            onTileTap: onTileTap,
+                            transitionRate: rotationSpeed
+                                .transitionRate, // NEW: Use user's preferred speed
+                            margin: margin,
+                            isDragMode: isDragMode, // NEW parameter
+                            gameMode: gameMode, // NEW parameter
+                          ),
 
-                  SizedBox(height: 10),
+                          // Inner ring - UPDATED to use mode toggle and rotation speed
+                          SimpleRing(
+                            key: ValueKey(
+                                'inner_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
+                            ringModel: innerRingModel,
+                            size: innerRingSize,
+                            tileSize: innerTileSize,
+                            isInner: true,
+                            onRotateSteps: onUpdateInnerRing,
+                            lockedEquations: lockedEquations,
+                            greyedOutNumbers: greyedOutNumbers,
+                            onTileTap: onTileTap,
+                            transitionRate: rotationSpeed
+                                .transitionRate, // NEW: Use user's preferred speed
+                            margin: margin,
+                            isDragMode: isDragMode, // NEW parameter
+                            gameMode: gameMode, // NEW parameter
+                          ),
 
-                  // Game board section - using Expanded to take available space
-                  Expanded(
-                    child: Center(
-                      child: Container(
-                        width: boardSize,
-                        height: boardSize,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Outer ring - UPDATED to use mode toggle and rotation speed
-                            SimpleRing(
-                              key: ValueKey(
-                                  'outer_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
-                              ringModel: outerRingModel,
-                              size: boardSize,
-                              tileSize: outerTileSize,
-                              isInner: false,
-                              onRotateSteps: onUpdateOuterRing,
-                              lockedEquations: lockedEquations,
-                              greyedOutNumbers: greyedOutNumbers,
-                              onTileTap: onTileTap,
-                              transitionRate: rotationSpeed
-                                  .transitionRate, // NEW: Use user's preferred speed
-                              margin: margin,
-                              isDragMode: isDragMode, // NEW parameter
-                              gameMode: gameMode, // NEW parameter
-                            ),
-
-                            // Inner ring - UPDATED to use mode toggle and rotation speed
-                            SimpleRing(
-                              key: ValueKey(
-                                  'inner_${isDragMode ? 'drag' : 'swipe'}_${rotationSpeed.level}'), // Force rebuild when mode or speed changes
-                              ringModel: innerRingModel,
-                              size: innerRingSize,
-                              tileSize: innerTileSize,
-                              isInner: true,
-                              onRotateSteps: onUpdateInnerRing,
-                              lockedEquations: lockedEquations,
-                              greyedOutNumbers: greyedOutNumbers,
-                              onTileTap: onTileTap,
-                              transitionRate: rotationSpeed
-                                  .transitionRate, // NEW: Use user's preferred speed
-                              margin: margin,
-                              isDragMode: isDragMode, // NEW parameter
-                              gameMode: gameMode, // NEW parameter
-                            ),
-
-                            // Center target number with enhanced styling
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: operation.color,
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 4),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 10,
-                                    spreadRadius: 2,
-                                    offset: Offset(0, 4),
-                                  ),
+                          // Center target number with enhanced styling
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: operation.color,
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: Colors.white, width: 4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  operation.color.withValues(alpha: 0.7),
+                                  operation.color,
                                 ],
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    operation.color.withValues(alpha: 0.7),
-                                    operation.color,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$targetNumber',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black38,
+                                      blurRadius: 4,
+                                      offset: Offset(2, 2),
+                                    ),
                                   ],
                                 ),
                               ),
-                              child: Center(
-                                child: Text(
-                                  '$targetNumber',
-                                  style: TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black38,
-                                        blurRadius: 4,
-                                        offset: Offset(2, 2),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
                             ),
+                          ),
 
-                            // Equation symbols - using improved layout
-                            EquationLayout(
-                              boardSize: boardSize,
-                              innerRingSize: innerRingSize,
-                              outerRingSize: boardSize,
-                              operation: operation,
-                              lockedEquations: lockedEquations,
-                              onEquationTap: onEquationTap,
-                              gameMode: gameMode,
-                              isGameComplete: isGameComplete,
-                            ),
-                          ],
-                        ),
+                          // Equation symbols - using improved layout
+                          EquationLayout(
+                            boardSize: boardSize,
+                            innerRingSize: innerRingSize,
+                            outerRingSize: boardSize,
+                            operation: operation,
+                            lockedEquations: lockedEquations,
+                            onEquationTap: onEquationTap,
+                            gameMode: gameMode,
+                            isGameComplete: isGameComplete,
+                          ),
+                        ],
                       ),
                     ),
-                  ),
 
-                  // Progress stars under the rings
-                  Container(
-                    padding: EdgeInsets.only(top: 5, bottom: 15),
-                    child: ProgressStars(
-                      total: 12,
-                      completed: lockedEquations.length,
-                    ),
-                  ),
-
-                  // Bottom section: Show completion message when game is complete
-                  if (isGameComplete)
+                    // Progress stars under the rings
                     Container(
-                      padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                      child: _buildCompletionMessage(),
+                      padding: EdgeInsets.only(top: 20, bottom: 0),
+                      child: ProgressStars(
+                        total: 12,
+                        completed: lockedEquations.length,
+                      ),
                     ),
-                ],
+                  ],
+                ),
               ),
+
+              // Title at the top
+              Positioned(
+                top: 20,
+                left: 0,
+                right: 0,
+                child: Text(
+                  '${difficultyLevel.displayName} Mode',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: operation.color,
+                  ),
+                ),
+              ),
+
+              // Completion message overlay when game is complete
+              if (isGameComplete)
+                Positioned(
+                  bottom: 20,
+                  left: 20,
+                  right: 20,
+                  child: _buildCompletionMessage(),
+                ),
 
               // Star animations layer
               ...starAnimations,

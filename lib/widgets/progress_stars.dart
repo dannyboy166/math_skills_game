@@ -49,7 +49,7 @@ class ProgressStars extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: rows.map((row) => Padding(
-        padding: EdgeInsets.symmetric(vertical: 4),
+        padding: EdgeInsets.symmetric(vertical: 1),
         child: row,
       )).toList(),
     );
