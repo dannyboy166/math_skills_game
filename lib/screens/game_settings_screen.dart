@@ -1,6 +1,8 @@
 // lib/screens/game_settings_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/operation_config.dart';
+import '../models/rotation_speed.dart';
 
 class GameSettingsScreen extends StatefulWidget {
   final OperationConfig operation;
@@ -20,11 +22,21 @@ class GameSettingsScreen extends StatefulWidget {
 
 class _GameSettingsScreenState extends State<GameSettingsScreen> {
   late bool _currentDragMode;
+  RotationSpeed _rotationSpeed = RotationSpeed.defaultSpeed;
   
   @override
   void initState() {
     super.initState();
     _currentDragMode = widget.isDragMode;
+    _loadRotationSpeed();
+  }
+  
+  Future<void> _loadRotationSpeed() async {
+    final prefs = await SharedPreferences.getInstance();
+    final speedLevel = prefs.getInt('rotation_speed') ?? 5;
+    setState(() {
+      _rotationSpeed = RotationSpeed.fromLevel(speedLevel);
+    });
   }
   
   void _handleToggleMode() {
@@ -32,6 +44,15 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
       _currentDragMode = !_currentDragMode;
     });
     widget.onToggleMode();
+  }
+  
+  Future<void> _changeRotationSpeed(RotationSpeed newSpeed) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('rotation_speed', newSpeed.level);
+    
+    setState(() {
+      _rotationSpeed = newSpeed;
+    });
   }
   
   @override
@@ -70,6 +91,9 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
           children: [
             _buildSectionHeader('Controls'),
             _buildControlModeCard(),
+            
+            SizedBox(height: 16),
+            _buildRotationSpeedCard(),
             
             SizedBox(height: 24),
             
@@ -229,6 +253,167 @@ class _GameSettingsScreenState extends State<GameSettingsScreen> {
                 color: Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRotationSpeedCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: widget.operation.color.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: widget.operation.color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.rotate_right,
+                    color: widget.operation.color,
+                    size: 32,
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ring Rotation Speed',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: widget.operation.color,
+                        ),
+                      ),
+                      Text(
+                        'Control how fast the rings rotate',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            SizedBox(height: 20),
+            
+            // Speed selection slider
+            Column(
+              children: [
+                Text(
+                  'Current: ${_rotationSpeed.displayName}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: widget.operation.color,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Slider(
+                  value: _rotationSpeed.level.toDouble(),
+                  min: 1,
+                  max: 10,
+                  divisions: 9,
+                  activeColor: widget.operation.color,
+                  inactiveColor: widget.operation.color.withValues(alpha: 0.3),
+                  onChanged: (value) {
+                    final newSpeed = RotationSpeed.fromLevel(value.round());
+                    _changeRotationSpeed(newSpeed);
+                  },
+                ),
+
+                // Speed labels
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '1',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _rotationSpeed.level == 1
+                            ? widget.operation.color
+                            : Colors.grey[500],
+                        fontWeight: _rotationSpeed.level == 1
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    Text(
+                      '5',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _rotationSpeed.level == 5
+                            ? widget.operation.color
+                            : Colors.grey[500],
+                        fontWeight: _rotationSpeed.level == 5
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    Text(
+                      '10',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _rotationSpeed.level == 10
+                            ? widget.operation.color
+                            : Colors.grey[500],
+                        fontWeight: _rotationSpeed.level == 10
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 8),
+
+                // Speed descriptions
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Slowest',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    Text(
+                      'Normal',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    Text(
+                      'Maximum',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

@@ -23,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Local state for settings
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
+  bool _isDragMode = false;
   RotationSpeed _rotationSpeed = RotationSpeed.defaultSpeed;
 
   @override
@@ -38,6 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _soundEnabled = _soundService.isSoundEnabled;
       _vibrationEnabled = _hapticService.isVibrationEnabled;
+      _isDragMode = prefs.getBool('drag_mode') ?? false;
 
       // Load rotation speed (default to level 5 - Normal)
       final speedLevel = prefs.getInt('rotation_speed') ?? 5;
@@ -72,6 +74,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Provide haptic feedback if vibration is enabled
     if (_vibrationEnabled) {
       _hapticService.mediumImpact();
+    }
+  }
+
+  Future<void> _toggleControlMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('drag_mode', !_isDragMode);
+
+    setState(() {
+      _isDragMode = !_isDragMode;
+    });
+
+    // Provide feedback
+    if (_vibrationEnabled) {
+      _hapticService.mediumImpact();
+    }
+    if (_soundEnabled) {
+      _soundService.playCorrect();
     }
   }
 
@@ -190,6 +209,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _vibrationEnabled,
               _toggleVibration,
               Colors.purple,
+            ),
+
+            // Control Mode Toggle
+            _buildSettingSwitch(
+              'Control Mode',
+              _isDragMode ? 'Currently using Drag Mode' : 'Currently using Swipe Mode',
+              _isDragMode ? Icons.drag_indicator : Icons.swipe,
+              _isDragMode,
+              _toggleControlMode,
+              Colors.green,
             ),
 
             // Ring Rotation Speed

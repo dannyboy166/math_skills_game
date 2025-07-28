@@ -1300,11 +1300,11 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  void _showGameSettings() {
+  void _showGameSettings() async {
     // Light haptic feedback when showing settings
     _hapticService.lightImpact();
 
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => GameSettingsScreen(
@@ -1314,6 +1314,9 @@ class _GameScreenState extends State<GameScreen> {
         ),
       ),
     );
+    
+    // Reload rotation speed when returning from settings
+    _loadRotationSpeedPreference();
   }
 }
 
