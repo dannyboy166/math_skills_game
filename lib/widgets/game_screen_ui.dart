@@ -12,6 +12,7 @@ import '../models/game_mode.dart';
 import '../models/rotation_speed.dart';
 import 'simple_ring.dart';
 import 'equation_layout.dart';
+import 'equation_highlight_overlay.dart';
 
 /// UI component for the game screen
 /// This separates the UI from the logic in the GameScreen widget
@@ -38,6 +39,9 @@ class GameScreenUI extends StatelessWidget {
 
   // NEW: Rotation speed control
   final RotationSpeed rotationSpeed;
+
+  // NEW: Equation highlight overlay control
+  final bool showEquationHighlight;
 
   // Callback functions for interactions
   final Function(int) onUpdateInnerRing;
@@ -66,6 +70,7 @@ class GameScreenUI extends StatelessWidget {
     required this.isDragMode, // NEW
     required this.onToggleMode, // NEW
     required this.rotationSpeed, // NEW
+    this.showEquationHighlight = false, // NEW
     required this.onUpdateInnerRing,
     required this.onUpdateOuterRing,
     required this.onTileTap,
@@ -289,6 +294,18 @@ class GameScreenUI extends StatelessWidget {
                             gameMode: gameMode,
                             isGameComplete: isGameComplete,
                           ),
+
+                          // Equation highlight overlay
+                          if (showEquationHighlight)
+                            EquationHighlightOverlay(
+                              size: boardSize,
+                              tileSize: outerTileSize,
+                              margin: margin,
+                              innerRingModel: innerRingModel,
+                              outerRingModel: outerRingModel,
+                              targetNumber: targetNumber,
+                              isVisible: showEquationHighlight,
+                            ),
                         ],
                       ),
                     ),

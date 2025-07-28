@@ -98,6 +98,8 @@ class _GameScreenState extends State<GameScreen> {
   RotationSpeed _rotationSpeed =
       RotationSpeed.defaultSpeed; // Default rotation speed
 
+  bool _showEquationHighlight = true; // Show equation highlighting overlay (for testing)
+
 // Add more debug logging to GameScreen initState method:
 
   @override
@@ -875,6 +877,7 @@ class _GameScreenState extends State<GameScreen> {
       isDragMode: _isDragMode,
       onToggleMode: _toggleControlMode,
       rotationSpeed: _rotationSpeed,
+      showEquationHighlight: _showEquationHighlight,
     );
   }
 
