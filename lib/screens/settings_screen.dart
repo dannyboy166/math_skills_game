@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:number_ninja/models/rotation_speed.dart';
 import 'package:number_ninja/screens/about_app_screen.dart';
 import 'package:number_ninja/screens/privacy_settings_screen.dart';
+import 'package:number_ninja/screens/landing_screen.dart';
 import 'package:number_ninja/services/haptic_service.dart';
 import 'package:number_ninja/services/sound_service.dart';
 import 'package:number_ninja/services/auth_service.dart';
@@ -111,37 +112,196 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _showLogoutDialog() async {
-    return showDialog<void>(
+  Widget _buildAccountSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Reset Password Setting
+        _buildNavigationSetting(
+          'Reset Password',
+          'Change your login password',
+          Icons.lock_reset,
+          Colors.blue,
+          () => _showResetPasswordDialog(),
+        ),
+
+        // Logout Setting
+        _buildNavigationSetting(
+          'Logout',
+          'Sign out of your account',
+          Icons.logout,
+          Colors.red,
+          () => _showLogoutDialog(),
+        ),
+      ],
+    );
+  }
+
+  void _showResetPasswordDialog() {
+    final emailController = TextEditingController();
+    emailController.text = _authService.currentUser?.email ?? '';
+
+    showDialog(
       context: context,
-      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Row(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade400, Colors.blue.shade600],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_reset, color: Colors.white, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Reset Password 🔐',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.logout, color: Colors.red),
-              SizedBox(width: 8),
-              Text('Logout'),
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Text(
+                  'We will send a password reset link to your email address: 📧',
+                  style: TextStyle(fontSize: 14, color: Colors.blue.shade800),
+                ),
+              ),
+              SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade300),
+                ),
+                child: TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email Address ✉️',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ),
             ],
           ),
-          content: Text('Are you sure you want to logout?'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('Logout'),
-              onPressed: () async {
-                Navigator.of(context).pop(); // Close dialog
-                await _performLogout();
-              },
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      'Cancel ❌',
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade400, Colors.blue.shade600],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      // Show fun loading message
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 2,
+                              ),
+                              SizedBox(width: 16),
+                              Text('Sending reset email... 📧'),
+                            ],
+                          ),
+                          backgroundColor: Colors.blue.shade600,
+                        ),
+                      );
+
+                      try {
+                        await _authService
+                            .resetPassword(emailController.text.trim());
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text('Password reset email sent! 📬'),
+                              ],
+                            ),
+                            backgroundColor: Colors.green.shade600,
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.error, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text('Failed to send reset email 😔'),
+                              ],
+                            ),
+                            backgroundColor: Colors.red.shade600,
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                    ),
+                    child: Text(
+                      'Send Reset Link 🚀',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -149,24 +309,213 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _performLogout() async {
-    try {
-      await _authService.signOut();
-      if (mounted) {
-        // Navigate back to login/landing screen
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-      }
-    } catch (e) {
-      print('Error during logout: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error logging out. Please try again.'),
-            backgroundColor: Colors.red,
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.orange.shade400, Colors.red.shade500],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.logout, color: Colors.white, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Logout 👋',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          content: Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Text(
+              'Are you sure you want to logout? 🤔\n\nYou can always come back to continue your math ninja journey! 🥷',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.orange.shade800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      'Stay 😊',
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.red.shade400, Colors.red.shade600],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _performLogout();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                    ),
+                    child: Text(
+                      'Logout 👋',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _performLogout() {
+    // Show a fun loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade200, Colors.purple.shade200],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.logout,
+                  size: 48,
+                  color: Colors.white,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Logging out... 🥷',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Thanks for practicing math today!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                SizedBox(height: 20),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ],
+            ),
           ),
         );
+      },
+    );
+
+    // Add debug before logout
+    print("SETTINGS DEBUG: Starting logout process");
+    print(
+        "SETTINGS DEBUG: Current user before logout: ${_authService.currentUser?.uid ?? 'null'}");
+
+    // Perform logout after a brief delay to ensure dialog is shown
+    Future.delayed(Duration(milliseconds: 500), () async {
+      try {
+        // Sign out
+        await _authService.signOut();
+
+        // Check after signout
+        print("SETTINGS DEBUG: Logout completed");
+        print(
+            "SETTINGS DEBUG: Current user after logout: ${_authService.currentUser?.uid ?? 'null'}");
+
+        // Navigate to landing screen and clear the stack
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => LandingScreen()),
+            (route) => false, // This removes all previous routes
+          );
+        }
+
+        print("SETTINGS DEBUG: Navigated to landing screen");
+      } catch (e) {
+        print("SETTINGS DEBUG: Error during logout: $e");
+
+        // If there's an error, pop the dialog and show error
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Failed to log out. Please try again. 😔'),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+        }
       }
-    }
+    });
   }
 
   @override
@@ -248,13 +597,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
 
-            _buildNavigationSetting(
-              'Logout',
-              'Sign out of your account',
-              Icons.logout,
-              Colors.red,
-              () => _showLogoutDialog(),
-            ),
+            _buildAccountSection(),
 
             _buildNavigationSetting(
               'About',
