@@ -286,6 +286,31 @@ class _RaceCharacterState extends State<RaceCharacter>
                     color: widget.characterColor,
                   ),
                 ),
+                SizedBox(width: 8),
+                // High score time display moved here
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.emoji_events, size: 12, color: Colors.orange.shade600),
+                      SizedBox(width: 4),
+                      Text(
+                        widget.highScoreString,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -305,7 +330,7 @@ class _RaceCharacterState extends State<RaceCharacter>
                   return Positioned(
                     left: _highScorePositionAnimation.value *
                         (widget.width - 40), // 40 is character width
-                    top: 10, // Top lane (centered in upper half)
+                    top: 5, // Top lane
                     child: Transform.scale(
                       scale:
                           _highScoreWon ? _victoryBounceAnimation.value : 1.0,
@@ -329,7 +354,7 @@ class _RaceCharacterState extends State<RaceCharacter>
                 return Positioned(
                   left: _playerPositionAnimation.value *
                       (widget.width - 40), // 40 is character width
-                  top: 30, // Bottom lane (centered in lower half)
+                  top: 25, // Bottom lane
                   child: Transform.scale(
                     scale: _playerWon ? _victoryBounceAnimation.value : 1.0,
                     child: _buildAnimatedCharacter(
@@ -390,13 +415,13 @@ class _RaceCharacterState extends State<RaceCharacter>
   Widget _buildRaceTrack({required List<Widget> children}) {
     return Container(
       width: widget.width,
-      height: 70, // Increased height for two lanes
+      height: 60, // Reduced height since high score display moved up
       child: Stack(
         children: [
           // Race track background
           Container(
-            height: 50, // Increased height for two lanes
-            margin: EdgeInsets.only(top: 10),
+            height: 50,
+            margin: EdgeInsets.only(top: 5), // Reduced top margin
             decoration: BoxDecoration(
               color: Colors.black12,
               borderRadius: BorderRadius.circular(25),

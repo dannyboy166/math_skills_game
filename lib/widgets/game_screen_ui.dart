@@ -123,32 +123,6 @@ class GameScreenUI extends StatelessWidget {
           ),
         ),
         actions: [
-          // High score display in app bar  
-          Center(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              margin: EdgeInsets.only(right: 4),
-              decoration: BoxDecoration(
-                color: Colors.white12,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.emoji_events, size: 14, color: Colors.white70),
-                  SizedBox(width: 2),
-                  Text(
-                    currentHighScore,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
           // Timer display in app bar
           Center(
             child: Container(
