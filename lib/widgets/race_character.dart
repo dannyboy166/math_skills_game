@@ -36,19 +36,23 @@ class _RaceCharacterState extends State<RaceCharacter>
   late AnimationController _highScorePositionController;
   late Animation<double> _highScoreRunAnimation;
   late Animation<double> _highScorePositionAnimation;
-  
+
   // Player character animations
   late AnimationController _playerRunController;
   late AnimationController _playerPositionController;
   late Animation<double> _playerRunAnimation;
   late Animation<double> _playerPositionAnimation;
-  
+
+  // Victory celebration animations
+  late AnimationController _victoryController;
+  late Animation<double> _victoryBounceAnimation;
+
   Timer? _updateTimer;
 
   @override
   void initState() {
     super.initState();
-    
+
     // High score character animations
     _highScoreRunController = AnimationController(
       duration: Duration(milliseconds: 400),
@@ -99,6 +103,19 @@ class _RaceCharacterState extends State<RaceCharacter>
       curve: Curves.easeOut,
     ));
 
+    // Victory celebration animation
+    _victoryController = AnimationController(
+      duration: Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _victoryBounceAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.3,
+    ).animate(CurvedAnimation(
+      parent: _victoryController,
+      curve: Curves.elasticOut,
+    ));
+
     _startAnimations();
   }
 
@@ -124,7 +141,8 @@ class _RaceCharacterState extends State<RaceCharacter>
   void _updatePositions() {
     // Update high score character position based on time
     if (widget.highScoreTimeMs > 0) {
-      double highScoreProgress = widget.currentElapsedTimeMs / widget.highScoreTimeMs;
+      double highScoreProgress =
+          widget.currentElapsedTimeMs / widget.highScoreTimeMs;
       highScoreProgress = highScoreProgress.clamp(0.0, 1.0);
       _highScorePositionController.animateTo(highScoreProgress);
     }
@@ -138,16 +156,22 @@ class _RaceCharacterState extends State<RaceCharacter>
   @override
   void didUpdateWidget(RaceCharacter oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Restart animations if game state changed
     if (oldWidget.isGameRunning != widget.isGameRunning ||
         oldWidget.isGameComplete != widget.isGameComplete) {
       if (widget.isGameRunning && !widget.isGameComplete) {
         _startAnimations();
+// Reset victory message flag
       } else {
         _highScoreRunController.stop();
         _playerRunController.stop();
         _updateTimer?.cancel();
+
+        // Trigger victory celebration if game just completed
+        if (widget.isGameComplete && !oldWidget.isGameComplete) {
+          _triggerVictoryCelebration();
+        }
       }
     }
 
@@ -159,50 +183,187 @@ class _RaceCharacterState extends State<RaceCharacter>
     }
   }
 
+  void _triggerVictoryCelebration() {
+    _victoryController.forward().then((_) {
+      _victoryController.reverse();
+    });
+  }
+
+  // Determine who won the race
+  bool get _playerWon {
+    if (!widget.isGameComplete || widget.highScoreTimeMs <= 0) return false;
+    return widget.currentElapsedTimeMs < widget.highScoreTimeMs;
+  }
+
+  bool get _highScoreWon {
+    if (!widget.isGameComplete || widget.highScoreTimeMs <= 0) return false;
+    return widget.currentElapsedTimeMs >= widget.highScoreTimeMs;
+  }
+
+  // Get race status message
+  String get _raceStatusMessage {
+    if (!widget.isGameComplete) return '';
+
+    if (widget.highScoreTimeMs <= 0) {
+      return 'First completion! New record set! 🎉';
+    }
+
+    if (_playerWon) {
+      return 'NEW HIGH SCORE! You beat your record! 🏆';
+    } else {
+      double timeRatio = widget.currentElapsedTimeMs / widget.highScoreTimeMs;
+
+      if (timeRatio <= 1.2) {
+        return 'So close! Just ${((timeRatio - 1) * 100).toStringAsFixed(0)}% slower than your record';
+      } else if (timeRatio <= 1.5) {
+        return 'Good effort! You\'re getting closer to your record';
+      } else if (timeRatio <= 2.0) {
+        return 'Keep practicing! You\'re about halfway to your record pace';
+      } else {
+        return 'Room for improvement! Try to solve equations faster';
+      }
+    }
+  }
+
   @override
   void dispose() {
     _highScoreRunController.dispose();
     _highScorePositionController.dispose();
     _playerRunController.dispose();
     _playerPositionController.dispose();
+    _victoryController.dispose();
     _updateTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return _buildRaceTrack(
+    return Column(
       children: [
-        // High score character (top lane)
-        if (widget.highScoreTimeMs > 0)
-          AnimatedBuilder(
-            animation: Listenable.merge([_highScorePositionAnimation, _highScoreRunAnimation]),
-            builder: (context, child) {
-              return Positioned(
-                left: _highScorePositionAnimation.value * (widget.width - 40), // 40 is character width
-                top: 10, // Top lane (centered in upper half)
-                child: _buildAnimatedCharacter(
-                  isHighScore: true,
-                  runAnimation: _highScoreRunAnimation,
+        // Race explanation (only show when game is running)
+        if (widget.isGameRunning &&
+            !widget.isGameComplete &&
+            widget.highScoreTimeMs > 0)
+          Container(
+            margin: EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(
+                  color: widget.characterColor.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.info_outline,
+                    size: 16, color: widget.characterColor),
+                SizedBox(width: 6),
+                Text(
+                  'Race your high score!',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: widget.characterColor,
+                  ),
                 ),
-              );
-            },
+              ],
+            ),
           ),
-        
-        // Player character (bottom lane)
-        AnimatedBuilder(
-          animation: Listenable.merge([_playerPositionAnimation, _playerRunAnimation]),
-          builder: (context, child) {
-            return Positioned(
-              left: _playerPositionAnimation.value * (widget.width - 40), // 40 is character width
-              top: 30, // Bottom lane (centered in lower half)
-              child: _buildAnimatedCharacter(
-                isHighScore: false,
-                runAnimation: _playerRunAnimation,
+
+        // Race track
+        _buildRaceTrack(
+          children: [
+            // High score character (top lane)
+            if (widget.highScoreTimeMs > 0)
+              AnimatedBuilder(
+                animation: Listenable.merge([
+                  _highScorePositionAnimation,
+                  _highScoreRunAnimation,
+                  _victoryBounceAnimation
+                ]),
+                builder: (context, child) {
+                  return Positioned(
+                    left: _highScorePositionAnimation.value *
+                        (widget.width - 40), // 40 is character width
+                    top: 10, // Top lane (centered in upper half)
+                    child: Transform.scale(
+                      scale:
+                          _highScoreWon ? _victoryBounceAnimation.value : 1.0,
+                      child: _buildAnimatedCharacter(
+                        isHighScore: true,
+                        runAnimation: _highScoreRunAnimation,
+                      ),
+                    ),
+                  );
+                },
               ),
-            );
-          },
+
+            // Player character (bottom lane)
+            AnimatedBuilder(
+              animation: Listenable.merge([
+                _playerPositionAnimation,
+                _playerRunAnimation,
+                _victoryBounceAnimation
+              ]),
+              builder: (context, child) {
+                return Positioned(
+                  left: _playerPositionAnimation.value *
+                      (widget.width - 40), // 40 is character width
+                  top: 30, // Bottom lane (centered in lower half)
+                  child: Transform.scale(
+                    scale: _playerWon ? _victoryBounceAnimation.value : 1.0,
+                    child: _buildAnimatedCharacter(
+                      isHighScore: false,
+                      runAnimation: _playerRunAnimation,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
+
+        // Race status message (only show when game is complete)
+        if (widget.isGameComplete && _raceStatusMessage.isNotEmpty)
+          Container(
+            margin: EdgeInsets.only(top: 12),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: _playerWon
+                  ? Colors.green.withValues(alpha: 0.1)
+                  : Colors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _playerWon ? Colors.green : Colors.orange,
+                width: 2,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _playerWon ? Icons.emoji_events : Icons.timer,
+                  color: _playerWon ? Colors.green : Colors.orange,
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    _raceStatusMessage,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: _playerWon
+                          ? Colors.green.shade700
+                          : Colors.orange.shade700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -234,19 +395,38 @@ class _RaceCharacterState extends State<RaceCharacter>
                     color: Colors.white.withValues(alpha: 0.15),
                   ),
                 ),
-                // Finish line
+                // Checkered finish line pattern
                 Positioned(
-                  right: 5,
-                  top: 0,
-                  bottom: 0,
+                  right: 2,
+                  top: 2,
+                  bottom: 2,
                   child: Container(
-                    width: 3,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.white, Colors.grey.shade300],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
+                    width: 8,
+                    child: Column(
+                      children: [
+                        // Create checkered pattern
+                        for (int i = 0; i < 6; i++)
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    color: (i % 2 == 0)
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Container(
+                                    color: (i % 2 == 0)
+                                        ? Colors.black
+                                        : Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -292,39 +472,49 @@ class _RaceCharacterState extends State<RaceCharacter>
     );
   }
 
-
   Widget _buildCharacterIcon({
     required bool isHighScore,
-    required Animation<double> runAnimation,  
+    required Animation<double> runAnimation,
   }) {
     Color characterColor;
-    
+    IconData characterIcon;
+
     if (isHighScore) {
       // High score character - golden/orange theme
       characterColor = Colors.orange.shade600;
+
+      // Show trophy only if high score character won
+      if (widget.isGameComplete) {
+        characterIcon = _highScoreWon ? Icons.emoji_events : Icons.person;
+      } else {
+        characterIcon =
+            widget.isGameRunning ? Icons.directions_run : Icons.person;
+      }
     } else {
       // Player character - use theme color
       characterColor = widget.characterColor;
-      
+
       // Change color based on progress vs high score position
       if (widget.highScoreTimeMs > 0 && widget.isGameRunning) {
         double playerProgress = widget.completedStars / 12.0;
-        double highScoreProgress = widget.currentElapsedTimeMs / widget.highScoreTimeMs;
-        
+        double highScoreProgress =
+            widget.currentElapsedTimeMs / widget.highScoreTimeMs;
+
         if (playerProgress > highScoreProgress) {
           characterColor = Colors.green; // Player is ahead
         } else if (playerProgress < highScoreProgress * 0.8) {
           characterColor = Colors.red; // Player is falling behind
         }
       }
-    }
 
-    // Always use running person icon for both characters
-    IconData characterIcon = widget.isGameRunning && !widget.isGameComplete
-        ? Icons.directions_run
-        : widget.isGameComplete
-            ? Icons.emoji_events // Trophy when game is complete
-            : Icons.person;
+      // Show trophy only if player won
+      if (widget.isGameComplete) {
+        characterIcon = _playerWon ? Icons.emoji_events : Icons.person;
+      } else {
+        characterIcon =
+            widget.isGameRunning ? Icons.directions_run : Icons.person;
+      }
+    }
 
     return Transform.scale(
       scale: 1.0 + (runAnimation.value * 0.1), // Slight bounce when running
