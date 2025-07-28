@@ -13,6 +13,7 @@ import 'package:number_ninja/services/sound_service.dart';
 import 'package:number_ninja/services/unlock_celebration_service.dart';
 import 'package:number_ninja/services/user_service.dart';
 import 'package:number_ninja/services/user_stats_service.dart';
+import 'package:number_ninja/services/high_score_service.dart';
 import 'package:number_ninja/widgets/game_screen_ui.dart';
 import 'package:number_ninja/widgets/time_penalty_animation.dart';
 import 'package:number_ninja/screens/game_settings_screen.dart';
@@ -274,68 +275,19 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   String _getBestTimeForCurrentLevel(List<LevelCompletionModel> completions) {
-    // Determine the range for this level based on operation and difficulty
-    List<int> levelRange = _getLevelRange();
-
-    // Filter completions that fall within this level's range
-    final matchingCompletions = completions
-        .where((completion) =>
-            levelRange.contains(completion.targetNumber) &&
-            completion.completionTimeMs > 0)
-        .toList();
-
-    if (matchingCompletions.isEmpty) {
-      return '--:--';
-    }
-
-    // Find the minimum time (best time) achieved in this level range
-    final bestCompletion = matchingCompletions
-        .reduce((a, b) => a.completionTimeMs < b.completionTimeMs ? a : b);
-
-    return StarRatingCalculator.formatTime(bestCompletion.completionTimeMs);
+    final bestTime = HighScoreService.getBestTimeForLevel(
+      completions: completions,
+      operationName: widget.operationName,
+      difficultyLevel: widget.difficultyLevel,
+      targetNumber: targetNumber,
+    );
+    
+    print('🏆 High score for ${widget.operationName} target $targetNumber: $bestTime');
+    print('🏆 High score in ms: ${HighScoreService.parseHighScoreToMs(bestTime)}');
+    
+    return bestTime;
   }
 
-  List<int> _getLevelRange() {
-    if (widget.operationName == 'multiplication' ||
-        widget.operationName == 'division') {
-      // For multiplication/division, it's just the single target number
-      return [targetNumber];
-    }
-
-    // For addition/subtraction, determine the range based on difficulty and target number
-    if (widget.difficultyLevel == DifficultyLevel.standard ||
-        widget.difficultyLevel == DifficultyLevel.challenging) {
-      // Individual levels (1-10)
-      return [targetNumber];
-    }
-
-    // Expert and Impossible have ranges
-    if (widget.difficultyLevel == DifficultyLevel.expert) {
-      // Expert ranges: 11-12, 13-14, 15-16, 17-18, 19-20
-      if (targetNumber >= 11 && targetNumber <= 12) return [11, 12];
-      if (targetNumber >= 13 && targetNumber <= 14) return [13, 14];
-      if (targetNumber >= 15 && targetNumber <= 16) return [15, 16];
-      if (targetNumber >= 17 && targetNumber <= 18) return [17, 18];
-      if (targetNumber >= 19 && targetNumber <= 20) return [19, 20];
-    }
-
-    if (widget.difficultyLevel == DifficultyLevel.impossible) {
-      // Impossible ranges: 21-26, 27-32, 33-38, 39-44, 45-50
-      if (targetNumber >= 21 && targetNumber <= 26)
-        return List.generate(6, (i) => 21 + i);
-      if (targetNumber >= 27 && targetNumber <= 32)
-        return List.generate(6, (i) => 27 + i);
-      if (targetNumber >= 33 && targetNumber <= 38)
-        return List.generate(6, (i) => 33 + i);
-      if (targetNumber >= 39 && targetNumber <= 44)
-        return List.generate(6, (i) => 39 + i);
-      if (targetNumber >= 45 && targetNumber <= 50)
-        return List.generate(6, (i) => 45 + i);
-    }
-
-    // Fallback to single number
-    return [targetNumber];
-  }
 
   void _startGameTimer() {
     _startTime = DateTime.now();
@@ -1343,12 +1295,8 @@ class _GameScreenState extends State<GameScreen> {
                     _elapsedTimeMs = 0;
                     _startGameTimer();
                   });
-                  // Refresh high score after resetting the game with a small delay
-                  Future.delayed(Duration(milliseconds: 500), () {
-                    if (mounted) {
-                      _loadCurrentLevelHighScore();
-                    }
-                  });
+                  // Refresh high score immediately after resetting the game
+                  _loadCurrentLevelHighScore();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor:

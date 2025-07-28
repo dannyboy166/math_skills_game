@@ -10,6 +10,7 @@ import 'package:number_ninja/models/level_completion_model.dart';
 import 'package:number_ninja/screens/game_screen.dart';
 import 'package:number_ninja/services/user_service.dart';
 import 'package:number_ninja/services/haptic_service.dart';
+import 'package:number_ninja/services/high_score_service.dart';
 import 'package:number_ninja/widgets/operation_selector.dart';
 
 class LevelsScreen extends StatefulWidget {
@@ -342,23 +343,11 @@ class _LevelsScreenState extends State<LevelsScreen> {
     final rangeStart = level['rangeStart'];
     final rangeEnd = level['rangeEnd'];
 
-    // Filter completions that fall within this range and have a valid time
-    final matchingCompletions = _completedLevels
-        .where((completion) =>
-            completion.targetNumber >= rangeStart &&
-            completion.targetNumber <= rangeEnd &&
-            completion.completionTimeMs > 0)
-        .toList();
-
-    if (matchingCompletions.isEmpty) {
-      return '--:--'; // No valid completions yet
-    }
-
-    // Find the minimum time (best time) achieved
-    final bestCompletion = matchingCompletions
-        .reduce((a, b) => a.completionTimeMs < b.completionTimeMs ? a : b);
-
-    return StarRatingCalculator.formatTime(bestCompletion.completionTimeMs);
+    return HighScoreService.getBestTimeForLevelRange(
+      completions: _completedLevels,
+      rangeStart: rangeStart,
+      rangeEnd: rangeEnd,
+    );
   }
 
   void _navigateToGame(String difficulty, Map<String, dynamic> level) {

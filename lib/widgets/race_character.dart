@@ -13,6 +13,7 @@ class RaceCharacter extends StatefulWidget {
   final bool isGameComplete; // Whether the game is finished
   final double width; // Width of the racing track
   final Color characterColor; // Color theme for the characters
+  final String highScoreString; // Raw high score string to distinguish loading vs no score
 
   const RaceCharacter({
     Key? key,
@@ -23,6 +24,7 @@ class RaceCharacter extends StatefulWidget {
     required this.isGameComplete,
     required this.width,
     required this.characterColor,
+    required this.highScoreString,
   }) : super(key: key);
 
   @override
@@ -120,8 +122,13 @@ class _RaceCharacterState extends State<RaceCharacter>
   }
 
   void _startAnimations() {
+    print('🏃 RaceCharacter: _startAnimations called - running=${widget.isGameRunning}, complete=${widget.isGameComplete}, shouldShow=$_shouldShowHighScoreOpponent');
+    
     if (widget.isGameRunning && !widget.isGameComplete) {
-      _highScoreRunController.repeat(reverse: true);
+      if (_shouldShowHighScoreOpponent) {
+        print('🏃 RaceCharacter: Starting high score animations');
+        _highScoreRunController.repeat(reverse: true);
+      }
       _playerRunController.repeat(reverse: true);
       _startPositionUpdates();
     }
@@ -145,6 +152,9 @@ class _RaceCharacterState extends State<RaceCharacter>
           widget.currentElapsedTimeMs / widget.highScoreTimeMs;
       highScoreProgress = highScoreProgress.clamp(0.0, 1.0);
       _highScorePositionController.animateTo(highScoreProgress);
+    } else if (_shouldShowHighScoreOpponent) {
+      // If we should show opponent but don't have valid time data, keep it at start
+      _highScorePositionController.animateTo(0.0);
     }
 
     // Update player character position based on stars completed
@@ -157,9 +167,10 @@ class _RaceCharacterState extends State<RaceCharacter>
   void didUpdateWidget(RaceCharacter oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Restart animations if game state changed
+    // Restart animations if game state changed or high score data became available
     if (oldWidget.isGameRunning != widget.isGameRunning ||
-        oldWidget.isGameComplete != widget.isGameComplete) {
+        oldWidget.isGameComplete != widget.isGameComplete ||
+        oldWidget.highScoreString != widget.highScoreString) {
       if (widget.isGameRunning && !widget.isGameComplete) {
         _startAnimations();
 // Reset victory message flag
@@ -187,6 +198,18 @@ class _RaceCharacterState extends State<RaceCharacter>
     _victoryController.forward().then((_) {
       _victoryController.reverse();
     });
+  }
+
+  // Determine if high score opponent should be shown
+  bool get _shouldShowHighScoreOpponent {
+    // Show opponent if we have a valid high score time, OR if high score string indicates a score exists
+    // This handles cases where the time might be 0 due to parsing issues but we know a score exists
+    final shouldShow = widget.highScoreTimeMs > 0 || 
+           (widget.highScoreString.isNotEmpty && widget.highScoreString != '--:--');
+    
+    print('🏃 RaceCharacter: shouldShow=$shouldShow, timeMs=${widget.highScoreTimeMs}, string="${widget.highScoreString}"');
+    
+    return shouldShow;
   }
 
   // Determine who won the race
@@ -243,7 +266,7 @@ class _RaceCharacterState extends State<RaceCharacter>
         // Race explanation (only show when game is running)
         if (widget.isGameRunning &&
             !widget.isGameComplete &&
-            widget.highScoreTimeMs > 0)
+            _shouldShowHighScoreOpponent)
           Container(
             margin: EdgeInsets.only(bottom: 8),
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -275,7 +298,7 @@ class _RaceCharacterState extends State<RaceCharacter>
         _buildRaceTrack(
           children: [
             // High score character (top lane)
-            if (widget.highScoreTimeMs > 0)
+            if (_shouldShowHighScoreOpponent)
               AnimatedBuilder(
                 animation: Listenable.merge([
                   _highScorePositionAnimation,

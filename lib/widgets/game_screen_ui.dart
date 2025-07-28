@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:number_ninja/models/level_completion_model.dart';
 import 'package:number_ninja/widgets/progress_stars.dart';
 import 'package:number_ninja/widgets/race_character.dart';
+import 'package:number_ninja/services/high_score_service.dart';
 import '../models/difficulty_level.dart';
 import '../models/operation_config.dart';
 import '../models/ring_model.dart';
@@ -72,26 +73,6 @@ class GameScreenUI extends StatelessWidget {
     required this.onShowSettings,
   }) : super(key: key);
 
-  // Helper method to convert high score string to milliseconds
-  int _parseHighScoreToMs(String highScore) {
-    if (highScore == '--:--' || highScore.isEmpty) {
-      return 0; // No high score available
-    }
-    
-    try {
-      // Parse format like "1:23" or "0:45"
-      final parts = highScore.split(':');
-      if (parts.length == 2) {
-        final minutes = int.parse(parts[0]);
-        final seconds = int.parse(parts[1]);
-        return (minutes * 60 + seconds) * 1000; // Convert to milliseconds
-      }
-    } catch (e) {
-      print('Error parsing high score: $highScore');
-    }
-    
-    return 0;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -222,13 +203,14 @@ class GameScreenUI extends StatelessWidget {
                     Container(
                       margin: EdgeInsets.only(bottom: 20),
                       child: RaceCharacter(
-                        highScoreTimeMs: _parseHighScoreToMs(currentHighScore),
+                        highScoreTimeMs: HighScoreService.parseHighScoreToMs(currentHighScore),
                         currentElapsedTimeMs: elapsedTimeMs,
                         completedStars: lockedEquations.length, // Number of completed stars
                         isGameRunning: isGameRunning,
                         isGameComplete: isGameComplete,
                         width: screenWidth * 0.8,
                         characterColor: operation.color,
+                        highScoreString: currentHighScore,
                       ),
                     ),
                     
