@@ -102,7 +102,7 @@ class _RaceCharacterState extends State<RaceCharacter>
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _playerPositionController,
-      curve: Curves.easeOut,
+      curve: Curves.linear,
     ));
 
     // Victory celebration animation
@@ -204,12 +204,8 @@ class _RaceCharacterState extends State<RaceCharacter>
   bool get _shouldShowHighScoreOpponent {
     // Show opponent if we have a valid high score time, OR if high score string indicates a score exists
     // This handles cases where the time might be 0 due to parsing issues but we know a score exists
-    final shouldShow = widget.highScoreTimeMs > 0 || 
+    return widget.highScoreTimeMs > 0 || 
            (widget.highScoreString.isNotEmpty && widget.highScoreString != '--:--');
-    
-    print('🏃 RaceCharacter: shouldShow=$shouldShow, timeMs=${widget.highScoreTimeMs}, string="${widget.highScoreString}"');
-    
-    return shouldShow;
   }
 
   // Determine who won the race
@@ -506,12 +502,15 @@ class _RaceCharacterState extends State<RaceCharacter>
       // High score character - golden/orange theme
       characterColor = Colors.orange.shade600;
 
-      // Show trophy only if high score character won
+      // Show trophy when high score character reaches finish line or wins
       if (widget.isGameComplete) {
         characterIcon = _highScoreWon ? Icons.emoji_events : Icons.person;
+      } else if (widget.isGameRunning && widget.highScoreTimeMs > 0) {
+        double highScoreProgress = widget.currentElapsedTimeMs / widget.highScoreTimeMs;
+        // Show trophy when high score character finishes, even if game isn't complete
+        characterIcon = highScoreProgress >= 1.0 ? Icons.emoji_events : Icons.directions_run;
       } else {
-        characterIcon =
-            widget.isGameRunning ? Icons.directions_run : Icons.person;
+        characterIcon = widget.isGameRunning ? Icons.directions_run : Icons.person;
       }
     } else {
       // Player character - use theme color
@@ -523,9 +522,13 @@ class _RaceCharacterState extends State<RaceCharacter>
         double highScoreProgress =
             widget.currentElapsedTimeMs / widget.highScoreTimeMs;
 
-        if (playerProgress > highScoreProgress) {
-          characterColor = Colors.green; // Player is ahead
-        } else if (playerProgress < highScoreProgress * 0.8) {
+        // Calculate actual visual positions to determine who's ahead
+        double playerVisualPos = playerProgress * (widget.width - 40);
+        double highScoreVisualPos = highScoreProgress * (widget.width - 40);
+        
+        if (playerVisualPos > highScoreVisualPos) {
+          characterColor = Colors.green; // Player is ahead visually
+        } else if (playerVisualPos < highScoreVisualPos * 0.8) {
           characterColor = Colors.red; // Player is falling behind
         }
       }
