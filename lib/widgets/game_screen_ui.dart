@@ -338,14 +338,7 @@ class GameScreenUI extends StatelessWidget {
                 ),
               ),
 
-              // Completion message overlay when game is complete
-              if (isGameComplete)
-                Positioned(
-                  bottom: 20,
-                  left: 20,
-                  right: 20,
-                  child: _buildCompletionMessage(),
-                ),
+              // Completion message overlay removed - user requested no bottom popups
 
               // Star animations layer
               ...starAnimations,
@@ -357,51 +350,5 @@ class GameScreenUI extends StatelessWidget {
   }
 
 
-  Widget _buildCompletionMessage() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(15),
-        border:
-            Border.all(color: operation.color.withValues(alpha: 0.3), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.check_circle,
-            color: Colors.green,
-            size: 40,
-          ),
-          SizedBox(height: 10),
-          Text(
-            'All Equations Completed!',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: operation.color,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            '${lockedEquations.length}/12 equations solved in ${StarRatingCalculator.formatTime(elapsedTimeMs)}',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+  // _buildCompletionMessage removed - user requested no bottom popups
 }

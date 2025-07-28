@@ -714,27 +714,7 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
-    // Provide visual feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.star, color: Colors.amber),
-            SizedBox(width: 10),
-            Text(
-              'Great job! ${solvedEquations.length}/12 equations found!',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        duration: Duration(seconds: 1),
-        backgroundColor: operation.color,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
+    // Visual feedback removed - user requested no bottom popups
   }
 
   void _addTimePenalty(int cornerIndex) {
