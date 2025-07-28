@@ -68,35 +68,28 @@ class EquationHighlightPainter extends CustomPainter {
 
   void _drawShadowOverlay(Canvas canvas, Size canvasSize) {
     final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.6)
+      ..color = Colors.black.withValues(alpha: 0.05)
       ..style = PaintingStyle.fill;
 
-    // Create a path that covers everything except the diagonal cross and corners/center
-    final fullAreaPath = Path()
-      ..addRect(Rect.fromLTWH(0, 0, canvasSize.width, canvasSize.height));
+    final shadowPath = Path();
 
-    final holePath = Path();
-
-    // Create holes for center circle
+    // Create shadow for center circle
     final centerOffset = Offset(size / 2, size / 2);
-    holePath.addOval(Rect.fromCenter(
+    shadowPath.addOval(Rect.fromCenter(
       center: centerOffset,
-      width: 90,
-      height: 90,
+      width: 110,
+      height: 110,
     ));
 
-    // Create holes for corners and diagonal paths
-    _addCornerHoles(holePath);
-    _addDiagonalPathHoles(holePath);
+    // Create shadow for corners and diagonal paths
+    _addCornerShadows(shadowPath);
+    _addDiagonalPathShadows(shadowPath);
 
-    // Subtract holes from full area to create shadow
-    final shadowPath =
-        Path.combine(PathOperation.difference, fullAreaPath, holePath);
     canvas.drawPath(shadowPath, shadowPaint);
   }
 
-  void _addCornerHoles(Path holePath) {
-    // Inner ring corner holes (keep as rectangles)
+  void _addCornerShadows(Path shadowPath) {
+    // Inner ring corner shadows (keep as rectangles)
     for (int cornerIndex in innerRingModel.cornerIndices) {
       final cornerPos = SquarePositionUtils.calculateInnerSquarePosition(
         cornerIndex,
@@ -106,7 +99,7 @@ class EquationHighlightPainter extends CustomPainter {
         margin: margin,
       );
 
-      holePath.addRect(Rect.fromLTWH(
+      shadowPath.addRect(Rect.fromLTWH(
         cornerPos.dx - 5,
         cornerPos.dy - 5,
         tileSize * 1.2 + 10,
@@ -114,7 +107,7 @@ class EquationHighlightPainter extends CustomPainter {
       ));
     }
 
-    // Outer ring corner holes - IMPROVED curved shadows
+    // Outer ring corner shadows - IMPROVED curved shadows
     for (int cornerIndex in outerRingModel.cornerIndices) {
       final cornerPos = SquarePositionUtils.calculateSquarePosition(
         cornerIndex,
@@ -135,8 +128,8 @@ class EquationHighlightPainter extends CustomPainter {
       final expandedRadius =
           baseRadius + 8; // Increased padding for better curve
 
-      // Create a more generous circular hole
-      holePath.addOval(Rect.fromCenter(
+      // Create a more generous circular shadow
+      shadowPath.addOval(Rect.fromCenter(
         center: tileCenter,
         width: expandedRadius * 2,
         height: expandedRadius * 2,
@@ -145,7 +138,7 @@ class EquationHighlightPainter extends CustomPainter {
       // Optional: Add a secondary, smaller circular area for even smoother transition
       // This creates a "feathered" edge effect
       final featherRadius = expandedRadius + 8;
-      holePath.addOval(Rect.fromCenter(
+      shadowPath.addOval(Rect.fromCenter(
         center: tileCenter,
         width: featherRadius * 2,
         height: featherRadius * 2,
@@ -153,11 +146,11 @@ class EquationHighlightPainter extends CustomPainter {
     }
   }
 
-  void _addDiagonalPathHoles(Path holePath) {
+  void _addDiagonalPathShadows(Path shadowPath) {
     final centerOffset = Offset(size / 2, size / 2);
     final pathWidth = 50.0;
 
-    // Create diagonal path holes (big X pattern)
+    // Create diagonal path shadows (big X pattern)
     final innerCorners = innerRingModel.cornerIndices;
     final outerCorners = outerRingModel.cornerIndices;
 
@@ -194,8 +187,8 @@ class EquationHighlightPainter extends CustomPainter {
       );
 
       // Create path from inner corner through center to outer corner
-      _addThickLinePath(holePath, innerCenter, centerOffset, pathWidth);
-      _addThickLinePath(holePath, centerOffset, outerCenter, pathWidth);
+      _addThickLinePath(shadowPath, innerCenter, centerOffset, pathWidth);
+      _addThickLinePath(shadowPath, centerOffset, outerCenter, pathWidth);
     }
   }
 
