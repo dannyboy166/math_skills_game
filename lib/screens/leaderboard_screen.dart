@@ -65,8 +65,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     });
 
     try {
-      // Load games leaderboard (default tab)
-      await _loadGamesLeaderboard();
+      // Load time leaderboard (default tab)
+      await _loadAllTimeLeaderboards('Standard');
 
       // Get user's rank
 
@@ -95,7 +95,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     try {
       print('DEBUG: Loading data for tab index $tabIndex');
       switch (tabIndex) {
-        case 0: // Games tab
+        case 0: // Time tab
+          await _loadAllTimeLeaderboards('Standard');
+          break;
+        case 1: // Games tab
           await _loadGamesLeaderboard();
           // Explicitly fetch and log the timestamp
           final timestamp =
@@ -109,9 +112,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               print('DEBUG: Updated _lastUpdated state to: $_lastUpdated');
             });
           }
-          break;
-        case 1: // Time tab
-          await _loadAllTimeLeaderboards('Standard');
           break;
       }
     } catch (e) {
@@ -228,18 +228,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // Games Tab
-                  LeaderboardTab(
-                    leaderboardEntries: _gamesLeaderboard,
-                    currentUserId: _currentUserId,
-                    valueSelector: (entry) => entry.totalGames,
-                    valueLabel: 'games',
-                    valueIcon: Icons.sports_esports,
-                    valueColor: Colors.blue,
-                    onRefresh: _refreshCurrentTab,
-                    isLoading: _isLoading,
-                  ),
-
                   // Time Tab
                   TimeLeaderboardTab(
                     additionLeaderboard: _timeLeaderboards['addition'] ?? [],
@@ -254,6 +242,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                       await _loadTimeLeaderboard(operation,
                           difficulty: difficulty);
                     },
+                  ),
+
+                  // Games Tab
+                  LeaderboardTab(
+                    leaderboardEntries: _gamesLeaderboard,
+                    currentUserId: _currentUserId,
+                    valueSelector: (entry) => entry.totalGames,
+                    valueLabel: 'games',
+                    valueIcon: Icons.sports_esports,
+                    valueColor: Colors.blue,
+                    onRefresh: _refreshCurrentTab,
+                    isLoading: _isLoading,
                   ),
                 ],
               ),
@@ -320,12 +320,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         unselectedLabelColor: Colors.grey[600],
         tabs: [
           Tab(
-            icon: Icon(Icons.sports_esports),
-            text: 'Games',
-          ),
-          Tab(
             icon: Icon(Icons.timer),
             text: 'Time',
+          ),
+          Tab(
+            icon: Icon(Icons.sports_esports),
+            text: 'Games',
           ),
         ],
       ),
