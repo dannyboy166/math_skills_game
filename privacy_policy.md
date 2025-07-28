@@ -149,7 +149,7 @@ Continued use of the App after policy changes constitutes acceptance of the upda
 
 If you have questions, concerns, or requests regarding this Privacy Policy or your personal information, please contact us:
 
-**Email**: [Your support email]
+**Email**: samus.daniel@outlook.com
 **In-App**: Use the "Contact Support" feature in app settings
 **Response Time**: We aim to respond to all inquiries within 48 hours
 
