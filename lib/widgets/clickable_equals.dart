@@ -82,10 +82,6 @@ class _ClickableEqualsState extends State<ClickableEquals> with SingleTickerProv
               width: widget.size,
               height: widget.size,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
               child: Stack(
                 alignment: Alignment.center,
                 children: [

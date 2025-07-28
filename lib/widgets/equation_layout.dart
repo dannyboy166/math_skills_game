@@ -94,17 +94,6 @@ class EquationLayout extends StatelessWidget {
       width: 30,
       height: 30,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.3),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 2,
-            spreadRadius: 0.5,
-          )
-        ],
-      ),
       child: Transform.translate(
         offset: Offset(
             0, verticalOffset), // Apply vertical offset for precise centering
