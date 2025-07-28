@@ -532,7 +532,7 @@ class AboutAppScreen extends StatelessWidget {
   }
 
   void _launchPrivacyPolicyUrl(BuildContext context) async {
-    const url = 'https://your-website.com/privacy-policy'; // Replace with your actual URL
+    const url = 'https://dannyboy166.github.io/math_skills_game/privacy_policy';
     try {
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);

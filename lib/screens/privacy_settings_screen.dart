@@ -2,9 +2,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PrivacySettingsScreen extends StatelessWidget {
   const PrivacySettingsScreen({super.key});
+
+  Future<void> _launchPrivacyPolicy() async {
+    final Uri url = Uri.parse('https://dannyboy166.github.io/math_skills_game/privacy_policy');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
+  }
 
   Future<void> _deleteAccount(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -100,6 +108,14 @@ class PrivacySettingsScreen extends StatelessWidget {
             ),
 
             _buildSectionHeader('Account Management'),
+
+            _buildActionButton(
+              'Privacy Policy',
+              'View our privacy policy and data handling practices',
+              Icons.policy,
+              Colors.blue,
+              _launchPrivacyPolicy,
+            ),
 
             _buildActionButton(
               'Delete Account',
