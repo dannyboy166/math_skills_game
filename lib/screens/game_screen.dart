@@ -1225,7 +1225,7 @@ class _GameScreenState extends State<GameScreen> {
 
                 // Time information
                 Text(
-                  'Total time: ${(completionTimeMs / 1000).toStringAsFixed(2)}s',
+                  'Total time: ${StarRatingCalculator.formatTime(completionTimeMs)}',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),

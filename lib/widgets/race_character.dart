@@ -541,20 +541,29 @@ class _RaceCharacterState extends State<RaceCharacter>
       // Player character - use theme color
       characterColor = widget.characterColor;
 
-      // Change color based on progress vs high score position
+      // Change color based on whether player is on pace to beat high score
       if (widget.highScoreTimeMs > 0 && widget.isGameRunning) {
         double playerProgress = widget.completedStars / 12.0;
-        double highScoreProgress =
-            widget.currentElapsedTimeMs / widget.highScoreTimeMs;
-
-        // Calculate actual visual positions to determine who's ahead
-        double playerVisualPos = playerProgress * (widget.width - 40);
-        double highScoreVisualPos = highScoreProgress * (widget.width - 40);
         
-        if (playerVisualPos > highScoreVisualPos) {
-          characterColor = Colors.green; // Player is ahead visually
-        } else if (playerVisualPos < highScoreVisualPos * 0.8) {
-          characterColor = Colors.red; // Player is falling behind
+        if (widget.completedStars > 0) {
+          // Calculate what the player's time should be at this progress to beat high score
+          double timeToTargetAtThisProgress = widget.highScoreTimeMs * playerProgress;
+          
+          // Compare actual elapsed time vs target time
+          if (widget.currentElapsedTimeMs < timeToTargetAtThisProgress) {
+            characterColor = Colors.green; // Player is ahead of pace
+          } else if (widget.currentElapsedTimeMs > timeToTargetAtThisProgress * 1.1) {
+            characterColor = Colors.red; // Player is significantly behind pace
+          }
+          // Keep original color if close to pace (within 10% margin)
+        } else {
+          // At start of race (no stars yet), compare against high score's expected pace
+          double highScoreProgress = widget.currentElapsedTimeMs / widget.highScoreTimeMs;
+          
+          // If high score character has moved ahead while player hasn't earned stars, turn red
+          if (highScoreProgress > 0.05) { // 5% threshold to avoid immediate red at race start
+            characterColor = Colors.red;
+          }
         }
       }
 
