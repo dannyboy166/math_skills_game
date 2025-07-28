@@ -914,6 +914,7 @@ class _GameScreenState extends State<GameScreen> {
       isGameComplete: isGameComplete,
       elapsedTimeMs: _displayedElapsedTimeMs,
       currentHighScore: _currentHighScore,
+      isGameRunning: _isTimerRunning,
       onUpdateInnerRing: _updateInnerRing,
       onUpdateOuterRing: _updateOuterRing,
       onTileTap: _handleTileTap,
