@@ -343,6 +343,32 @@ class AuthService {
     return _auth.sendPasswordResetEmail(email: email);
   }
 
+  // Check if the current user signed in with email/password
+  bool get isEmailPasswordUser {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    
+    // Check if user has password provider
+    for (var info in user.providerData) {
+      if (info.providerId == 'password') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Get the user's authentication provider
+  String? get userAuthProvider {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    
+    // Return the first provider (most relevant one)
+    if (user.providerData.isNotEmpty) {
+      return user.providerData.first.providerId;
+    }
+    return null;
+  }
+
   // Helper method to generate a cryptographically secure random nonce
   String _generateNonce([int length = 32]) {
     const charset =

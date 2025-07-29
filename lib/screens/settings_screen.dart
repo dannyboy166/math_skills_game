@@ -113,17 +113,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAccountSection() {
+    final authService = AuthService();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Reset Password Setting
-        _buildNavigationSetting(
-          'Reset Password',
-          'Change your login password',
-          Icons.lock_reset,
-          Colors.blue,
-          () => _showResetPasswordDialog(),
-        ),
+        // Reset Password Setting - only show for email/password users
+        if (authService.isEmailPasswordUser)
+          _buildNavigationSetting(
+            'Reset Password',
+            'Change your login password',
+            Icons.lock_reset,
+            Colors.blue,
+            () => _showResetPasswordDialog(),
+          ),
+
+        // Show different setting for OAuth users
+        if (!authService.isEmailPasswordUser && authService.currentUser != null)
+          _buildNavigationSetting(
+            'Account Settings',
+            'Manage your ${_getProviderDisplayName(authService.userAuthProvider)} account',
+            Icons.account_circle,
+            Colors.blue,
+            () => _showAccountInfoDialog(),
+          ),
 
         // Logout Setting
         _buildNavigationSetting(
@@ -212,25 +225,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(
-                      'Cancel ❌',
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'Cancel ❌',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                 ),
-                Container(
+                SizedBox(width: 8),
+                Expanded(
+                  child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [Colors.blue.shade400, Colors.blue.shade600],
@@ -300,6 +317,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                   ),
+                ),
                 ),
               ],
             ),
@@ -965,6 +983,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         onTap: onTap,
       ),
+    );
+  }
+
+  // Helper method to get user-friendly provider names
+  String _getProviderDisplayName(String? providerId) {
+    switch (providerId) {
+      case 'google.com':
+        return 'Google';
+      case 'apple.com':
+        return 'Apple';
+      case 'password':
+        return 'Email';
+      default:
+        return 'account';
+    }
+  }
+
+  // Show account info dialog for OAuth users
+  void _showAccountInfoDialog() {
+    final authService = AuthService();
+    final provider = _getProviderDisplayName(authService.userAuthProvider);
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Account Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('You signed in with $provider.'),
+              SizedBox(height: 16),
+              Text('To manage your password or account settings, please visit your $provider account settings.'),
+              if (provider == 'Google') ...[
+                SizedBox(height: 12),
+                Text('Visit: myaccount.google.com', style: TextStyle(color: Colors.blue)),
+              ],
+              if (provider == 'Apple') ...[
+                SizedBox(height: 12),
+                Text('Visit: Settings > Sign-In & Security on your Apple device', style: TextStyle(color: Colors.blue)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
     );
   }
 
