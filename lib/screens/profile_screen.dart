@@ -13,7 +13,7 @@ class ProfileScreen extends StatefulWidget {
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
   final TextEditingController _displayNameController = TextEditingController();
@@ -24,10 +24,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
   Map<String, dynamic>? _streakData;
+  
+  // Animation controllers
+  late AnimationController _ninjaAnimationController;
+  late Animation<double> _ninjaScaleAnimation;
+  
+  // Scroll controller for header animations
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0.0;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize animations
+    _ninjaAnimationController = AnimationController(
+      duration: Duration(seconds: 2),
+      vsync: this,
+    );
+    
+    _ninjaScaleAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.05,
+    ).animate(CurvedAnimation(
+      parent: _ninjaAnimationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // Start breathing animation
+    _ninjaAnimationController.repeat(reverse: true);
+    
+    // Listen to scroll for header animations
+    _scrollController.addListener(() {
+      setState(() {
+        _scrollOffset = _scrollController.offset;
+      });
+    });
+    
     _loadUserData();
   }
 
@@ -434,6 +467,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _displayNameController.dispose();
+    _ninjaAnimationController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -453,167 +488,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Custom Header with Ninja Theme
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.blue.shade400,
-                      Colors.blue.shade500,
-                      Colors.blue.shade600,
-                    ],
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    // Ninja avatar in circle
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.yellow.shade300,
-                            Colors.orange.shade400
-                          ],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.yellow.withValues(alpha: 0.5),
-                            blurRadius: 10,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/ninja.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 28,
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(width: 16),
-
-                    // Title
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'My Profile 🥷',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            'Your ninja stats await!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Edit and Settings buttons
-                    if (!_isEditing && !_isLoading)
-                      Container(
-                        margin: EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: Icon(Icons.edit, color: Colors.white),
-                          onPressed: () {
-                            setState(() {
-                              _isEditing = true;
-                            });
-                          },
-                        ),
-                      ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: Icon(Icons.settings, color: Colors.white),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => SettingsScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Scrollable content
-              Expanded(
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              _buildAnimatedHeader(),
+              SliverToBoxAdapter(
                 child: _isLoading
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.blue),
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Loading your ninja stats... 🥷',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.blue.shade700,
-                                fontWeight: FontWeight.w500,
+                    ? SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.7,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.blue),
                               ),
-                            ),
-                          ],
+                              SizedBox(height: 16),
+                              Text(
+                                'Loading your ninja stats... 🥷',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.blue.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : _userData == null
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 60,
-                                  color: Colors.red.shade300,
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  'Oops! Could not load profile data 😔',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.red.shade600,
-                                    fontWeight: FontWeight.w500,
+                        ? SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.7,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 60,
+                                    color: Colors.red.shade300,
                                   ),
-                                ),
-                              ],
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Oops! Could not load profile data 😔',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.red.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           )
-                        : SingleChildScrollView(
+                        : Padding(
                             padding: EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,6 +577,162 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedHeader() {
+    // Calculate header scaling based on scroll
+    double headerScale = 1.0 - (_scrollOffset / 400).clamp(0.0, 0.4);
+    double ninjaScale = 1.0 - (_scrollOffset / 300).clamp(0.0, 0.6);
+    double titleOpacity = (1.0 - (_scrollOffset / 200)).clamp(0.0, 1.0);
+    
+    return SliverAppBar(
+      expandedHeight: 90,
+      floating: false,
+      pinned: false,
+      snap: false,
+      elevation: 8,
+      shadowColor: Colors.blue.withValues(alpha: 0.3),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.blue.shade400,
+                Colors.blue.shade500,
+                Colors.blue.shade600,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                children: [
+                  // Animated ninja with breathing effect
+                  AnimatedBuilder(
+                    animation: _ninjaScaleAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: ninjaScale * _ninjaScaleAnimation.value,
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.yellow.shade300,
+                                Colors.orange.shade400
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.yellow.withValues(alpha: 0.5),
+                                blurRadius: 10 * ninjaScale,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/ninja.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 28,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  SizedBox(width: 16),
+
+                  // Title with fade and scale effect
+                  Expanded(
+                    child: Opacity(
+                      opacity: titleOpacity,
+                      child: Transform.scale(
+                        scale: headerScale,
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'My Profile',
+                              style: TextStyle(
+                                fontSize: 22 * headerScale,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            if (titleOpacity > 0.5)
+                              Text(
+                                'Your ninja stats await!',
+                                style: TextStyle(
+                                  fontSize: 14 * headerScale,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Edit and Settings buttons with scaling
+                  if (!_isEditing && !_isLoading)
+                    Transform.scale(
+                      scale: headerScale,
+                      child: Container(
+                        margin: EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.edit, color: Colors.white),
+                          onPressed: () {
+                            setState(() {
+                              _isEditing = true;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  Transform.scale(
+                    scale: headerScale,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.settings, color: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => SettingsScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

@@ -22,13 +22,21 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String? selectedOperation;
   DifficultyLevel selectedLevel = DifficultyLevel.standard;
   int? selectedMultiplicationTable;
   int _currentIndex = 0;
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
+  
+  // Animation controllers
+  late AnimationController _ninjaAnimationController;
+  late Animation<double> _ninjaScaleAnimation;
+  
+  // Scroll controller for header animations
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0.0;
 
   // Track unlocked time tables
   List<int> _unlockedTimeTables = [];
@@ -50,6 +58,30 @@ class _HomeScreenState extends State<HomeScreen> {
     // Initialize with empty data
     _weeklyStreak = WeeklyStreak.currentWeek();
 
+    // Initialize animations
+    _ninjaAnimationController = AnimationController(
+      duration: Duration(seconds: 2),
+      vsync: this,
+    );
+    
+    _ninjaScaleAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.05,
+    ).animate(CurvedAnimation(
+      parent: _ninjaAnimationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // Start breathing animation
+    _ninjaAnimationController.repeat(reverse: true);
+    
+    // Listen to scroll for header animations
+    _scrollController.addListener(() {
+      setState(() {
+        _scrollOffset = _scrollController.offset;
+      });
+    });
+
     // Start listening to streams when signed in
     _listenToStreakData();
     _listenToUnlockData();
@@ -61,6 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _weeklyStreakSubscription?.cancel();
     _streakStatsSubscription?.cancel();
     _unlockedTimeTablesSubscription?.cancel();
+    
+    // Dispose animations
+    _ninjaAnimationController.dispose();
+    _scrollController.dispose();
+    
     super.dispose();
   }
 
@@ -199,10 +236,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHomeScreen() {
     return SafeArea(
-      child: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          _buildAnimatedHeader(),
+          SliverToBoxAdapter(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -211,40 +249,38 @@ class _HomeScreenState extends State<HomeScreen> {
                   colors: [Colors.blue.shade50, Colors.white],
                 ),
               ),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildWelcomeCard(),
-                      SizedBox(height: 24),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildWelcomeCard(),
+                    SizedBox(height: 24),
 
-                      // Operation selection
-                      Text(
-                        'Choose Operation',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                    // Operation selection
+                    Text(
+                      'Choose Operation',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
-                      SizedBox(height: 16),
+                    ),
+                    SizedBox(height: 16),
 
-                      _buildOperationGrid(),
+                    _buildOperationGrid(),
 
-                      // Show difficulty selection only if an operation is selected
-                      if (selectedOperation != null) ...[
-                        SizedBox(height: 30),
-                        selectedOperation == 'multiplication' ||
-                                selectedOperation == 'division'
-                            ? _buildMultiplicationTablesUI()
-                            : _buildDifficultySelection(),
-                        SizedBox(height: 30),
-                        _buildStartGameButton(),
-                      ],
+                    // Show difficulty selection only if an operation is selected
+                    if (selectedOperation != null) ...[
+                      SizedBox(height: 30),
+                      selectedOperation == 'multiplication' ||
+                              selectedOperation == 'division'
+                          ? _buildMultiplicationTablesUI()
+                          : _buildDifficultySelection(),
+                      SizedBox(height: 30),
+                      _buildStartGameButton(),
                     ],
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -254,102 +290,134 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.blue.shade400,
-            Colors.blue.shade500,
-            Colors.blue.shade600,
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: Offset(0, 5),
+  Widget _buildAnimatedHeader() {
+    // Calculate header scaling based on scroll
+    double headerScale = 1.0 - (_scrollOffset / 400).clamp(0.0, 0.4);
+    double ninjaScale = 1.0 - (_scrollOffset / 300).clamp(0.0, 0.6);
+    double titleOpacity = (1.0 - (_scrollOffset / 200)).clamp(0.0, 1.0);
+    
+    return SliverAppBar(
+      expandedHeight: 90,
+      floating: false,
+      pinned: false,
+      snap: false,
+      elevation: 8,
+      shadowColor: Colors.blue.withValues(alpha: 0.3),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.blue.shade400,
+                Colors.blue.shade500,
+                Colors.blue.shade600,
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Ninja in yellow circle
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.yellow.shade300,
-                  Colors.orange.shade400
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                children: [
+                  // Animated ninja with breathing effect
+                  AnimatedBuilder(
+                    animation: _ninjaScaleAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: ninjaScale * _ninjaScaleAnimation.value,
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.yellow.shade300,
+                                Colors.orange.shade400
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.yellow.withValues(alpha: 0.5),
+                                blurRadius: 10 * ninjaScale,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Container(
+                              width: 35,
+                              height: 35,
+                              child: Image.asset(
+                                'assets/images/ninja.png',
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(
+                                    Icons.calculate_rounded,
+                                    color: Colors.white,
+                                    size: 28,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  SizedBox(width: 16),
+                  
+                  // App title and subtitle with fade effect
+                  Expanded(
+                    child: Opacity(
+                      opacity: titleOpacity,
+                      child: Transform.scale(
+                        scale: headerScale,
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Number Ninja',
+                              style: TextStyle(
+                                fontSize: 22 * headerScale,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            if (titleOpacity > 0.5)
+                              Text(
+                                _getHeaderSubtitle(),
+                                style: TextStyle(
+                                  fontSize: 13 * headerScale,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(width: 12),
+                  
+                  // Streak widget with scaling
+                  Transform.scale(
+                    scale: headerScale,
+                    child: const StreakFlameWidget(),
+                  ),
                 ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.yellow.withValues(alpha: 0.5),
-                  blurRadius: 10,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: ClipOval(
-              child: Container(
-                width: 35,
-                height: 35,
-                child: Image.asset(
-                  'assets/images/ninja.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(
-                      Icons.calculate_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    );
-                  },
-                ),
               ),
             ),
           ),
-          
-          SizedBox(width: 16),
-          
-          // App title and subtitle
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Number Ninja',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  _getHeaderSubtitle(),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          SizedBox(width: 12),
-          
-          // Streak widget
-          const StreakFlameWidget(),
-        ],
+        ),
       ),
     );
   }
@@ -658,82 +726,100 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-// Updated _buildOperationCard method to fix alignment issues
+// Updated _buildOperationCard method with hover animations
   Widget _buildOperationCard(String title, String symbol, Color color,
       String operation, IconData icon) {
     final bool isSelected = selectedOperation == operation;
 
-    return GestureDetector(
-      onTap: () {
-        HapticService().lightImpact();
-        setState(() {
-          selectedOperation = operation;
-          selectedMultiplicationTable = null; // Reset when changing operation
-        });
-      },
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected
-                  ? color.withValues(alpha: 0.5)
-                  : Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.shade200,
-            width: 2,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            // Top icon circle
-            Icon(
-              icon,
-              size: 40,
-              color: isSelected ? Colors.white : color,
-            ),
-
-            // Middle text
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black87,
-              ),
-            ),
-
-            // Bottom symbol - Fixed vertical centering
-            Container(
-              width: 40,
-              height: 40,
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 200),
+      tween: Tween(begin: 1.0, end: 1.0),
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: GestureDetector(
+            onTapDown: (_) {
+              // Scale down slightly on tap
+            },
+            onTapUp: (_) {
+              // Scale back to normal
+            },
+            onTapCancel: () {
+              // Scale back to normal if tap is cancelled
+            },
+            onTap: () {
+              HapticService().lightImpact();
+              setState(() {
+                selectedOperation = operation;
+                selectedMultiplicationTable = null; // Reset when changing operation
+              });
+            },
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 300),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.3)
-                    : color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              // Add alignment to center the content vertically and horizontally
-              alignment: Alignment.center,
-              child: Text(
-                symbol,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : color,
+                color: isSelected ? color : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: isSelected
+                        ? color.withValues(alpha: 0.5)
+                        : Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(
+                  color: isSelected ? color : Colors.grey.shade200,
+                  width: 2,
                 ),
               ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Top icon circle
+                  Icon(
+                    icon,
+                    size: 40,
+                    color: isSelected ? Colors.white : color,
+                  ),
+
+                  // Middle text
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.white : Colors.black87,
+                    ),
+                  ),
+
+                  // Bottom symbol - Fixed vertical centering
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.white.withValues(alpha: 0.3)
+                          : color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    // Add alignment to center the content vertically and horizontally
+                    alignment: Alignment.center,
+                    child: Text(
+                      symbol,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : color,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
