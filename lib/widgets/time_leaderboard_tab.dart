@@ -35,6 +35,7 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   String _currentOperation = 'addition';
   String _currentDifficulty = 'Standard';
   bool _isLoading = false;
+  bool _isRefreshing = false;
 
   // List of difficulty options
   final List<String> _difficulties = [
@@ -57,12 +58,14 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
   }
 
   void _loadInitialData() {
-    setState(() {
-      _isLoading = true;
-    });
+    if (!_isRefreshing) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
     
     widget.onDifficultyChanged(_currentOperation, _currentDifficulty).then((_) {
-      if (mounted) {
+      if (mounted && !_isRefreshing) {
         setState(() {
           _isLoading = false;
         });
@@ -82,16 +85,22 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           _getOperationFromIndex(_operationTabController.index);
       if (newOperation != _currentOperation) {
         // First set loading state to true BEFORE changing the operation
-        setState(() {
-          _isLoading = true;
-          _currentOperation = newOperation;
-        });
+        if (!_isRefreshing) {
+          setState(() {
+            _isLoading = true;
+            _currentOperation = newOperation;
+          });
+        } else {
+          setState(() {
+            _currentOperation = newOperation;
+          });
+        }
 
         // Then load the data for the new operation
         widget
             .onDifficultyChanged(_currentOperation, _currentDifficulty)
             .then((_) {
-          if (mounted) {
+          if (mounted && !_isRefreshing) {
             setState(() {
               _isLoading = false;
             });
@@ -198,14 +207,18 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           child: RefreshIndicator(
             onRefresh: () async {
               setState(() {
+                _isRefreshing = true;
                 _isLoading = true;
               });
               await widget.onRefresh();
+              // Reload the current operation/difficulty data after general refresh
+              await widget.onDifficultyChanged(_currentOperation, _currentDifficulty);
               setState(() {
+                _isRefreshing = false;
                 _isLoading = false;
               });
             },
-            child: _isLoading
+            child: (_isLoading && !_isRefreshing)
                 ? Center(
                     child: CircularProgressIndicator(
                       valueColor:
@@ -264,15 +277,21 @@ class _TimeLeaderboardTabState extends State<TimeLeaderboardTab>
           return GestureDetector(
             onTap: () {
               if (difficulty != _currentDifficulty && !_isLoading) {
-                setState(() {
-                  _currentDifficulty = difficulty;
-                  _isLoading = true;
-                });
+                if (!_isRefreshing) {
+                  setState(() {
+                    _currentDifficulty = difficulty;
+                    _isLoading = true;
+                  });
+                } else {
+                  setState(() {
+                    _currentDifficulty = difficulty;
+                  });
+                }
 
                 widget
                     .onDifficultyChanged(_currentOperation, difficulty)
                     .then((_) {
-                  if (mounted) {
+                  if (mounted && !_isRefreshing) {
                     setState(() {
                       _isLoading = false;
                     });
