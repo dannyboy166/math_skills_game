@@ -80,9 +80,10 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted && result.user != null) {
         print(
             "LOGIN DEBUG: User is logged in, manually navigating to HomeScreen");
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => HomeScreen()),
+          (route) => false,
         );
       } else {
         print(
@@ -142,9 +143,10 @@ class _LoginScreenState extends State<LoginScreen>
         // Existing user - skip age dialog and proceed directly
 
         if (mounted) {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => HomeScreen()),
+            (route) => false,
           );
         }
       }
@@ -198,9 +200,10 @@ class _LoginScreenState extends State<LoginScreen>
         // Existing user - skip age dialog and proceed directly
 
         if (mounted) {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => HomeScreen()),
+            (route) => false,
           );
         }
       }

@@ -102,9 +102,10 @@ class _RegisterScreenState extends State<RegisterScreen>
         // Briefly delay before navigating to HomeScreen
         Future.delayed(Duration(seconds: 2), () {
           // Navigate to home screen instead of going back to login
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => HomeScreen()),
+            (route) => false,
           );
         });
       }
@@ -160,9 +161,10 @@ class _RegisterScreenState extends State<RegisterScreen>
         if (mounted) {
           _showSuccessDialog();
           Future.delayed(Duration(seconds: 2), () {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => HomeScreen()),
+              (route) => false,
             );
           });
         }
@@ -219,9 +221,10 @@ class _RegisterScreenState extends State<RegisterScreen>
         if (mounted) {
           _showSuccessDialog();
           Future.delayed(Duration(seconds: 2), () {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => HomeScreen()),
+              (route) => false,
             );
           });
         }
