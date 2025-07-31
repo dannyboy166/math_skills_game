@@ -777,6 +777,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+
   Widget _buildAppLogo() {
     return Column(
       children: [
@@ -795,13 +796,11 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           ),
           child: Center(
-            child: Text(
-              "123",
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue.shade700,
-              ),
+            child: Image.asset(
+              'assets/images/ninja.png',
+              width: 80,
+              height: 80,
+              fit: BoxFit.contain,
             ),
           ),
         ),

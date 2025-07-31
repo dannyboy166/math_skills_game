@@ -550,34 +550,13 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
             ],
           ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Text(
-                "123",
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue.shade700,
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 20,
-                child: Container(
-                  padding: EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-              ),
-            ],
+          child: Center(
+            child: Image.asset(
+              'assets/images/ninja.png',
+              width: 80,
+              height: 80,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
         SizedBox(height: 16),

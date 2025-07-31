@@ -15,7 +15,6 @@ class _LandingScreenState extends State<LandingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _rotateAnimation;
 
   @override
   void initState() {
@@ -32,14 +31,6 @@ class _LandingScreenState extends State<LandingScreen>
       CurvedAnimation(
         parent: _controller,
         curve: Curves.elasticInOut,
-      ),
-    );
-
-    // Rotation animation for math symbols
-    _rotateAnimation = Tween<double>(begin: -0.05, end: 0.05).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
       ),
     );
   }
@@ -92,91 +83,40 @@ class _LandingScreenState extends State<LandingScreen>
   }
 
   Widget _buildAnimatedLogo() {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Rotating background math symbols
-        ..._buildMathSymbols(),
-
-        // Main logo with bounce effect
-        AnimatedBuilder(
-          animation: _scaleAnimation,
-          builder: (context, child) {
-            return Transform.scale(
-              scale: _scaleAnimation.value,
-              child: child,
-            );
-          },
-          child: Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: Offset(0, 6),
-                ),
-              ],
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: child,
+        );
+      },
+      child: Container(
+        width: 160,
+        height: 160,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: Offset(0, 6),
             ),
-            child: Center(
-              child: Image.asset(
-                'assets/images/ninja.png',
-                width: 120,
-                height: 120,
-                fit: BoxFit.contain,
-              ),
-            ),
+          ],
+        ),
+        child: Center(
+          child: Image.asset(
+            'assets/images/ninja.png',
+            width: 120,
+            height: 120,
+            fit: BoxFit.contain,
           ),
         ),
-      ],
+      ),
     );
   }
 
-  List<Widget> _buildMathSymbols() {
-    final symbols = ["+", "-", "×", "÷", "=", "%"];
-    final positions = [
-      Offset(120, -30),
-      Offset(-100, 20),
-      Offset(110, 50),
-      Offset(-90, -40),
-      Offset(30, 80),
-      Offset(-30, -80),
-    ];
-    final colors = [
-      Colors.yellow,
-      Colors.green,
-      Colors.purple,
-      Colors.orange,
-      Colors.red,
-      Colors.pink,
-    ];
-    final sizes = [40.0, 50.0, 45.0, 48.0, 42.0, 44.0];
-
-    return List.generate(symbols.length, (index) {
-      return AnimatedBuilder(
-        animation: _rotateAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: positions[index],
-            child: Transform.rotate(
-              angle: _rotateAnimation.value * (index % 2 == 0 ? 1 : -1) * 3.14,
-              child: Text(
-                symbols[index],
-                style: TextStyle(
-                  fontSize: sizes[index],
-                  fontWeight: FontWeight.bold,
-                  color: colors[index],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    });
-  }
 
   Widget _buildWelcomeText() {
     return Column(
