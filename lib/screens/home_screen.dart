@@ -442,12 +442,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // Star decoration
-              Icon(
-                Icons.auto_awesome,
-                color: Colors.yellow.shade200,
-                size: 30,
-              ),
             ],
           ),
 
@@ -503,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getWelcomeTitle() {
     if (_currentStreak == 0) {
-      return "Ready to Start? 🚀";
+      return "Ready to Start?";
     } else if (_currentStreak == 1) {
       return "Great Start! 🌟";
     } else if (_currentStreak < 7) {
